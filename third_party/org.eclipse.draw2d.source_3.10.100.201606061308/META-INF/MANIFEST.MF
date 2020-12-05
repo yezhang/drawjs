@@ -1,0 +1,897 @@
+Manifest-Version: 1.0
+Bundle-SymbolicName: org.eclipse.draw2d.source
+Bundle-Version: 3.10.100.201606061308
+Bundle-Name: %bundleName
+Bundle-Localization: OSGI-INF/l10n/bundle-src
+Archiver-Version: Plexus Archiver
+Built-By: genie.gef
+Bundle-ManifestVersion: 2
+Bundle-Vendor: %bundleVendor
+Eclipse-SourceBundle: org.eclipse.draw2d;version="3.10.100.20160606130
+ 8";roots:="."
+Build-Jdk: 1.7.0_80
+Created-By: Apache Maven
+
+Name: org/eclipse/draw2d/InputEvent.java
+SHA-256-Digest: /z2Ed7+oqdliZrwWpyWyyxnHjLlsuXLLHMnVabiQ0dg=
+
+Name: org/eclipse/draw2d/AbstractLocator.java
+SHA-256-Digest: zKaTARguH68/BQ1KuTTJbRYQbd+wVWmv9I+J+xi/74U=
+
+Name: org/eclipse/draw2d/text/FlowUtilities.java
+SHA-256-Digest: jRHkQiPU7yf4Ml6lzd9y/3ZbA3mBe/iiGV/7FCXu5jE=
+
+Name: org/eclipse/draw2d/ButtonGroup.java
+SHA-256-Digest: /8BX9dszsuhQ3E3Tqc7kCLFzIlgtd4uqPW9eSK1oY3w=
+
+Name: org/eclipse/draw2d/AbstractLabeledBorder.java
+SHA-256-Digest: 1whhp6ZtkbYcvlPVVoM2zsonWx1i0RxNIMYFF3K5Pao=
+
+Name: org/eclipse/draw2d/text/FlowBox.java
+SHA-256-Digest: 1fXd6rvvnc1rFk7wH01j/1+bXDOCC1T2TBFctnhXFMc=
+
+Name: org/eclipse/draw2d/GroupBoxBorder.java
+SHA-256-Digest: E/k4XKCgujx1QVD9m388MhmCQMT/CxvLE2HTxSH+3gk=
+
+Name: org/eclipse/draw2d/graph/CompoundVerticalPlacement.java
+SHA-256-Digest: s7G9edmSKwxsQaraWkIHKJ/0w695kwxvYR91JzzzAnA=
+
+Name: org/eclipse/draw2d/geometry/PointList.java
+SHA-256-Digest: wO5N1al8wEOLXgHqSDULwKrVOpuJJX+4JNgEHp2YpYE=
+
+Name: org/eclipse/draw2d/graph/CompoundDirectedGraph.java
+SHA-256-Digest: cI+APjen08F6cwh5zC/54v7X3Eb94XHRuLpTA1Ol9xQ=
+
+Name: org/eclipse/draw2d/text/CompositeBox.java
+SHA-256-Digest: qiO1yQAlZ3tRyB13uasCCd1VgfSxh3ciGBrGxaTwL/U=
+
+Name: org/eclipse/draw2d/FreeformFigure.java
+SHA-256-Digest: Dt2ntfYbHMduAFiqAyYudz51jnX9jgCmiulGIagoHy4=
+
+Name: org/eclipse/draw2d/AbstractRouter.java
+SHA-256-Digest: Vyss86ZTgRVFRZAj0ewFhrUNdNSD/73ADWv1wprJIkw=
+
+Name: org/eclipse/draw2d/graph/ShortestPathRouter.java
+SHA-256-Digest: SxgkBv3M/+scrA3ftOo0PkCPEbbgFxqB2aOU2t7slDA=
+
+Name: org/eclipse/draw2d/ScrollBar.java
+SHA-256-Digest: 3srcGH/NK8ePmYGRscieHFnFDptQ/WO/xSkEWtHE+hk=
+
+Name: org/eclipse/draw2d/MouseEvent.java
+SHA-256-Digest: M+ZsRgLFcTxcC54WKQGrJxrmz6upP1GOaW8xeBK4doM=
+
+Name: org/eclipse/draw2d/PolygonDecoration.java
+SHA-256-Digest: wcHOgnr+gdW6GvEo9Bv3PqpdX3jZRavjsukmMbTg2yY=
+
+Name: org/eclipse/draw2d/text/FlowFigureLayout.java
+SHA-256-Digest: J0zGtkWFIebRg4vLyYXYNgFNaxUp2ZcP66dPiUtyJDM=
+
+Name: org/eclipse/draw2d/MouseListener.java
+SHA-256-Digest: w/adhvH0+emKnVHn03jSUiAWMrabANttLtT/DApG2Kg=
+
+Name: org/eclipse/draw2d/text/BidiProcessor.java
+SHA-256-Digest: fJz27fQpHJKkDKyWNK7oJjlRdjVOc+VGA1NlLqpipwY=
+
+Name: org/eclipse/draw2d/SubordinateUpdateManager.java
+SHA-256-Digest: kjigsfzdkg7dO3grlyFbfKYGcvzKDr9q11DZpfleogI=
+
+Name: org/eclipse/draw2d/LayoutListener.java
+SHA-256-Digest: mSj3yALrNXUgFh03anTe8d9MYmqqV5vvOFGoqlVUtH0=
+
+Name: org/eclipse/draw2d/AccessibleBase.java
+SHA-256-Digest: DQ7Y7rzhcinMTbuhx1L/xooZpfUHRhdonVJ/Ksri7Kk=
+
+Name: org/eclipse/draw2d/ConnectionLocator.java
+SHA-256-Digest: yRGTGhLkDtHJCRd0VHH3TFMxQ3mAudbxyJsZ20h2B9g=
+
+Name: overview.html
+SHA-256-Digest: Hu8HpArYKHqKFml2CKrPQrVx5i8/Fx2kPlw+xk+e1Ug=
+
+Name: org/eclipse/draw2d/doc-files/demo2.gif
+SHA-256-Digest: 6ParkHBlfaZDQWuWzqAObnyXYXC9nCgqdZXnzYJTR8Q=
+
+Name: org/eclipse/draw2d/graph/LocalOptimizer.java
+SHA-256-Digest: UF59d4pRUWkjCu8Na+3WlFTJVGw6W+kpdSu/P6dyyiM=
+
+Name: org/eclipse/draw2d/ClickableEventHandler.java
+SHA-256-Digest: VjwEgxVzTQxAV39Vn876j3iWNNO6dCLOFK/lZXTXPy4=
+
+Name: org/eclipse/draw2d/ChopboxAnchor.java
+SHA-256-Digest: 5ZQhL4xLGN96dmefdixPqtuXRBoELQgUOmTM3i8UmmI=
+
+Name: org/eclipse/draw2d/AnchorListener.java
+SHA-256-Digest: v//QPG7BGzm6DSy7ySFuHFZmPNZID2wZDY2dDST/LGs=
+
+Name: OSGI-INF/l10n/bundle-src.properties
+SHA-256-Digest: 0O3x6pkUoubBWQVGAs1XP0EC5cFFhBg3t8mOAowrwXE=
+
+Name: org/eclipse/draw2d/internal/MultiValueMap.java
+SHA-256-Digest: OoX4jCPStkNNG++i6SpbUdWf49mNxou80Lm9lmItUaA=
+
+Name: org/eclipse/draw2d/geometry/Dimension.java
+SHA-256-Digest: hQmZdW34oZmba2bmZcXY/sSDGrrOiBUetXQNv/1+Ees=
+
+Name: org/eclipse/draw2d/Locator.java
+SHA-256-Digest: 3xFCIfhmjHiaw16lQbBnVuFGO+aK1a4uG1JLKRtS0u0=
+
+Name: org/eclipse/draw2d/graph/BreakCycles.java
+SHA-256-Digest: i+dR6EjNOOm8Ex00mgJr3E/BP8jiofg5v23d0WSSw20=
+
+Name: org/eclipse/draw2d/text/FlowFigure.java
+SHA-256-Digest: 7hToL67AadjDT3AKFXRJKMjLqLli+ozJSvVkpbz7LII=
+
+Name: org/eclipse/draw2d/FigureListener.java
+SHA-256-Digest: A9nnFNgMk69rF/ogMdmOUg7fuOZ/gE4rpvDG3aeIRZU=
+
+Name: org/eclipse/draw2d/FocusTraverseManager.java
+SHA-256-Digest: p+yQtKrnqLJ3fNG64H9Ou79491ArfixdU/VrgEnBdUM=
+
+Name: org/eclipse/draw2d/Toggle.java
+SHA-256-Digest: ume/EHGCMkc/CW2w83gp2gb//giCFfFfgdq6EJiZLow=
+
+Name: org/eclipse/draw2d/StackLayout.java
+SHA-256-Digest: JTGwmFVaKR4nqBJoNo5GQvXDxoULqz3d+ZXfvYLa0+w=
+
+Name: org/eclipse/draw2d/IScrollableFigure.java
+SHA-256-Digest: NAmU34ZJc24vkjuDJRovNrtr4pzCzLXpOe2paCOR1M0=
+
+Name: org/eclipse/draw2d/AbstractBorder.java
+SHA-256-Digest: x+VIjhvJuG3oFnSnLSQ9o/wX7XasgFprf4Cu0/JpsXo=
+
+Name: org/eclipse/draw2d/geometry/Geometry.java
+SHA-256-Digest: fEObUGoYrMBUdMA/Ir/dThJLt+0nYUbGPDH4rorbkMQ=
+
+Name: org/eclipse/draw2d/ConnectionAnchor.java
+SHA-256-Digest: /4A9khonEyCt83Vm/FVGoTVQAnvWQPxBLv6JYJ2ZfMQ=
+
+Name: org/eclipse/draw2d/package.html
+SHA-256-Digest: 5fwLTq4piKNfsh/fr3MHCOFCgN2+RyYHpzur7CYyhrc=
+
+Name: org/eclipse/draw2d/AbstractBackground.java
+SHA-256-Digest: mxCAMw/PAXu0EDVaX5HMHgV9jZqkGYgOnLRURFJdigQ=
+
+Name: org/eclipse/draw2d/graph/InvertEdges.java
+SHA-256-Digest: H++SS3kjld/FoVnVCOxxIYZ3l45WSbKhuQYsTwed7jQ=
+
+Name: org/eclipse/draw2d/geometry/PrecisionGeometry.java
+SHA-256-Digest: NvBiwa8l30odOXy0QdlDNp8wt6T3JNsOgiCjJDY1phU=
+
+Name: org/eclipse/draw2d/text/LineRoot.java
+SHA-256-Digest: fpO6PgYmijSguKxTj7mJM8ZVruJSQiX1iB5Zk9aUyf8=
+
+Name: org/eclipse/draw2d/geometry/Rectangle.java
+SHA-256-Digest: xsBaO1+V6/zxHa8wsQpCeYmKdb1vwvalSByEw0q6t7k=
+
+Name: org/eclipse/draw2d/text/FlowContext.java
+SHA-256-Digest: iRSFml23G8iu3KAWQaFAJY7HdieJGERB03jotE5mUgE=
+
+Name: org/eclipse/draw2d/CompoundBorder.java
+SHA-256-Digest: wsfc3atfX0lbXK8TBQ/bKuuN/R1GLcCDfWuB+i29vJE=
+
+Name: org/eclipse/draw2d/text/FlowPage.java
+SHA-256-Digest: lCQ6pJCUjXRinAq3rBWkYZ6gpewY4ZQdLQ9h62sWCjs=
+
+Name: org/eclipse/draw2d/RoutingListener.java
+SHA-256-Digest: htt4n2LuVghIytb7HMdQHSNrt89/bDpca9iZPGpXbfk=
+
+Name: org/eclipse/draw2d/geometry/Point.java
+SHA-256-Digest: nCJr3uxEtxX0Mw66pAeP18+8sBFc2knt5/Brf66AjtE=
+
+Name: org/eclipse/draw2d/Label.java
+SHA-256-Digest: gQ/P90u3sQLXOvDe/3WhuODleCgnkJRM1jkjbDD/hdo=
+
+Name: org/eclipse/draw2d/ConnectionAnchorBase.java
+SHA-256-Digest: xPyxDrrg46N30XSynJSg8qthJ//MJ/HU9pS48qTDEa4=
+
+Name: org/eclipse/draw2d/BorderLayout.java
+SHA-256-Digest: htyTE33mbH5DsuaRiT3Cau+D7lbB4lOWX6aTATF0Vxc=
+
+Name: org/eclipse/draw2d/text/NestedLine.java
+SHA-256-Digest: iweiFqeWv9qGNgsdRJSbUF0Rg5LGCTD4A12XaZnfjTY=
+
+Name: org/eclipse/draw2d/KeyEvent.java
+SHA-256-Digest: zhuGtLFWXy23z5h4AM81nJaeA5vTc9tzUrIFY69dpwg=
+
+Name: org/eclipse/draw2d/ScaledGraphics.java
+SHA-256-Digest: +lSNupOBdBX7Wta039VoMTBz7Tf+R6WcHKUXYIj40hw=
+
+Name: org/eclipse/draw2d/BufferedGraphicsSource.java
+SHA-256-Digest: lr3MnqYBkRML4v/H0AdrXshCBXuMqUt7HPWnaWkVfRg=
+
+Name: org/eclipse/draw2d/text/FlowAdapter.java
+SHA-256-Digest: YWQGhckgOqEoURrmhuFNDWr+jzK9UqYnB90+CoWKays=
+
+Name: org/eclipse/draw2d/graph/RouteEdges.java
+SHA-256-Digest: RDnEDFPJQQ0ptSEZvr3ClXxN9RLnDlgy3vEFyogDxzQ=
+
+Name: org/eclipse/draw2d/XYLayout.java
+SHA-256-Digest: IxIktQCQ9hOc3aN3SQpFQs3c/+5vdIX/7MJnITXBjSE=
+
+Name: org/eclipse/draw2d/graph/RevertableChange.java
+SHA-256-Digest: mYHf985viai1dRl/IrONUbWVEBSKVXjkdBcNaESlmf8=
+
+Name: org/eclipse/draw2d/RectangleFigure.java
+SHA-256-Digest: Vn1CAIiiBe31e2QkfK4+JGyf5PjkGPiqDikgLlVvkc8=
+
+Name: org/eclipse/draw2d/RotatableDecoration.java
+SHA-256-Digest: A2PKHHkeD5vMY2ydPxX8sGDv1cZotG+dzrfnuXn9lCs=
+
+Name: org/eclipse/draw2d/ImageUtilities.java
+SHA-256-Digest: HHi0TAvaEg/3yptGuQYGv6EhcX5wiaxB0wHQ2vQ59Kc=
+
+Name: org/eclipse/draw2d/graph/CompoundBreakCycles.java
+SHA-256-Digest: b7KsiejbCbABvW/MQizlMJDE01IkqLA6reDeu0Br2Ek=
+
+Name: org/eclipse/draw2d/Bendpoint.java
+SHA-256-Digest: JE4P6G5emXKfsj6a3OD+oUsJxpAbfTH0wjY4EqHDghQ=
+
+Name: org/eclipse/draw2d/text/FlowBorder.java
+SHA-256-Digest: R7Jo4ERIF54voPEH9egmpalb7WsE/X09y8Un8/zzd9A=
+
+Name: org/eclipse/draw2d/ChangeListener.java
+SHA-256-Digest: OX0MqkOzHNORM4tOrxUUXGHzs2Qy24e+mkd+gYu67nE=
+
+Name: org/eclipse/draw2d/text/CaretInfo.java
+SHA-256-Digest: Q6ZrgocnjoKq86QN49UoeCACQ7exT0eRGx08ZmxrA34=
+
+Name: org/eclipse/draw2d/AbstractConnectionAnchor.java
+SHA-256-Digest: XiZAx+RfkKWtEFKn4jOV6uV8kJMCDcg7tIvLyHkqo8E=
+
+Name: org/eclipse/draw2d/text/InlineFlowLayout.java
+SHA-256-Digest: 7xAn1Y/3WUIvB0MdGI2p0YW18+o67VPI4t0z147g4rU=
+
+Name: org/eclipse/draw2d/Ellipse.java
+SHA-256-Digest: XF5LFgrpmzAJdIAU3NwwBUeTXZI7fw6s0oxBfqE8qak=
+
+Name: org/eclipse/draw2d/IClippingStrategy.java
+SHA-256-Digest: mfG/PV8FcA2kwwiIi5MLFNxwTxyrOaMJoN5QKyihUH8=
+
+Name: org/eclipse/draw2d/ButtonStateTransitionListener.java
+SHA-256-Digest: g1eCNoMdf6Qoo5LcDbkqHN+trcOwJghzq8dotXI0cgA=
+
+Name: org/eclipse/draw2d/text/SimpleTextLayout.java
+SHA-256-Digest: pGrdPJQxDPiWP3t1hvXwzAfKRjBshl5j/PjYb33Eu5I=
+
+Name: org/eclipse/draw2d/SWTEventDispatcher.java
+SHA-256-Digest: V9Ap15j8rxfxRrQLMwH0+V4aKZLJhjaEMjYKHPO0BXo=
+
+Name: org/eclipse/draw2d/AncestorListener.java
+SHA-256-Digest: pUkBjIIAIkr5SZeLRDbJcLIecywX9vud95fQhaE8l9w=
+
+Name: org/eclipse/draw2d/doc-files/demo4.html
+SHA-256-Digest: B35/wJ0A3vp1LlaWvweCjyHdAoV/uUU8E7yYki+Sm2E=
+
+Name: org/eclipse/draw2d/text/BlockFlowLayout.java
+SHA-256-Digest: c3p8taHR3UZNGf5SskcIUOMfxtBXDwwMrkulryAxVOk=
+
+Name: org/eclipse/draw2d/LabeledBorder.java
+SHA-256-Digest: c4vLcuMXqxXzGo7RhfLnC6K1yHMsCscQYs6KhB3OAy8=
+
+Name: org/eclipse/draw2d/AncestorHelper.java
+SHA-256-Digest: FKG1mVRp5QtgaYObtbq+OGdcRPfed5NTBf7v3RBTwTY=
+
+Name: org/eclipse/draw2d/SWTGraphics.java
+SHA-256-Digest: yekUo3uRcEh1epTpWeKZfc1fy+b4Qjh9BXQIMOvVVS8=
+
+Name: org/eclipse/draw2d/ButtonModel.java
+SHA-256-Digest: XNcSfPzshr3qhY7BLEmvyZMT71+js836E/BqF/VYl7U=
+
+Name: src/org/eclipse/draw2d/images/checkboxenabledoff.gif
+SHA-256-Digest: FM9uIjPuWHk0waq0mczmWquD5iAyIBh0xUlhiGrcCto=
+
+Name: org/eclipse/draw2d/geometry/PrecisionPoint.java
+SHA-256-Digest: zOrur9Q30Wa1nSLzoTVlu5wnNYrD/QyHI7uE4F6rc5I=
+
+Name: org/eclipse/draw2d/graph/InitialRankSolver.java
+SHA-256-Digest: DwIx2bPlouVpSmY9s4gIXcU8SE8BzvRuFka9DJ5B/94=
+
+Name: org/eclipse/draw2d/AbstractImageFigure.java
+SHA-256-Digest: iiA9loq1xtdvTV1zGtDZMwNik3NP5UGRdyPMf+SEm8k=
+
+Name: org/eclipse/draw2d/AbsoluteBendpoint.java
+SHA-256-Digest: 4mfIqF93biwPKxtvDfGNu3fGzKHH28+rtdbTl7x/vfk=
+
+Name: org/eclipse/draw2d/text/TextFlow.java
+SHA-256-Digest: gIFFE15Fndbc1AU64DvijCcpgwHrBw5rad7rz64dqhE=
+
+Name: org/eclipse/draw2d/Polyline.java
+SHA-256-Digest: 6phA2wmwfqApmsHq7l9NVjpdLoD8qjhRobhIxwZISLc=
+
+Name: org/eclipse/draw2d/Layer.java
+SHA-256-Digest: cbdT7+3PCOs3CQ/Rsac4eH2iz2BncKejq6RS9btnjXQ=
+
+Name: org/eclipse/draw2d/graph/GraphVisitor.java
+SHA-256-Digest: owaxFtUCf13lNj3xfuoWlx6oF0N2WS5Fw4favrQXUMQ=
+
+Name: org/eclipse/draw2d/FreeformHelper.java
+SHA-256-Digest: J1PP8GlawgjpvxeI3PlkqMf4EZMcE1TTv7e5R47WPHc=
+
+Name: org/eclipse/draw2d/FreeformListener.java
+SHA-256-Digest: ttwU44tT00zGD7QFeUPzlmOtPnoJdmw9Ewbe6QctxQA=
+
+Name: org/eclipse/draw2d/graph/Cell.java
+SHA-256-Digest: R0g69kTZXBPoCITPh96gCPIp/W1gsRhE5I14vQX0Q6w=
+
+Name: org/eclipse/draw2d/PrintFigureOperation.java
+SHA-256-Digest: p53niRvtYhwzUGgDekVCGT4McODC2SdE3hHrqNRdZpU=
+
+Name: org/eclipse/draw2d/Triangle.java
+SHA-256-Digest: hBcz3OrpSXqWrviiISMBVRJR8C9hIR1MSL3OFbDqopA=
+
+Name: org/eclipse/draw2d/graph/VirtualNode.java
+SHA-256-Digest: fBs28ZXH+4ARW2S167Pv+mJQolLx7Wrao3Nk/AFbI14=
+
+Name: org/eclipse/draw2d/FigureUtilities.java
+SHA-256-Digest: 7raD2AaI8Q0ZkJ2mKcgj2mcX3wj2+rn4WYsDN7TP3uI=
+
+Name: org/eclipse/draw2d/geometry/Insets.java
+SHA-256-Digest: MiEazJS9fN9iImNNln0hoCt08Qew1OjgCSHjdLla4/Q=
+
+Name: org/eclipse/draw2d/LineBorder.java
+SHA-256-Digest: Giwn/6u1LDN7noZvWDNMAnZwBeqONEgyrKRsEhOaRtc=
+
+Name: org/eclipse/draw2d/graph/SpanningTreeVisitor.java
+SHA-256-Digest: QEYu1t4GaEVRU+ZeVQwvO7mfjMsRe0mq8Eo3swdFOFQ=
+
+Name: org/eclipse/draw2d/FreeformLayout.java
+SHA-256-Digest: k738Xt6xRWjhUbAafK5nQGfLBC+7DH+uqgXNSWzIL3c=
+
+Name: org/eclipse/draw2d/Shape.java
+SHA-256-Digest: zMGKn7cD/98dmwypRd1DLiw+XB00Skqrpo6t4bY5cf8=
+
+Name: org/eclipse/draw2d/PositionConstants.java
+SHA-256-Digest: 5L8L2ZS3uOj+bm1SkDSzTZJF9YE1z0B/JMLGgnuLia0=
+
+Name: org/eclipse/draw2d/PolylineDecoration.java
+SHA-256-Digest: KGh2VtX64Bng4fDZ1cr0PJDl8GEoDglMzBzYZGmy+sM=
+
+Name: org/eclipse/draw2d/geometry/Vector.java
+SHA-256-Digest: iEONQiHYzWiw07HCknUHuqylJZoKmZQ2wqwxNLVYNJM=
+
+Name: org/eclipse/draw2d/AbstractLayout.java
+SHA-256-Digest: 58qTjj18qY9yuy7LfCBE7cGkA97/ATnIbwGBRsMhnx0=
+
+Name: org/eclipse/draw2d/LightweightSystem.java
+SHA-256-Digest: ktRIFFqHCx+ItzEEv8alZtwmem01PLbOihITakuIQCE=
+
+Name: org/eclipse/draw2d/ManhattanConnectionRouter.java
+SHA-256-Digest: oyOlnar2jD4KHeNKXi+fD7wtz7q0sysHlweSN5wKBw0=
+
+Name: org/eclipse/draw2d/doc-files/demo4.gif
+SHA-256-Digest: 6PIFX0mBwo6PM1D5lnbom30R5E2OVSH5X26OrXGhm2M=
+
+Name: org/eclipse/draw2d/ViewportUtilities.java
+SHA-256-Digest: gCzRczCA4ljG189U82gZxiIwbmvdsq1Om2PmpIwexZo=
+
+Name: org/eclipse/draw2d/PopUpHelper.java
+SHA-256-Digest: i5N/JB10CW6JlpVIankuUe3jvwsrbbW46AwjHWx7ZiM=
+
+Name: org/eclipse/draw2d/SimpleLoweredBorder.java
+SHA-256-Digest: +Q+xKiJEMyPZRoXcSsRpij85/dPABTsw2qJymwCg/h8=
+
+Name: org/eclipse/draw2d/Orientable.java
+SHA-256-Digest: SF0mIc2qD2xN5KZ1goT+lK9UluV3VGg0S9Vtjv+aPVM=
+
+Name: org/eclipse/draw2d/ButtonBorder.java
+SHA-256-Digest: SUX5y0QKoCCO3PgBlzgp0pt6Dy96KDjhtzShV8sfnb0=
+
+Name: org/eclipse/draw2d/GridLayout.java
+SHA-256-Digest: MxZr0Tm5BmK8M+sfdpwqXFQu1JSlbC+1/gXIwhXIgQw=
+
+Name: org/eclipse/draw2d/images/checkboxenabledoff.gif
+SHA-256-Digest: FM9uIjPuWHk0waq0mczmWquD5iAyIBh0xUlhiGrcCto=
+
+Name: org/eclipse/draw2d/FocusListener.java
+SHA-256-Digest: KVsQr90WBMMuKdxJ7SThFEv79T2k6pYZAVXv+LkTCdg=
+
+Name: org/eclipse/draw2d/parts/ScrollableThumbnail.java
+SHA-256-Digest: 2t0Tt/lAysw50R9ogKAxvr9aQPJFNIpgeWPKaZVhZ6Y=
+
+Name: org/eclipse/draw2d/text/TextFragmentBox.java
+SHA-256-Digest: cqyL8YfD7PKXB47QQCEL/zxo9yEdc+tYfAK39p8OpbU=
+
+Name: org/eclipse/draw2d/PolygonShape.java
+SHA-256-Digest: Sw/0n+tve0FBxjm0pC8waBix0SucVQKQbuNzJO7sRdk=
+
+Name: org/eclipse/draw2d/ColorConstants.java
+SHA-256-Digest: 7E+4tsec/cyy7Lq4t1Xl+EY1b61IEKF7Zb2mro/HIhc=
+
+Name: org/eclipse/draw2d/PrinterGraphics.java
+SHA-256-Digest: QwlwmlG4cVs8AzJABgmKYV+/5ZS1hrbnm8h+cVToXnk=
+
+Name: org/eclipse/draw2d/text/ParagraphTextLayout.java
+SHA-256-Digest: T4J1FvPUMzPfZx/k89Qh1yoUVcTeEqJdrBL8iXu/j6g=
+
+Name: org/eclipse/draw2d/MouseMotionListener.java
+SHA-256-Digest: U2uu2fXGMinoAiAKiVQGQa/d9EKSAEs9ysFEqlmXrgg=
+
+Name: org/eclipse/draw2d/ShortestPathConnectionRouter.java
+SHA-256-Digest: RlPKhHlhlz1R+HjIRtTlzzFK/X/pF9NkK7xreolEJmQ=
+
+Name: org/eclipse/draw2d/graph/TransposeMetrics.java
+SHA-256-Digest: uFT9fxIQhph5Uxz9T6/c/IT/SxuMnFEicpLuchOqbsw=
+
+Name: org/eclipse/draw2d/TitleBarBorder.java
+SHA-256-Digest: ejXMQbgnc2ZjDcj61dS0C2nn5VaIi93kHJAqQP5OGCQ=
+
+Name: org/eclipse/draw2d/graph/RankList.java
+SHA-256-Digest: bR1OtxAroWEJj0Qra74Pf9AMfuF5T5JWGUA/zyQa7r0=
+
+Name: org/eclipse/draw2d/graph/NodeCluster.java
+SHA-256-Digest: vTSfR6a67g0HcRkDfQEmn6bk5bfr26cmpA9pAgTfx1I=
+
+Name: org/eclipse/draw2d/Cursors.java
+SHA-256-Digest: U4avGKvbUyAaoBZg99EHG3ZFvtUzKvNyNNU1CZopt6A=
+
+Name: org/eclipse/draw2d/graph/CompoundHorizontalPlacement.java
+SHA-256-Digest: 2a86egXZX5crIA6rFlR1zn+MSxE9TN0Wl39+gvBZ+D0=
+
+Name: org/eclipse/draw2d/KeyListener.java
+SHA-256-Digest: Z7ZSNOJW8z+aCF6RIcbpbpMrF0QXcKF8o890ZkoQsEs=
+
+Name: org/eclipse/draw2d/PolylineConnection.java
+SHA-256-Digest: Ok50NqvunM58r6o/+pUmuTR7G0XGo54A0oGsfg46g78=
+
+Name: org/eclipse/draw2d/ScrollPaneSolver.java
+SHA-256-Digest: zgX3EmS7zzi7OxcIFFly5C5RBa2Ru4wHxgxNT6o3Sus=
+
+Name: org/eclipse/draw2d/GraphicsSource.java
+SHA-256-Digest: 75zuBOvALxRUH6tvvCdckDDDTWyMD1kAMNokR9lwnDY=
+
+Name: org/eclipse/draw2d/graph/VirtualNodeCreation.java
+SHA-256-Digest: 2P+q2B0Vfrwts6Kyh1Ymuucot9ADbxgS6uqVMNmHyl4=
+
+Name: org/eclipse/draw2d/graph/NodeList.java
+SHA-256-Digest: P8IWcP5UtJ/eCNzZfYBp15FWNJsEVTAWNGiTVTZbK+A=
+
+Name: org/eclipse/draw2d/text/LineBox.java
+SHA-256-Digest: Rm7tL0VKLdeqeVXeFYIMSIVzfNQ7+lEzSuwJJBkpNqM=
+
+Name: org/eclipse/draw2d/AutomaticRouter.java
+SHA-256-Digest: RVsLw5Dq6/whvgW5W+Zr8i3tBr86LhgribGaUhP/40w=
+
+Name: org/eclipse/draw2d/text/FlowContainerLayout.java
+SHA-256-Digest: g0A2uWkdO/PcMcEGE3O0d6QJLQQJdfVXShzOT+TVhg8=
+
+Name: org/eclipse/draw2d/geometry/Translatable.java
+SHA-256-Digest: M0rwxeNguYTvmz3QOljgyJDizvXqbFbaVgRtfHP5ksU=
+
+Name: org/eclipse/draw2d/BendpointLocator.java
+SHA-256-Digest: Q88SO91ArIVgvW+vlQ8LM9ecnwAN2SaVCipEwDZMDUc=
+
+Name: org/eclipse/draw2d/graph/EdgeList.java
+SHA-256-Digest: dhdFEjQ3sOAtkqQt8r3l7tb1kH086FZU+iX2O/8MpUw=
+
+Name: org/eclipse/draw2d/graph/MinCross.java
+SHA-256-Digest: Mw+kv0Y9RcvOD+5OB2zuiDMDPYT/0L4gROkTXHB+0y0=
+
+Name: org/eclipse/draw2d/BendpointConnectionRouter.java
+SHA-256-Digest: tWFUcOAXowBk9Xg70auSZXSZIEjrdG2N8hVcgUaVQ0s=
+
+Name: org/eclipse/draw2d/graph/Segment.java
+SHA-256-Digest: zPOElF6nwyI8Lsa3gtPAfZojSS38tiUBRkVb/luMr7o=
+
+Name: org/eclipse/draw2d/text/BlockBox.java
+SHA-256-Digest: AFFxLV9WBUO7kIDOA6fVLBlphOKB1HlwwucLu9AhV5I=
+
+Name: org/eclipse/draw2d/graph/RankAssignmentSolver.java
+SHA-256-Digest: SSvJB/hMMbd/RID7UjEWQENuSoK9MvDsDiV3zNol120=
+
+Name: org/eclipse/draw2d/FreeformLayer.java
+SHA-256-Digest: AZbPmTQlbSLNADcuDHW319FkwGJYbOE/vkYmn3cLdgY=
+
+Name: org/eclipse/draw2d/UpdateListener.java
+SHA-256-Digest: 6FsRrp7/cfTgyAn0X6jkL+7uSnLyskiLoffQtWEQyBA=
+
+Name: org/eclipse/draw2d/widgets/ImageBorder.java
+SHA-256-Digest: ORvzUOgF6vxkJI1ggnq9rrOsZdiGsb4dqlo3rf9z4FU=
+
+Name: org/eclipse/draw2d/EventDispatcher.java
+SHA-256-Digest: 2HS/aVj4Kb1sscXzBQhIvQCy/XaRCKUYG7auSnzoM4Q=
+
+Name: org/eclipse/draw2d/ToolbarLayout.java
+SHA-256-Digest: egp7l3UM79QK7J+5l70ldZ6Q4/56MR8FFVButC5x9Sc=
+
+Name: org/eclipse/draw2d/ToggleModel.java
+SHA-256-Digest: mHJb/o/XhI61WouNjtsFODLpJGLguEBpFy+eZMCC46Q=
+
+Name: org/eclipse/draw2d/graph/SortSubgraphs.java
+SHA-256-Digest: KMAqoEMAzKqq2AUNrCdOFl/gN7iIVXxRLEHz5qjf12I=
+
+Name: org/eclipse/draw2d/graph/CompoundRankSorter.java
+SHA-256-Digest: IZBB5lp2VKWJIP6LukKtBvOUZr+mhiygZFQxoLkERRg=
+
+Name: org/eclipse/draw2d/RoutingAnimator.java
+SHA-256-Digest: mwixugp976tPO2Ohc4bkBgTex+OJFPTHd9F43jtKSP0=
+
+Name: org/eclipse/draw2d/PrintOperation.java
+SHA-256-Digest: y6UF/Vkyandttp8wuEFskNIFhV4zfEHw7WXx5NZhgeA=
+
+Name: org/eclipse/draw2d/Figure.java
+SHA-256-Digest: ZGiUD6Zap+/KxoLN5G40cu8tu1SdAUcezGlOp8pmql8=
+
+Name: org/eclipse/draw2d/geometry/Transform.java
+SHA-256-Digest: UinYMIfYc5K7WsuVxVZH8nvIIEV052cQr0rMQKdJqP4=
+
+Name: org/eclipse/draw2d/SchemeBorder.java
+SHA-256-Digest: EIvFsd4dymVHItVVtcm1gYQnIkVGi86612AZfQKis+8=
+
+Name: org/eclipse/draw2d/graph/CompoundDirectedGraphLayout.java
+SHA-256-Digest: rR9ECgt/BkhKeZkvb2FGJI0u4qNth5FsZZ5cIdUJYdg=
+
+Name: org/eclipse/draw2d/geometry/PrecisionRectangle.java
+SHA-256-Digest: vXTC4NscrRM7wNgzjhS+0fDE3KMHBOxCFNtjU+a6OB0=
+
+Name: org/eclipse/draw2d/Button.java
+SHA-256-Digest: sShH13dG1MD548utreojrcICLg//24AX3V5BZV/8h20=
+
+Name: org/eclipse/draw2d/DefaultRangeModel.java
+SHA-256-Digest: B/JqlmuNYROTCsABTg8PykdzrhUFoeaE94gUk39gAGQ=
+
+Name: org/eclipse/draw2d/FocusEvent.java
+SHA-256-Digest: hraWVwJJ2rGY6qTXZ4YfpFRBz+whKEYJKJnxVJnkEl0=
+
+Name: org/eclipse/draw2d/graph/GraphUtilities.java
+SHA-256-Digest: 9lyYs3SYd/Qy0VG4jZkq6zHzXqGJbPxy3eQWZeOvF3A=
+
+Name: org/eclipse/draw2d/images/checkboxenabledon.gif
+SHA-256-Digest: Dcy6lgh65HOZXHaqzdeB/arTyx9KfhOhWb7AGb9jFmM=
+
+Name: org/eclipse/draw2d/ActionEvent.java
+SHA-256-Digest: 4haKhUrmRuTjjTDkWvkd8eLP7WtPbvnQ6pH5enlATWo=
+
+Name: org/eclipse/draw2d/internal/package.html
+SHA-256-Digest: RP9P4gjvnshnxmqUP3voBSJDZPQohhfU4pjfDDHxcPU=
+
+Name: org/eclipse/draw2d/ScalablePolygonShape.java
+SHA-256-Digest: F7jMmEj3IkgykhJ+rmXkGNPKmHrJxEkbB+7Ub261tys=
+
+Name: org/eclipse/draw2d/graph/NestingTree.java
+SHA-256-Digest: 0OotuFNRRtCYmJ2WLpm/qQlmRWLA1RWBNga1gak87Xo=
+
+Name: org/eclipse/draw2d/graph/CompoundPopulateRanks.java
+SHA-256-Digest: dSiT00nyXSAoP1cqDqijnrt2stBnT87a6rwhvcxmC7Q=
+
+Name: org/eclipse/draw2d/text/PageFlowLayout.java
+SHA-256-Digest: 5tQFDYlH+gxEXOfAVsY9J4Hsw7cURSNTQMpAfjoH4xI=
+
+Name: org/eclipse/draw2d/graph/Rank.java
+SHA-256-Digest: rBrBk5O7is39lm2LbbyHMLHV/I11Gtj0x0uy50GVHVQ=
+
+Name: org/eclipse/draw2d/SimpleRaisedBorder.java
+SHA-256-Digest: v7causKnzqaOHfVovISxXBADsHtt99WKEPu20Zw+HmQ=
+
+Name: org/eclipse/draw2d/text/BidiChars.java
+SHA-256-Digest: UalVsbpcPDGtg7f7YaYO8Ya+JKlrjkJmop41Q3fyG4k=
+
+Name: org/eclipse/draw2d/TextUtilities.java
+SHA-256-Digest: YVLSa8fMecL7LsGQnZIGZbCkfxBfzoSkAZUmEdgVqaA=
+
+Name: org/eclipse/draw2d/ExclusionSearch.java
+SHA-256-Digest: 6ow/atEXyWdO/f/KmcQPkYIKeGDf+z8uYRRI0Rynv1w=
+
+Name: org/eclipse/draw2d/doc-files/demo3.gif
+SHA-256-Digest: Hx8SfrKVWfzl8SypsihX5IQ9N2W3qP6HT+mCtwbLMcE=
+
+Name: org/eclipse/draw2d/graph/Edge.java
+SHA-256-Digest: pkaTFEiP1rHh67XlbRm1k4NfD0cjmipYprMXlsNGuR0=
+
+Name: org/eclipse/draw2d/ConnectionLayer.java
+SHA-256-Digest: ke8Dn8hASCx+MeXGbh3GlumPXR7R4/5Wy/X7+u7qV1c=
+
+Name: org/eclipse/draw2d/graph/TightSpanningTreeSolver.java
+SHA-256-Digest: BaiAO3jje0IOhjAoRQdVh3GwQ8jHZwZgIigAWzPfats=
+
+Name: org/eclipse/draw2d/ViewportAwareConnectionLayerClippingStrategy.
+ java
+SHA-256-Digest: abywXz8j0u32TwYVnl/JikLV0pqx1e2G/V9A610poLQ=
+
+Name: org/eclipse/draw2d/text/TextLayout.java
+SHA-256-Digest: SwNvMzrEaZpPJmsYdg1eFjez41JNz+0NJjncqJNIFJ0=
+
+Name: org/eclipse/draw2d/ToggleButton.java
+SHA-256-Digest: PDqGbZ5oItFa4iWujhwJfksCOQ/tRc+UL9R6R2nFzCQ=
+
+Name: org/eclipse/draw2d/text/package.html
+SHA-256-Digest: oPz8p6s8OtMINNMo0yIqmEQ51A15uux5+NJc0WS+ZXA=
+
+Name: org/eclipse/draw2d/graph/Node.java
+SHA-256-Digest: aaWnZrIUXB2VKP/68JbXvkj6RDQT+ve6upwBVXtiA74=
+
+Name: org/eclipse/draw2d/graph/PopulateRanks.java
+SHA-256-Digest: 8/st7oHUb0zRyglZ8wdYCF5usF3eZUWZpHiU0I60ZEQ=
+
+Name: org/eclipse/draw2d/RoundedRectangle.java
+SHA-256-Digest: QkO5OcjWgDd60zdBewWjU06zboL/ICGoPM1W5TimgTg=
+
+Name: org/eclipse/draw2d/ArrowLocator.java
+SHA-256-Digest: crOZVizHGFd+EJwAK9eXeF3pTi6byxfwjgr4ErTuiiU=
+
+Name: org/eclipse/draw2d/LabeledContainer.java
+SHA-256-Digest: H1mkmdX+85c8PE1DK+8bHal27w0KlFdr74wORw48zlM=
+
+Name: org/eclipse/draw2d/geometry/Transposer.java
+SHA-256-Digest: axazv8mMlX4hectCykAbnL8TEm/cEJSLqYdHeR+y+0Q=
+
+Name: org/eclipse/draw2d/FreeformViewport.java
+SHA-256-Digest: n6oGmtZeaRm7lr0iED/55e9JSSo9Gfoz9gva0/U8wXE=
+
+Name: org/eclipse/draw2d/EllipseAnchor.java
+SHA-256-Digest: ZbayMF0a87aXNXBtbX4Rla2ijvpXtPo++vhX2S1o2WE=
+
+Name: org/eclipse/draw2d/PolylineShape.java
+SHA-256-Digest: OlB2k5wiizeeLdDdez+haKdAGAj4wsBv9Kd+k4yUzu0=
+
+Name: org/eclipse/draw2d/text/InlineFlow.java
+SHA-256-Digest: brlDLJO2BUhLN0/Wp+ru2nWrro5REuE8pDLHWVv/INg=
+
+Name: org/eclipse/draw2d/graph/CollapsedEdges.java
+SHA-256-Digest: S0b2UlqW6c8cHhUijVzFThAYcDs+6sSO2s4H1eMLq0I=
+
+Name: org/eclipse/draw2d/ArrowButton.java
+SHA-256-Digest: DguXeOjM+Tt3k/PjmDgvZJzrILxbdpec70rRCe09Hsk=
+
+Name: org/eclipse/draw2d/CoordinateListener.java
+SHA-256-Digest: cTnf7VVXGlTigRh+ewgYH71iOGLo7mxBPkwoKvwTUUc=
+
+Name: org/eclipse/draw2d/LayoutAnimator.java
+SHA-256-Digest: gRdto1tkxbxrUGOP8QOwk86B87EL0veGXwxnQm6Eh+U=
+
+Name: org/eclipse/draw2d/geometry/PrecisionDimension.java
+SHA-256-Digest: cenSAD9BZpWYs5r2Uw8J5x76boG6BXDWZPVe6qIBtWc=
+
+Name: org/eclipse/draw2d/graph/HorizontalPlacement.java
+SHA-256-Digest: X7PjKSrs+0aBh2KU/UfMPbp9uYYiLzfHZNnQtsC6rpw=
+
+Name: org/eclipse/draw2d/widgets/MultiLineLabel.java
+SHA-256-Digest: H/S7lJICZM4GNM6FAOI2NBhTU4gjPBNWb5zssk7Q5bY=
+
+Name: org/eclipse/draw2d/GridData.java
+SHA-256-Digest: A6CkCaOFofND3FL059wObzCnqbgOqfgPhIEk1GIBjjw=
+
+Name: org/eclipse/draw2d/Graphics.java
+SHA-256-Digest: CAFb3Ch9CEGdx9sk91wK2g6mBllBGqEcTm4FdlMvqb4=
+
+Name: org/eclipse/draw2d/graph/ConvertCompoundGraph.java
+SHA-256-Digest: qNJ6cwSPBDpp3N5BRLu+eO6fMrGMmNpbf4FJlEiYYnk=
+
+Name: org/eclipse/draw2d/EventListenerList.java
+SHA-256-Digest: WrevVJJ1DW0qlBdUWQF3eQZc4coAwvDMqemkX5BktCY=
+
+Name: org/eclipse/draw2d/DeferredUpdateManager.java
+SHA-256-Digest: 5atlgIRupTHuwb/0OSsHQ6mB/JcUco6f/okKrzavL6M=
+
+Name: org/eclipse/draw2d/TreeSearch.java
+SHA-256-Digest: Ia6YDyT8wX+AI9alOdvdmH2yvnvMUGIzyOmiSXF9Jzc=
+
+Name: org/eclipse/draw2d/MidpointLocator.java
+SHA-256-Digest: xW0x7te5hvsXdQBbCNSpkCn0kuNaqluNa8CwIdwPpKA=
+
+Name: org/eclipse/draw2d/geometry/package.html
+SHA-256-Digest: 0w+sYWFe+2bVedWMTYyZ2nOBVJ075XiENGS7z6o3dbo=
+
+Name: org/eclipse/draw2d/graph/Vertex.java
+SHA-256-Digest: bEafXoOI8tBGjypH7qsDFtNend7MkwbshFQrWNlB4pI=
+
+Name: org/eclipse/draw2d/ImageFigure.java
+SHA-256-Digest: jNaxcSYofIiNL/Y8FFx9uct6GlmZT1sYGI5Nn+ZsdIY=
+
+Name: org/eclipse/draw2d/ScrollPane.java
+SHA-256-Digest: bg/Y5+87MV7i/4/k9oJxE/POZ83WllEo4pC3u3XVsNw=
+
+Name: org/eclipse/draw2d/doc-files/helloworld.gif
+SHA-256-Digest: cRxAVWSjbbNcli3/ocf61Tvc3muyGEx0evY54dczv+U=
+
+Name: org/eclipse/draw2d/OrderedLayout.java
+SHA-256-Digest: Fi2wJotfi2drwHz2alQzcNVoFIxmGKwRuT13IXrb35k=
+
+Name: org/eclipse/draw2d/text/AbstractFlowBorder.java
+SHA-256-Digest: wsyy6foKPuBjZ+LKKtdGKP6zbkgy0sC6GcA23Eam5tY=
+
+Name: org/eclipse/draw2d/IImageFigure.java
+SHA-256-Digest: gweOrv5+t2u1rUaahBrify7tYJsAqw/pVF3oZG/Pes8=
+
+Name: org/eclipse/draw2d/doc-files/demo3.html
+SHA-256-Digest: R7oxjZQF/sLp875oMg7CHl0bpuuxLHRPWPfxFu03YyI=
+
+Name: org/eclipse/draw2d/ScalableFigure.java
+SHA-256-Digest: tkUOICJA1BXbtX4tquDNIvbCkZcz9Y9bJpHHPTnpGBc=
+
+Name: org/eclipse/draw2d/FreeformLayeredPane.java
+SHA-256-Digest: N6J+SiwK6f7txoy9TP1YJVlrlWvVRxTsMOr+YZjqx5w=
+
+Name: org/eclipse/draw2d/FigureCanvas.java
+SHA-256-Digest: HtiBkLuTfkoFkaQ3847L/EFl88JQ4L8txcLjID8I37E=
+
+Name: org/eclipse/draw2d/graph/NodePair.java
+SHA-256-Digest: p3hBBEHP6D5GZC+islTm6peuhhTsDI50AojaDA7/CtY=
+
+Name: org/eclipse/draw2d/text/BlockFlow.java
+SHA-256-Digest: dXGABZEXBaHfpsekd3vt+uTWHw9rK6dlPnaD44Uzpr0=
+
+Name: org/eclipse/draw2d/UpdateManager.java
+SHA-256-Digest: C9vwnowsgc4uc1MbJhqBozxgjPA5R/UWyN5Sqv5RhiQ=
+
+Name: org/eclipse/draw2d/RelativeBendpoint.java
+SHA-256-Digest: lkJ22/EqzPH4lUC7TRp/5JcW02g2ZcZpjndkxcJAL/g=
+
+Name: org/eclipse/draw2d/graph/RankSorter.java
+SHA-256-Digest: upj/1oJDIxa95wx0EGyw32z8apb6kJo9H3TFcamBvpQ=
+
+Name: org/eclipse/draw2d/NativeGraphicsSource.java
+SHA-256-Digest: JOTAyYfGj/hROlZ61v7Gi9Y10rc6VJj4EuxFDDCKcyo=
+
+Name: org/eclipse/draw2d/ConnectionRouter.java
+SHA-256-Digest: VYvBLLYrRcEbAqUUb6KoFYKBVyTKL3CTVEHUDs8OyUE=
+
+Name: org/eclipse/draw2d/FanRouter.java
+SHA-256-Digest: NOrXfmJMc9sGz6qgHglmDvaVaL3l1xpIqmLCC8g4ATQ=
+
+Name: org/eclipse/draw2d/ScrollBarLayout.java
+SHA-256-Digest: 8Jtb+jKxopOlNNkHaVXK/WHtHRraoU1V+XFHZ9snVcY=
+
+Name: org/eclipse/draw2d/text/ContentBox.java
+SHA-256-Digest: pEoQT1SNOHnXW3wiBsnSIQjbYzqqGG4D1lO5HgaqhH8=
+
+Name: org/eclipse/draw2d/FocusBorder.java
+SHA-256-Digest: mMl6uUZe8T5mnyae+4cJlwRjJruHqPDxY9Z/1bk2vMU=
+
+Name: org/eclipse/draw2d/graph/package.html
+SHA-256-Digest: tAe9xfVcsRT+a28n62xPt3tDA2BOruFfv72sWtaJzLA=
+
+Name: org/eclipse/draw2d/graph/DirectedGraph.java
+SHA-256-Digest: Vc84AhfQcC5PbtCnCHOJwe9fDf4ubxvoq67N0dzkwT4=
+
+Name: org/eclipse/draw2d/text/BidiInfo.java
+SHA-256-Digest: ag1zEuS4Y2kPxLoyJYJcHqZhoo4BwoVE+nN62KrOTbg=
+
+Name: org/eclipse/draw2d/RelativeLocator.java
+SHA-256-Digest: pHAhHmkI8r6+pLvIhI6X3K3U3DYdiDZljA88/0RCSao=
+
+Name: org/eclipse/draw2d/widgets/package.html
+SHA-256-Digest: jq60ZGKFSDSXcc1S1OeeoUqYyH/MobOb/UmGX9v9GUc=
+
+Name: org/eclipse/draw2d/Animation.java
+SHA-256-Digest: JZl9Bc9Q9JclnrHWP40qttwp5BFylmj9NJRovDReNyE=
+
+Name: org/eclipse/draw2d/Clickable.java
+SHA-256-Digest: ikyDn/OqttOZV/0vRbX83k7K43vagAaCJUHoTTnu8wg=
+
+Name: org/eclipse/draw2d/geometry/Ray.java
+SHA-256-Digest: dly2bbvENoy+7WHTOVBkAhtlsTbtgnSfOo25ZnDm7K8=
+
+Name: org/eclipse/draw2d/ViewportLayout.java
+SHA-256-Digest: cVgTUG0S0K99jNwJJgrVjZ7501nBwPG7WJVIhiX3AB4=
+
+Name: org/eclipse/draw2d/FlowLayout.java
+SHA-256-Digest: 8ra937qW8IsXebdVEx57k3ata7jyCkw42O0lACx3L4k=
+
+Name: org/eclipse/draw2d/CheckBox.java
+SHA-256-Digest: IKhEDqn+p4zRed9FMVhhSrfNgrPhSNU++iwZw3xtAao=
+
+Name: org/eclipse/draw2d/graph/Obstacle.java
+SHA-256-Digest: 8wT08AV46HfMf0oeSVUv1mbH+6JiqBuBloeZZxizz08=
+
+Name: org/eclipse/draw2d/graph/VerticalPlacement.java
+SHA-256-Digest: jDgxg6JSywiJXR99h4X3NYIcjvLt0SsWS0W/U1qEpVw=
+
+Name: org/eclipse/draw2d/geometry/Straight.java
+SHA-256-Digest: b8zMLVg3LVDE4hc6FcxkuMjwPzgMAggYMZVdEFXHE+g=
+
+Name: org/eclipse/draw2d/LayoutManager.java
+SHA-256-Digest: N/1VDAnnpdAQ9zTJYi9f6DNul9LM5XYOY+2tvWFmPSs=
+
+Name: org/eclipse/draw2d/AbstractHintLayout.java
+SHA-256-Digest: 7x1/XUtjgBFW0vN9Kb3UVTKJZAhlZm1SntP3X5wIMw0=
+
+Name: org/eclipse/draw2d/ChangeEvent.java
+SHA-256-Digest: ijkXNIQ9PxrIHYIa9DHwne7uptOq+vm4HIpMpVnoeoA=
+
+Name: org/eclipse/draw2d/graph/Path.java
+SHA-256-Digest: ZyFFc9Mj4rRbGGW8mGBZ8XfzhufLN2F9Tquf6Yrt9LM=
+
+Name: org/eclipse/draw2d/graph/CompoundTransposeMetrics.java
+SHA-256-Digest: OQo38Y3JS9PUwP4p7DvegKIiT0B/yDsQ+rxx9Tz8VCM=
+
+Name: org/eclipse/draw2d/graph/Subgraph.java
+SHA-256-Digest: L/N2GRZ2ozBlhMuswqypUHkfzWUCHVqoBHQKftac7eQ=
+
+Name: org/eclipse/draw2d/SimpleEtchedBorder.java
+SHA-256-Digest: PRYE7jLUHEtwpfnXDrNff9o10h+46Bfk8h39kkX6GhU=
+
+Name: org/eclipse/draw2d/Viewport.java
+SHA-256-Digest: XC0t2g+W3jf+b6si0LNeZCHTS6chYEB8hjiweYnUTkE=
+
+Name: org/eclipse/draw2d/PuristicScrollPane.java
+SHA-256-Digest: NhCaW9jhdKb0jEdPgOFrM+/KZG4d6isHq6IFUWBC5xE=
+
+Name: org/eclipse/draw2d/ToolTipHelper.java
+SHA-256-Digest: Zd7IKzLby1lr9Iy7zYwxC0uJeZWxxZ8OEVJirTkWN2g=
+
+Name: org/eclipse/draw2d/ScrollPaneLayout.java
+SHA-256-Digest: nehFC/FSJps5PqT4jp7EhacT8Y3Wcshrd2/7IZsfRWc=
+
+Name: org/eclipse/draw2d/Connection.java
+SHA-256-Digest: BKYul1tYEohMOc/4qSNyOnCeSAKRxd8OKh8TLqYcR4o=
+
+Name: org/eclipse/draw2d/RoundedRectangleAnchor.java
+SHA-256-Digest: ATSV+ZapgSFiHpFtw6EtBBu9N+mCdwlYvui4HK0MFU0=
+
+Name: about.html
+SHA-256-Digest: 31Y4uaBtOphfTgcHob0hh1CKroOIWaMaM86u24L7ZN8=
+
+Name: org/eclipse/draw2d/GhostImageFigure.java
+SHA-256-Digest: 9oVakAFsCEra7HJ5MoT3wRL3e84GOYN9wKJW0je8kwc=
+
+Name: org/eclipse/draw2d/parts/package.html
+SHA-256-Digest: ysmaiBUt592jrV/gcSlA7IU0SF3hv8+MnvJdPfce6to=
+
+Name: org/eclipse/draw2d/AbstractPointListShape.java
+SHA-256-Digest: dSL9NlATwJ3fAwDeRKt9DVgQfH9IR6iwKrqkP9zVcwA=
+
+Name: org/eclipse/draw2d/ScalableFreeformLayeredPane.java
+SHA-256-Digest: 44xAt8vYAtEpuBBkou2mUirzthba3xNDQOqb913IJ88=
+
+Name: org/eclipse/draw2d/ActionListener.java
+SHA-256-Digest: PPv1aI3sX2tVKsGjaFkoRAgOzbHqKkmAru37t0SKDBA=
+
+Name: org/eclipse/draw2d/MarginBorder.java
+SHA-256-Digest: oblcpJjfuhNrfJwO8hmqoxN50/5L2eMMhG1Q2aXcDNM=
+
+Name: org/eclipse/draw2d/parts/Thumbnail.java
+SHA-256-Digest: i9CM/nyVZTnYGD28HCXjmIjCb5yd2BqENErX4aji9GM=
+
+Name: org/eclipse/draw2d/RangeModel.java
+SHA-256-Digest: HuND5j00R8rc9SO2wXdRP8f76nXGMib59iKWGyhMWm8=
+
+Name: org/eclipse/draw2d/graph/SubgraphBoundary.java
+SHA-256-Digest: OWmQNelKkLhPOLG1MqZZtL0aE7c2jKgkBm5Eowj/ZDY=
+
+Name: org/eclipse/draw2d/Animator.java
+SHA-256-Digest: t/4x4d4qgjAkqvzc2AkWU9EcZR3qFNkMhfkLtZMhyTY=
+
+Name: org/eclipse/draw2d/Polygon.java
+SHA-256-Digest: qkwFNveKUk9bA9iJXzQ3zzLKc4PyGFf3ZQbpFERii6A=
+
+Name: org/eclipse/draw2d/doc-files/demo2.html
+SHA-256-Digest: PFaA8naavVWVVe1UEsVhOvpcgQFNLL4wl/TGSKzfvBM=
+
+Name: org/eclipse/draw2d/doc-files/draw2d.gif
+SHA-256-Digest: zhmdbzXTTkYzXNcprJxnzJGoT7fP748pfP2abBu3zZo=
+
+Name: org/eclipse/draw2d/Border.java
+SHA-256-Digest: bGuOIi/Fxoyva4OYjfA3RqND63Xwlr/3UDlaGAAq2ms=
+
+Name: org/eclipse/draw2d/LabelAnchor.java
+SHA-256-Digest: jxS5LUA19W8c3h5kmdfuYfkwt6b03o5Di7ClNNtIIuM=
+
+Name: org/eclipse/draw2d/LayeredPane.java
+SHA-256-Digest: hufLftLo23z9AJkY4ROGyAMbI0bx++5/599lBjKNJ7g=
+
+Name: org/eclipse/draw2d/FrameBorder.java
+SHA-256-Digest: LNkoXNDkR00OIopFiWL6FOxlOF8JaeTJsGAb7tx4Baw=
+
+Name: org/eclipse/draw2d/graph/DirectedGraphLayout.java
+SHA-256-Digest: RVgd4WcW1WKRQsMI2I760o7S7pkcxz5pTz30B3WZgdg=
+
+Name: org/eclipse/draw2d/IFigure.java
+SHA-256-Digest: 0Mej8HSgxmJGxgqgr20k4ePf4Fxl0yhVXvwlB3NzjOI=
+
+Name: org/eclipse/draw2d/DelegatingLayout.java
+SHA-256-Digest: o06qo6liEAG4VQigP3C21kT2rP5mwCoTjdAwofBxNjQ=
+
+Name: org/eclipse/draw2d/ConnectionEndpointLocator.java
+SHA-256-Digest: Idu6O7lndCfztMNZjk42NgoJy0xaYgOR2nRedae21Ks=
+
+Name: org/eclipse/draw2d/ScalableLayeredPane.java
+SHA-256-Digest: KsDYjdhH6P7d15x27AdnkwQxp5udl+elLG+bG7DmzhI=
+
+Name: org/eclipse/draw2d/XYAnchor.java
+SHA-256-Digest: 6P2b8ZYVnDipi5uJ7EZYpAO5QZL7Ag1Ij5C2P+N/zAE=
+
+Name: src/org/eclipse/draw2d/images/checkboxenabledon.gif
+SHA-256-Digest: Dcy6lgh65HOZXHaqzdeB/arTyx9KfhOhWb7AGb9jFmM=
+
+Name: org/eclipse/draw2d/Panel.java
+SHA-256-Digest: M7BxOsTnazdkF6OLihl+KejsAfREhFkL6Bzj4Q3aHkI=
+
