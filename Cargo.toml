@@ -1,0 +1,6 @@
+[package]
+name = "drawjs"
+version = "0.1.0"
+authors = ["yezhang <yezhang989@163.com>"]
+
+[dependencies]
