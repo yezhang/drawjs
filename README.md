@@ -1,4 +1,6 @@
-# 项目说明
+# drawjs
+
+a port of eclipse draw2d
 
 本项目构建可以运行在浏览器端的图形编辑框架。
 
