@@ -16,9 +16,16 @@ a port of eclipse draw2d
 3. [ ]使用 Rust 实现核心类
 4. [ ]建立 Rust 与 `<canvas/>` 通信机制
 5. [ ]验证核心类在 `<canvas/>` 标签的可用性。
+6. [ ]HTML Canvas 中支持的 Events 清单
 
 # 进一步阅读
 - [GEF4 wiki](https://wiki.eclipse.org/GEF/GEF4)
 - [GEF4 + 1 = GEF5](http://nyssen.blogspot.com/2017/02/gef4-1-gef-5.html#Merger%20of%20MVC%20and%20MVC.FX)
 - [The Draw2d Examples - A Hidden Treasure](http://nyssen.blogspot.com/2010/12/draw2d-examples-hidden-treasure.html)
 - Alexander Nyßen（GEF Leader, https://projects.eclipse.org/projects/tools.gef/who） 的其他博客[文章](http://nyssen.blogspot.com)
+- draw2d 源码位置在[这里](https://download.eclipse.org/oomph/archive/simrel/gef.aggrcon/index/org.eclipse.draw2d.source_3.10.100.201606061308.html)
+- [GEF 官方文章](https://www.eclipse.org/gef/reference/articles.html)
+- Graphiti，https://www.eclipse.org/graphiti/documentation/overview.php
+
+- 操作 Canvas 的 [3 种方法](https://compile.fi/canvas-filled-three-ways-js-webassembly-and-webgl/)
+- Canvas API 相关的[库](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API#libraries)
