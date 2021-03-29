@@ -39,6 +39,9 @@ a port of eclipse draw2d
 # 进一步阅读
 - [GEF4 wiki](https://wiki.eclipse.org/GEF/GEF4)
 - [GEF4 + 1 = GEF5](http://nyssen.blogspot.com/2017/02/gef4-1-gef-5.html#Merger%20of%20MVC%20and%20MVC.FX)
+- [GEF4 MVC (0.1.0) 用于替换 GEF (MVC) 3.x](https://github.com/eclipse/gef/blob/master/CHANGELOG.md#gef4-mvc-010)
+- [GEF4 FX (0.1.0)用于替换 Draw2D](https://github.com/eclipse/gef/blob/master/CHANGELOG.md#gef4-fx-010)
+
 - [The Draw2d Examples - A Hidden Treasure](http://nyssen.blogspot.com/2010/12/draw2d-examples-hidden-treasure.html)
 - Alexander Nyßen（GEF Leader, https://projects.eclipse.org/projects/tools.gef/who） 的其他博客[文章](http://nyssen.blogspot.com)
 - draw2d 源码位置在[这里](https://download.eclipse.org/oomph/archive/simrel/gef.aggrcon/index/org.eclipse.draw2d.source_3.10.100.201606061308.html)
@@ -51,4 +54,5 @@ a port of eclipse draw2d
 - [WebAssembly](https://webassembly.org/)
 
 - [SWT 中的 TraverseEvent](https://cloud.tencent.com/developer/article/1433531)
+
 
