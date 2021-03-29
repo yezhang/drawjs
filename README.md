@@ -14,6 +14,7 @@ a port of eclipse draw2d
 
 1. [ ]梳理 draw2d 的 Java 类继承关系
     1.1 [x] 绘制 IFigure 类图
+        1.1.1 [ ] 绘制 Figure 类图（Implement）
     1.2 [x] 绘制 EventDispatcher 类图
         1.2.1 [ ] SWTEventDispatcher 类图（Implement）
     1.3 [x] 绘制 UpdateManager 类图
@@ -41,18 +42,19 @@ a port of eclipse draw2d
 - [GEF4 + 1 = GEF5](http://nyssen.blogspot.com/2017/02/gef4-1-gef-5.html#Merger%20of%20MVC%20and%20MVC.FX)
 - [GEF4 MVC (0.1.0) 用于替换 GEF (MVC) 3.x](https://github.com/eclipse/gef/blob/master/CHANGELOG.md#gef4-mvc-010)
 - [GEF4 FX (0.1.0)用于替换 Draw2D](https://github.com/eclipse/gef/blob/master/CHANGELOG.md#gef4-fx-010)
-
 - [The Draw2d Examples - A Hidden Treasure](http://nyssen.blogspot.com/2010/12/draw2d-examples-hidden-treasure.html)
 - Alexander Nyßen（GEF Leader, https://projects.eclipse.org/projects/tools.gef/who） 的其他博客[文章](http://nyssen.blogspot.com)
 - draw2d 源码位置在[这里](https://download.eclipse.org/oomph/archive/simrel/gef.aggrcon/index/org.eclipse.draw2d.source_3.10.100.201606061308.html)
 - [GEF 官方文章](https://www.eclipse.org/gef/reference/articles.html)
 - Graphiti，https://www.eclipse.org/graphiti/documentation/overview.php
 
+### Web 绘图技术
 - 操作 Canvas 的 [3 种方法](https://compile.fi/canvas-filled-three-ways-js-webassembly-and-webgl/)
 - Canvas API 相关的[库](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API#libraries)
 - Camera 技术的使用：https://stackoverflow.com/questions/16919601/html5-canvas-camera-viewport-how-to-actually-do-it
 - [WebAssembly](https://webassembly.org/)
 
+### SWT 相关
 - [SWT 中的 TraverseEvent](https://cloud.tencent.com/developer/article/1433531)
-
+- [SWT 中的 Graphics Context](https://www.eclipse.org/articles/Article-SWT-graphics/SWT_graphics.html)
 

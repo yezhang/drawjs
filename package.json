@@ -1,0 +1,26 @@
+{
+  "name": "drawjs",
+  "version": "1.0.0",
+  "description": "a port of eclipse draw2d",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "dependencies": {
+    "canvaskit-wasm": "^0.25.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yezhang/drawjs.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yezhang/drawjs/issues"
+  },
+  "homepage": "https://github.com/yezhang/drawjs#readme"
+}
