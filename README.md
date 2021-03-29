@@ -20,7 +20,11 @@ a port of eclipse draw2d
     1.3 [x] 绘制 UpdateManager 类图
         1.3.1 [ ] DeferredUpdateManager 类图（Implement）
     1.4 [x] 绘制 LightweightSystem 类图
-    1.5 [ ] 绘制 EventHandler 类图
+        1.4.1 [x] 绘制 EventHandler 类图，从画布（Canvas）中捕获所有事件，并派发到 EventDispatcher
+    1.5 [ ] 绘制 GraphicsSource 类图
+        1.5.1 [ ] 绘制 BufferedGraphicsSource 类图（Implement）
+    1.6 [ ] 绘制 Graphics 类图
+        1.6.1 [ ] 绘制 SWTGraphics 类图（Implement）
 2. [ ]选择核心类范围
 3. [ ]使用 Rust 实现核心类
 4. [ ]建立 Rust 与 `<canvas/>` 通信机制
@@ -43,10 +47,11 @@ a port of eclipse draw2d
 - [GEF4 MVC (0.1.0) 用于替换 GEF (MVC) 3.x](https://github.com/eclipse/gef/blob/master/CHANGELOG.md#gef4-mvc-010)
 - [GEF4 FX (0.1.0)用于替换 Draw2D](https://github.com/eclipse/gef/blob/master/CHANGELOG.md#gef4-fx-010)
 - [The Draw2d Examples - A Hidden Treasure](http://nyssen.blogspot.com/2010/12/draw2d-examples-hidden-treasure.html)
+- [Display a UML Diagram using Draw2D](https://www.eclipse.org/articles/Article-GEF-Draw2d/GEF-Draw2d.html)
 - Alexander Nyßen（GEF Leader, https://projects.eclipse.org/projects/tools.gef/who） 的其他博客[文章](http://nyssen.blogspot.com)
 - draw2d 源码位置在[这里](https://download.eclipse.org/oomph/archive/simrel/gef.aggrcon/index/org.eclipse.draw2d.source_3.10.100.201606061308.html)
 - [GEF 官方文章](https://www.eclipse.org/gef/reference/articles.html)
-- Graphiti，https://www.eclipse.org/graphiti/documentation/overview.php
+- [Graphiti](https://www.eclipse.org/graphiti/documentation/overview.php)
 
 ### Web 绘图技术
 - 操作 Canvas 的 [3 种方法](https://compile.fi/canvas-filled-three-ways-js-webassembly-and-webgl/)
