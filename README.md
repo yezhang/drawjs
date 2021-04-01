@@ -12,19 +12,19 @@ a port of eclipse draw2d
 
 # 路线图（RoadMap）
 
-1. [ ]梳理 draw2d 的 Java 类继承关系
-    1.1 [x] 绘制 IFigure 类图
-        1.1.1 [ ] 绘制 Figure 类图（Implement）
-    1.2 [x] 绘制 EventDispatcher 类图
-        1.2.1 [ ] SWTEventDispatcher 类图（Implement）
-    1.3 [x] 绘制 UpdateManager 类图
-        1.3.1 [ ] DeferredUpdateManager 类图（Implement）
-    1.4 [x] 绘制 LightweightSystem 类图
-        1.4.1 [x] 绘制 EventHandler 类图，从画布（Canvas）中捕获所有事件，并派发到 EventDispatcher
-    1.5 [x] 绘制 GraphicsSource 类图
-        1.5.1 [x] 绘制 BufferedGraphicsSource 类图（Implement）
-    1.6 [ ] 绘制 Graphics 类图
-        1.6.1 [ ] 绘制 SWTGraphics 类图（Implement）
+1. [ ]梳理 draw2d 的 Java 类继承关系  
+    1.1 [x] 绘制 IFigure 类图  
+        1.1.1 [ ] 绘制 Figure 类图（Implement）  
+    1.2 [x] 绘制 EventDispatcher 类图  
+        1.2.1 [ ] SWTEventDispatcher 类图（Implement）  
+    1.3 [x] 绘制 UpdateManager 类图  
+        1.3.1 [ ] DeferredUpdateManager 类图（Implement）  
+    1.4 [x] 绘制 LightweightSystem 类图  
+        1.4.1 [x] 绘制 EventHandler 类图，从画布（Canvas）中捕获所有事件，并派发到 EventDispatcher  
+    1.5 [x] 绘制 GraphicsSource 类图  
+        1.5.1 [x] 绘制 BufferedGraphicsSource 类图（Implement）  
+    1.6 [ ] 绘制 Graphics 类图  
+        1.6.1 [ ] 绘制 SWTGraphics 类图（Implement）  
 2. [ ]选择核心类范围
 3. [ ]使用 C++ 实现核心类
 4. [ ]建立 C++ 与 `<canvas/>` 通信机制，
