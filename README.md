@@ -43,6 +43,8 @@ a port of eclipse draw2d
 - 支持海量复杂图形的高性能绘制。（百万级别数量图形）
     - 计算机图形学（2D/3D）中的裁剪算法。
 
+需支持不同的渲染器（WebGLRender、WebGPURender等），渲染器的设计可以参考 ThreeJS 中的渲染器设计。
+
 
 # 进一步阅读
 - [GEF4 wiki](https://wiki.eclipse.org/GEF/GEF4)
@@ -65,4 +67,12 @@ a port of eclipse draw2d
 ### SWT 相关
 - [SWT 中的 TraverseEvent](https://cloud.tencent.com/developer/article/1433531)
 - [SWT 中的 Graphics Context](https://www.eclipse.org/articles/Article-SWT-graphics/SWT_graphics.html)
+
+
+### WebAssembly 技术
+使用 WebAssembly 操作 WebGL，参考[OpenGL-support](https://emscripten.org/docs/porting/multimedia_and_graphics/OpenGL-support.html)
+使用 WebAssembly 操作 WebGPU，参考[ISSUE:webgpu.h-on-WebGPU](https://github.com/emscripten-core/emscripten/pull/10218)
+
+emscripten + webgpu 样例：
+https://github.com/cwoffenden/hello-webgpu
 
