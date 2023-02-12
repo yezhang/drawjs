@@ -7,7 +7,7 @@
     "doc": "docs"
   },
   "dependencies": {
-    "canvaskit-wasm": "^0.25.0"
+    "canvaskit-wasm": "^0.25.1"
   },
   "devDependencies": {},
   "scripts": {

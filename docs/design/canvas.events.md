@@ -57,6 +57,9 @@ HTMLElement 元素的事件主要继承自 Element 元素、或实现了 Documen
 https://developer.mozilla.org/en-US/docs/Web/API/GlobalEventHandlers
 
 
+## Web Worker 中的事件处理：
+Input For Workers and Worklets，https://github.com/WICG/input-for-workers
+Events in Workers and Worklets，https://docs.google.com/document/d/1byDy6IZqvaci-FQoiRzkeAmTSVCyMF5UuaSeGJRHpJk/edit#heading=h.yzqtozqzq3vs
 
 参考资料
 - https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement#events

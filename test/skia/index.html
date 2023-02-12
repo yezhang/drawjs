@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <canvas id=app width=300 height=300 tabindex=0 style='border:dashed 1px #f2f2f2'></canvas>
+
+<!-- <script type="text/javascript"
+  src="../../node_modules/canvaskit-wasm/bin/canvaskit.js"></script>
+<script type="text/javascript">
+  const ckLoaded = CanvasKitInit({
+    locateFile: (file) => '../../node_modules/canvaskit-wasm/bin/'+file});
+
+  ckLoaded.then((CanvasKit) => {
+    const surface = CanvasKit.MakeCanvasSurface('app');
+
+
+    const paint = new CanvasKit.Paint();
+    paint.setColor(CanvasKit.Color4f(0.9, 0, 0, 1.0));
+    paint.setStyle(CanvasKit.PaintStyle.Stroke);
+    paint.setAntiAlias(true);
+    const rr = CanvasKit.RRectXY(CanvasKit.LTRBRect(10, 60, 210, 260), 25, 15);
+
+    function draw(canvas) {
+      canvas.clear(CanvasKit.WHITE);
+      canvas.drawRRect(rr, paint);
+    }
+    surface.drawOnce(draw);
+  });
+</script> -->
+
+<script type="text/javascript" src="/test/skia/main.js"></script>
+</body>
+</html>
