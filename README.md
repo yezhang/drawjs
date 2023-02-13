@@ -75,4 +75,5 @@ a port of eclipse draw2d
 
 emscripten + webgpu 样例：
 https://github.com/cwoffenden/hello-webgpu
+https://www.nanovis.org/WebGPU-Cpp-WASM.html
 
