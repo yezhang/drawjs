@@ -77,3 +77,9 @@ emscripten + webgpu 样例：
 https://github.com/cwoffenden/hello-webgpu
 https://www.nanovis.org/WebGPU-Cpp-WASM.html
 
+### WebGPU 技术
+Edge 对于 WebGPU 的支持情况，打开 `edge://gpu/` 查看。
+WebGPU 在浏览器中的打开方式：https://caniuse.com/webgpu
+- Can be enabled in Firefox with the `dom.webgpu.enabled` flag.
+- Can be enabled in Safari on MacOS with the `WebGPU` experimental feature.
+- Can be enabled in some Chromium browsers (on Windows, MacOS, Linux) with the `enable-unsafe-webgpu` flag.
