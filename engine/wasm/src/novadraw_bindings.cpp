@@ -10,12 +10,11 @@
 #include <emscripten/html5_webgpu.h>
 
 extern "C" {
-EMSCRIPTEN_KEEPALIVE
-void draw() {
-// 插入绘制逻辑
+EMSCRIPTEN_KEEPALIVE void draw() {
+  // 插入绘制逻辑
 }
 }
-int main (int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
   emscripten_console_log("Hello, WebGPU!");
   return 0;
 }
