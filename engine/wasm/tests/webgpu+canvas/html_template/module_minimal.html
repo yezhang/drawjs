@@ -102,7 +102,7 @@
       <input
         type="button"
         value="Fullscreen"
-        onclick="Module.requestFullscreen(document.getElementById('pointerLock').checked, 
+        onclick="ModuleOptions.requestFullscreen(document.getElementById('pointerLock').checked, 
                                                                                 document.getElementById('resize').checked)"
       />
     </div>
@@ -115,7 +115,7 @@
       var progressElement = document.getElementById("progress");
       var spinnerElement = document.getElementById("spinner");
 
-      var Module = {
+      var ModuleOptions = {
         print: (function () {
           var element = document.getElementById("output");
           if (element) element.value = ""; // clear browser cache
@@ -151,14 +151,14 @@
           return canvas;
         })(),
         setStatus: (text) => {
-          if (!Module.setStatus.last)
-            Module.setStatus.last = { time: Date.now(), text: "" };
-          if (text === Module.setStatus.last.text) return;
+          if (!ModuleOptions.setStatus.last)
+            ModuleOptions.setStatus.last = { time: Date.now(), text: "" };
+          if (text === ModuleOptions.setStatus.last.text) return;
           var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
           var now = Date.now();
-          if (m && now - Module.setStatus.last.time < 30) return; // if this is a progress update, skip it if too soon
-          Module.setStatus.last.time = now;
-          Module.setStatus.last.text = text;
+          if (m && now - ModuleOptions.setStatus.last.time < 30) return; // if this is a progress update, skip it if too soon
+          ModuleOptions.setStatus.last.time = now;
+          ModuleOptions.setStatus.last.text = text;
           if (m) {
             text = m[1];
             progressElement.value = parseInt(m[2]) * 100;
@@ -176,7 +176,7 @@
         totalDependencies: 0,
         monitorRunDependencies: (left) => {
           this.totalDependencies = Math.max(this.totalDependencies, left);
-          Module.setStatus(
+          ModuleOptions.setStatus(
             left
               ? "Preparing... (" +
                   (this.totalDependencies - left) +
@@ -187,21 +187,20 @@
           );
         },
       };
-      Module.setStatus("Downloading...");
+      ModuleOptions.setStatus("Downloading...");
       window.onerror = () => {
-        Module.setStatus("Exception thrown, see JavaScript console");
+        ModuleOptions.setStatus("Exception thrown, see JavaScript console");
         spinnerElement.style.display = "none";
-        Module.setStatus = (text) => {
+        ModuleOptions.setStatus = (text) => {
           if (text) console.error("[post-exception status] " + text);
         };
       };
-      var HelloInit = Module;
     </script>
-    {{{ SCRIPT }}}
-    <!-- <script> -->
-    <!--   HelloInit().then(function (Module) { -->
-    <!--     console.log("HelloInit() done"); -->
-    <!--   }); -->
-    <!-- </script> -->
+    <script defer type="text/javascript" src="webgpu.js"></script>
+    <script defer>
+      HelloInit(ModuleOptions).then(function (Module) {
+        console.log("HelloInit() done");
+      });
+    </script>
   </body>
 </html>
