@@ -5,5 +5,6 @@ emcc \
 	webgpu.cpp \
 	-s MODULARIZE=1 \
 	-s EXPORT_NAME='HelloInit' \
+	-s EXPORTED_FUNCTIONS='["_draw", "_main"]' \
+	-s EXPORTED_RUNTIME_METHODS=ccall,cwrap \
 	-o webgpu.js
-# -s EXPORTED_FUNCTIONS='["_draw", "_main"]' \
