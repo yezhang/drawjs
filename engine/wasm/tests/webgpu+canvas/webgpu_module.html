@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Emscripten-Generated Code</title>
+    <title>Wasm+Canvas测试页面</title>
     <style>
       .emscripten {
         padding-right: 0;
@@ -200,6 +200,8 @@
     <script>
       HelloInit(ModuleOptions).then(function (Module) {
         console.log("HelloInit() done");
+        Module.ccall("draw");
+        print(Module);
       });
     </script>
   </body>
