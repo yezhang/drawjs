@@ -11,9 +11,10 @@
 extern "C" {
 EMSCRIPTEN_KEEPALIVE void draw() {
   // 插入绘制逻辑
+  emscripten_console_log("draw");
 }
 }
 int main(int argc, char *argv[]) {
-  emscripten_console_log("Hello, WebGPU!");
+  emscripten_console_log("Hello, WebGPU!. from cpp");
   return 0;
 }
