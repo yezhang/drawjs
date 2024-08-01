@@ -31,6 +31,7 @@ message(STATUS "Setting compilation target to WASM")
 
 execute_process(COMMAND em++ --cflags
     OUTPUT_VARIABLE EM_CFLAGS)
+
 set_target_properties(${WASM_TARGET} PROPERTIES
     COMPILE_FLAGS "${EM_CFLAGS}"
     OUTPUT_NAME ${WASM_TARGET}  # 确保所有生成的文件使用相同的基本名称
