@@ -7,4 +7,5 @@ emcc \
 	-s EXPORT_NAME='HelloInit' \
 	-s EXPORTED_FUNCTIONS='["_draw", "_main"]' \
 	-s EXPORTED_RUNTIME_METHODS=ccall,cwrap \
+	-s USE_WEBGPU=1 \
 	-o webgpu.js
