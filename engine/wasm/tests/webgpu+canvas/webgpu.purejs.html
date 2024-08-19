@@ -39,6 +39,18 @@
 
       const commandBuffer = commandEncoder.finish();
       device.queue.submit([commandBuffer]);
+
+      const vertices = new Float32Array([
+        // x, y,
+        -0.8, -0.8, 0.8, -0.8, 0.8, 0.8, -0.8, -0.8, 0.8, 0.8, -0.8, 0.8,
+      ]);
+      const vertexBuffer = device.createBuffer({})
+        label: "Cell vertices",
+        size: vertices.byteLength,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+      device.queue.writeBuffer(vertexBuffer, 0, vertices);
+      // TODO 确定定点布局
     </script>
   </body>
 </html>
