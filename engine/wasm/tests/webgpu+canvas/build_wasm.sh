@@ -1,4 +1,4 @@
-# 本脚本用于编译 webgpu.cpp 文件为 hello_module.js
+# 本脚本用于编译 webgpu.cpp 文件为 webgpu.js
 
 emcc \
 	-v \
