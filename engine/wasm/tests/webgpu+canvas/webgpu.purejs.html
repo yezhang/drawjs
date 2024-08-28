@@ -24,6 +24,56 @@
         device,
         format: canvasFormat,
       });
+
+      const vertices = new Float32Array([
+        // x, y,
+        -0.8, -0.8, 0.8, -0.8, 0.8, 0.8, -0.8, -0.8, 0.8, 0.8, -0.8, 0.8,
+      ]);
+      const vertexBuffer = device.createBuffer({
+        label: "Cell vertices",
+        size: vertices.byteLength,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+      device.queue.writeBuffer(vertexBuffer, 0, vertices);
+      // TODO 确定定点布局
+
+      const vertexBufferLayout = {
+        arrayStride: 2 * 4,
+        attributes: [{ format: "float32x2", offset: 0, shaderLocation: 0 }],
+      };
+      const cellShaderModule = device.createShaderModule({
+        label: "cell shader",
+        code: `
+          @vertex
+          fn vertexMain(@location(0) pos: vec2f) -> @builtin(position) vec4f{
+            return vec4f(pos, 0, 1); // (x, y, y, w);
+          }
+
+          @fragment
+          fn fragmentMain() -> @location(0) vec4f {
+            return vec4f(1, 0, 0, 1); // (r, g, b, a);
+          }
+        `,
+      });
+      const cellPipeline = device.createRenderPipeline({
+        label: "cell pipeline",
+        layout: "auto",
+        vertex: {
+          module: cellShaderModule,
+          entryPoint: "vertexMain",
+          buffers: [vertexBufferLayout],
+        },
+        fragment: {
+          module: cellShaderModule,
+          entryPoint: "fragmentMain",
+          targets: [
+            {
+              format: canvasFormat,
+            },
+          ],
+        },
+      });
+
       const commandEncoder = device.createCommandEncoder();
       const pass = commandEncoder.beginRenderPass({
         colorAttachments: [
@@ -35,22 +85,13 @@
           },
         ],
       });
+      pass.setPipeline(cellPipeline);
+      pass.setVertexBuffer(0, vertexBuffer);
+      pass.draw(vertices.length / 2);
       pass.end();
 
       const commandBuffer = commandEncoder.finish();
       device.queue.submit([commandBuffer]);
-
-      const vertices = new Float32Array([
-        // x, y,
-        -0.8, -0.8, 0.8, -0.8, 0.8, 0.8, -0.8, -0.8, 0.8, 0.8, -0.8, 0.8,
-      ]);
-      const vertexBuffer = device.createBuffer({})
-        label: "Cell vertices",
-        size: vertices.byteLength,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      });
-      device.queue.writeBuffer(vertexBuffer, 0, vertices);
-      // TODO 确定定点布局
     </script>
   </body>
 </html>
