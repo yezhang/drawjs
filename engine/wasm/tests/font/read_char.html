@@ -105,89 +105,6 @@
         }
       }
 
-      function drawPath(ctx, path) {
-        ctx.beginPath();
-        path.commands.forEach((cmd) => {
-          if (cmd.type === "M") {
-            ctx.moveTo(cmd.x, cmd.y);
-          } else if (cmd.type === "L") {
-            ctx.lineTo(cmd.x, cmd.y);
-          } else if (cmd.type === "C") {
-            ctx.bezierCurveTo(cmd.x1, cmd.y1, cmd.x2, cmd.y2, cmd.x, cmd.y);
-          } else if (cmd.type === "Q") {
-            ctx.quadraticCurveTo(cmd.x1, cmd.y1, cmd.x, cmd.y);
-          } else if (cmd.type === "Z") {
-            ctx.closePath();
-          }
-        });
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-
-      function drawPoints(ctx, path) {
-        ctx.fillStyle = "red";
-        path.commands.forEach((cmd) => {
-          if (
-            cmd.type === "M" ||
-            cmd.type === "L" ||
-            cmd.type === "C" ||
-            cmd.type === "Q"
-          ) {
-            ctx.beginPath();
-            ctx.arc(cmd.x, cmd.y, 3, 0, 2 * Math.PI);
-            ctx.fill();
-          }
-          if (cmd.type === "C" || cmd.type === "Q") {
-            ctx.beginPath();
-            ctx.arc(cmd.x1, cmd.y1, 3, 0, 2 * Math.PI);
-            ctx.fill();
-            if (cmd.type === "C") {
-              ctx.beginPath();
-              ctx.arc(cmd.x2, cmd.y2, 3, 0, 2 * Math.PI);
-              ctx.fill();
-            }
-          }
-        });
-      }
-
-      function drawMetrics(ctx, font, glyph, x, y, fontSize) {
-        const scale = fontSize / font.unitsPerEm;
-        const advanceWidth = glyph.advanceWidth * scale;
-        const leftSideBearing = glyph.leftSideBearing * scale;
-
-        // 绘制基线
-        ctx.strokeStyle = "blue";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(ctx.canvas.width, y);
-        ctx.stroke();
-
-        // 绘制前进宽度
-        ctx.strokeStyle = "green";
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + advanceWidth, y);
-        ctx.stroke();
-
-        // 绘制左侧边距
-        ctx.strokeStyle = "purple";
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + leftSideBearing, y);
-        ctx.stroke();
-
-        // 绘制边界框
-        ctx.strokeStyle = "orange";
-        ctx.strokeRect(
-          x + glyph.xMin * scale,
-          y - glyph.yMax * scale,
-          (glyph.xMax - glyph.xMin) * scale,
-          (glyph.yMax - glyph.yMin) * scale,
-        );
-      }
-
       async function drawGlyph(fontUrl, char) {
         const font = await loadFont(fontUrl);
         const glyph = font.charToGlyph(char);
@@ -199,11 +116,15 @@
 
         const scale = fontSize / font.unitsPerEm;
 
+        console.log("font.unitsPerEm:", font.unitsPerEm, "scale:", scale);
+        // 将 glyph 的信息打印到控制台
+        console.log("glyph:", glyph);
+
         // 计算边界框的中心位置
         const bboxWidth = (glyph.xMax - glyph.xMin) * scale;
         const bboxHeight = (glyph.yMax - glyph.yMin) * scale;
         const x = (canvasWidth - bboxWidth) / 2 - glyph.xMin * scale;
-        const y = (canvasHeight + bboxHeight) / 2 - glyph.yMax * scale;
+        const y = (canvasHeight - bboxHeight) / 2 + glyph.yMax * scale;
 
         console.log("x:", x, "y:", y, "fontSize:", fontSize);
 
@@ -212,11 +133,13 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawGrid(ctx, canvasWidth, canvasHeight, 50); // 绘制网格背景，网格大小为 50
 
-        drawPath(ctx, path); // 绘制路径
-        drawPoints(ctx, path); // 绘制锚点和控制点
-        glyph.drawMetrics(ctx, x, 10, fontSize);
+        path.stroke = "red";
+        path.fill = "transparent";
+        path.draw(ctx);
 
-        // drawMetrics(ctx, font, glyph, x, y, fontSize); // 绘制度量属性
+        // glyph.draw(ctx, x, 400, fontSize, font);
+        glyph.drawPoints(ctx, x, y, fontSize, font);
+        glyph.drawMetrics(ctx, x, y, fontSize);
       }
 
       function drawRulers() {
