@@ -15,3 +15,11 @@ y_world = y0 - y_local; 相当于 y_world = y0 + (-y_local)
 ```
 
 注意，`y_local` 需要取反，因为在 canvas 中，y 轴是向下增加的，而在局部坐标系中，y 轴是向上增加的。
+
+## 本地调试
+
+使用 python 模块 http.server 来启动一个本地服务器，然后在浏览器中打开 http://localhost:8080 即可查看效果。
+
+```bash
+python -m http.server 8080
+```
