@@ -1,2 +1,0 @@
-方法地址：
-https://wdobbie.com/post/gpu-text-rendering-with-vector-textures/
