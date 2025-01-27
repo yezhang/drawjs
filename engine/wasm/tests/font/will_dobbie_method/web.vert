@@ -1,5 +1,5 @@
 	uniform sampler2D uAtlasSampler;
-    uniform vec2 uTexelSize;
+  uniform vec2 uTexelSize;
 	uniform vec2 uPositionMul;
 	uniform vec2 uPositionAdd;
 	uniform vec2 uCanvasSize;
