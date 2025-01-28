@@ -1,3 +1,7 @@
+## font.frag 代码注释
+
+### 逐行解释
+
 以下是结合 `font.frag` 代码的逐行注释，帮助理解每一行的功能和作用：
 
 ```glsl
@@ -248,3 +252,285 @@ void main() {
 - **网格显示**：可选地显示网格，便于调试和可视化。
 
 通过这些注释，可以更清晰地理解 `font.frag` 片段着色器的实现细节和功能。
+
+## integerCell/indicesCoord/cellMid 计算逻辑
+
+在 `font.frag` 片段着色器中，`integerCell`、`indicesCoord` 和 `cellMid` 是与网格单元（grid cell）相关的变量，用于定位当前像素对应的贝塞尔曲线数据。以下是它们的详细解释和计算逻辑：
+
+---
+
+### 1. **`integerCell`：当前像素所在的网格单元坐标**
+
+```glsl
+vec2 integerCell = floor(clamp(vNormCoord * vGridSize, vec2(0.5), vec2(vGridSize) - 0.5));
+```
+
+- **`vNormCoord`**：归一化的纹理坐标，表示当前像素在字形中的相对位置。
+- **`vGridSize`**：网格的大小，表示字形被划分为多少个网格单元。
+- **`vNormCoord * vGridSize`**：将归一化坐标转换为网格坐标。例如，如果网格大小为 `10x10`，则 `vNormCoord * vGridSize` 的范围是 `[0, 10]`。
+- **`floor`**：将浮点数坐标向下取整，得到当前像素所在的网格单元的整数坐标。
+- **`clamp`**：将坐标限制在 `[0.5, vGridSize - 0.5]` 范围内，避免越界。
+
+**作用**：
+
+- `integerCell` 表示当前像素所在的网格单元的整数坐标。例如，如果网格大小为 `10x10`，则 `integerCell` 的范围是 `[0, 9]`。
+
+---
+
+### 2. **`indicesCoord`：贝塞尔曲线索引的纹理坐标**
+
+```glsl
+vec2 indicesCoord = vGridMin + integerCell + 0.5;
+```
+
+- **`vGridMin`**：网格的起始坐标，表示当前字形在纹理中的起始位置。
+- **`integerCell`**：当前像素所在的网格单元坐标。
+- **`+ 0.5`**：将整数坐标转换为纹理坐标的中心点。纹理坐标的范围是 `[0, 1]`，而网格单元的整数坐标是离散的，因此需要加上 `0.5` 来获取网格单元的中心。
+
+**作用**：
+
+- `indicesCoord` 是当前网格单元在纹理中的坐标，用于从纹理中读取贝塞尔曲线的索引数据。
+
+---
+
+### 3. **`cellMid`：网格单元的中心点坐标**
+
+```glsl
+vec2 cellMid = (integerCell + 0.5) / vGridSize;
+```
+
+- **`integerCell + 0.5`**：将网格单元的整数坐标转换为中心点坐标。
+- **`/ vGridSize`**：将中心点坐标归一化到 `[0, 1]` 范围。
+
+**作用**：
+
+- `cellMid` 表示当前网格单元的中心点在归一化坐标系中的位置。它用于计算贝塞尔曲线与网格单元的相对位置。
+
+---
+
+### 为什么要这么计算？
+
+1. **网格单元的作用**：
+
+   - 字形被划分为多个网格单元，每个网格单元存储与该单元相交的贝塞尔曲线的索引和控制点数据。
+   - 通过网格单元，可以快速定位当前像素需要处理的贝塞尔曲线，避免遍历所有曲线。
+
+2. **纹理坐标的计算**：
+
+   - 纹理坐标需要精确到网格单元的中心点，以确保读取的贝塞尔曲线数据是准确的。
+   - `indicesCoord` 的计算确保了从纹理中读取的数据对应于当前网格单元。
+
+3. **归一化坐标的作用**：
+
+   - `cellMid` 的归一化坐标用于计算贝塞尔曲线与当前像素的相对位置，从而确定像素是否被字形覆盖。
+
+4. **抗锯齿和交点计算**：
+   - 通过 `integerCell` 和 `cellMid`，可以确定当前像素与贝塞尔曲线的交点，进而计算像素的透明度值，实现抗锯齿效果。
+
+---
+
+### 示例
+
+假设：
+
+- 网格大小 `vGridSize = (10, 10)`，即字形被划分为 `10x10` 的网格。
+- 当前像素的归一化坐标 `vNormCoord = (0.15, 0.25)`。
+
+计算过程：
+
+1. **`integerCell`**：
+
+   - `vNormCoord * vGridSize = (1.5, 2.5)`
+   - `floor(clamp((1.5, 2.5), (0.5, 0.5), (9.5, 9.5))) = (1, 2)`
+   - 结果：`integerCell = (1, 2)`
+
+2. **`indicesCoord`**：
+
+   - 假设 `vGridMin = (0, 0)`（字形从纹理的左上角开始）。
+   - `indicesCoord = vGridMin + integerCell + 0.5 = (0, 0) + (1, 2) + (0.5, 0.5) = (1.5, 2.5)`
+   - 结果：`indicesCoord = (1.5, 2.5)`
+
+3. **`cellMid`**：
+   - `cellMid = (integerCell + 0.5) / vGridSize = (1.5, 2.5) / (10, 10) = (0.15, 0.25)`
+   - 结果：`cellMid = (0.15, 0.25)`
+
+---
+
+### 总结
+
+- **`integerCell`**：当前像素所在的网格单元坐标。
+- **`indicesCoord`**：当前网格单元在纹理中的坐标，用于读取贝塞尔曲线数据。
+- **`cellMid`**：当前网格单元的中心点坐标，用于计算贝塞尔曲线与像素的相对位置。
+
+这些变量的计算是为了高效地定位和处理贝塞尔曲线数据，从而实现高质量的字体渲染。
+
+## 采样过程分析
+
+在 `font.frag` 中，遍历所有采样角度的逻辑是为了实现抗锯齿效果。通过在不同角度下采样贝塞尔曲线，计算像素的覆盖面积，从而得到平滑的边缘效果。以下是针对一个采样角度的详细分析，逐行解释其目的和计算逻辑。
+
+---
+
+### 采样角度的核心逻辑
+
+```glsl
+for (int ss = 0; ss < numSS; ss++) {
+    vec2 t;
+    int numT = getAxisIntersections(p[0].x, p[1].x, p[2].x, t);
+
+    for (int tindex = 0; tindex < 2; tindex++) {
+        if (tindex == numT) break;
+
+        if (t[tindex] > 0.0 && t[tindex] <= 1.0) {
+            float derivx = tangentAt(p[0].x, p[1].x, p[2].x, t[tindex]);
+            float posy = positionAt(p[0].y, p[1].y, p[2].y, t[tindex]);
+
+            if (posy > -1.0 && posy < 1.0) {
+                float delta = integrateWindow(posy);
+                percent = percent + (derivx < 0.0 ? delta : -delta);
+
+                float intersectDist = posy + 1.0;
+                if (intersectDist < abs(firstIntersection[ss])) {
+                    firstIntersection[ss] = derivx < 0.0 ? -intersectDist : intersectDist;
+                }
+            }
+        }
+    }
+
+    if (ss + 1 < numSS) {
+        for (int i = 0; i < 3; i++) {
+            p[i] = rotM * p[i];
+        }
+    }
+}
+```
+
+---
+
+### 逐行解释
+
+#### 1. **初始化采样角度**
+
+```glsl
+for (int ss = 0; ss < numSS; ss++) {
+```
+
+- **目的**：遍历所有采样角度。`numSS` 是采样次数，通常为 4。
+- **作用**：通过多次采样，计算像素在不同角度下的覆盖面积，实现抗锯齿。
+
+---
+
+#### 2. **计算贝塞尔曲线与水平线的交点**
+
+```glsl
+vec2 t;
+int numT = getAxisIntersections(p[0].x, p[1].x, p[2].x, t);
+```
+
+- **目的**：计算当前贝塞尔曲线与水平线的交点。
+- **`getAxisIntersections`**：求解二次方程的根，得到贝塞尔曲线与水平线的交点参数 `t`。
+- **`t`**：存储交点的参数值（范围 `[0, 1]`）。
+- **`numT`**：交点的数量（0、1 或 2）。
+
+---
+
+#### 3. **遍历所有交点**
+
+```glsl
+for (int tindex = 0; tindex < 2; tindex++) {
+    if (tindex == numT) break;
+```
+
+- **目的**：遍历所有交点，计算每个交点对像素覆盖面积的贡献。
+- **`tindex`**：当前交点的索引。
+- **`break`**：如果交点数少于 2，则提前退出循环。
+
+---
+
+#### 4. **检查交点是否在有效范围内**
+
+```glsl
+if (t[tindex] > 0.0 && t[tindex] <= 1.0) {
+```
+
+- **目的**：确保交点参数 `t` 在有效范围内（`[0, 1]`）。
+- **作用**：排除无效的交点，避免错误计算。
+
+---
+
+#### 5. **计算交点的切线和位置**
+
+```glsl
+float derivx = tangentAt(p[0].x, p[1].x, p[2].x, t[tindex]);
+float posy = positionAt(p[0].y, p[1].y, p[2].y, t[tindex]);
+```
+
+- **`tangentAt`**：计算贝塞尔曲线在交点处的切线（导数）。
+- **`positionAt`**：计算贝塞尔曲线在交点处的垂直位置（y 坐标）。
+- **`derivx`**：交点的切线值，用于判断曲线的方向（进入或退出字形）。
+- **`posy`**：交点的垂直位置，用于计算像素的覆盖面积。
+
+---
+
+#### 6. **检查交点是否在像素窗口内**
+
+```glsl
+if (posy > -1.0 && posy < 1.0) {
+```
+
+- **目的**：确保交点位于像素窗口内（`[-1, 1]` 范围）。
+- **作用**：排除位于像素窗口外的交点，避免错误计算。
+
+---
+
+#### 7. **计算交点的贡献**
+
+```glsl
+float delta = integrateWindow(posy);
+percent = percent + (derivx < 0.0 ? delta : -delta);
+```
+
+- **`integrateWindow`**：计算交点对像素覆盖面积的贡献。
+- **`delta`**：交点的贡献值，根据切线方向（`derivx`）决定是增加还是减少覆盖面积。
+- **`percent`**：累加所有交点的贡献，最终得到像素的覆盖面积。
+
+---
+
+#### 8. **更新最近的交点**
+
+```glsl
+float intersectDist = posy + 1.0;
+if (intersectDist < abs(firstIntersection[ss])) {
+    firstIntersection[ss] = derivx < 0.0 ? -intersectDist : intersectDist;
+}
+```
+
+- **`intersectDist`**：交点与像素窗口边界的距离。
+- **`firstIntersection[ss]`**：存储当前采样角度下的最近交点。
+- **作用**：记录最近的交点，用于后续判断像素是否在字形内部。
+
+---
+
+#### 9. **旋转控制点，准备下一次采样**
+
+```glsl
+if (ss + 1 < numSS) {
+    for (int i = 0; i < 3; i++) {
+        p[i] = rotM * p[i];
+    }
+}
+```
+
+- **目的**：旋转贝塞尔曲线的控制点，准备下一个采样角度。
+- **`rotM`**：旋转矩阵，用于将控制点旋转到下一个采样角度。
+- **作用**：通过旋转控制点，模拟不同角度下的采样过程。
+
+---
+
+### 总结
+
+- **采样角度**：通过多次采样，计算像素在不同角度下的覆盖面积，实现抗锯齿。
+- **交点计算**：求解贝塞尔曲线与水平线的交点，确定像素的覆盖面积。
+- **贡献累加**：根据交点的位置和切线方向，累加像素的覆盖面积。
+- **旋转控制点**：通过旋转控制点，模拟不同角度下的采样过程。
+
+通过这一过程，`font.frag` 能够高效地计算像素的覆盖面积，并实现高质量的字体渲染效果。
