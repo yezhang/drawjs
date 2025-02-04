@@ -19,6 +19,11 @@
         border: 1px dashed #000;
         box-sizing: border-box;
       }
+      #fontRasterCanvas {
+        width: 800px;
+        height: 800px;
+        border: 1px dashed #000;
+      }
       #rulerX,
       #rulerY {
         position: absolute;
@@ -42,10 +47,12 @@
   </head>
   <body>
     <div id="container">
-      <canvas id="fontCanvas" width="500" height="500"></canvas>
-      <canvas id="rulerX" width="500" height="40"></canvas>
-      <canvas id="rulerY" width="40" height="500"></canvas>
+      <canvas id="fontCanvas" width="1000" height="1000"></canvas>
+      <canvas id="rulerX" width="1000" height="40"></canvas>
+      <canvas id="rulerY" width="40" height="1000"></canvas>
     </div>
+
+    <canvas id="fontRasterCanvas" width="1000" height="1000"></canvas>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/opentype.js/1.3.3/opentype.min.js"></script>
     <script>
       async function loadFont(url) {
@@ -96,15 +103,410 @@
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
-        for (let y = 0; y <= height; y += gridSize) {
+        for (let y = height; y >= 0; y -= gridSize) {
           ctx.beginPath();
           ctx.moveTo(0, y);
           ctx.lineTo(10, y);
           ctx.stroke();
-          ctx.fillText(y, 15, y);
+          ctx.fillText(height - y, 15, y);
         }
       }
 
+      function convertToQuadraticBezierArray(commands) {
+        const quadraticBeziers = [];
+        let currentX, currentY; // 当前点坐标
+        let startX, startY; // 当前子路径的起点（用于闭合路径）
+
+        for (const cmd of commands) {
+          switch (cmd.type) {
+            case "M": // moveTo: 更新起点，不生成曲线
+              currentX = cmd.x;
+              currentY = cmd.y;
+              startX = currentX;
+              startY = currentY;
+              break;
+
+            case "L": {
+              // lineTo: 转换为二次曲线（控制点为中点）
+              const endX = cmd.x,
+                endY = cmd.y;
+              quadraticBeziers.push({
+                type: "quadratic",
+                start: { x: currentX, y: currentY },
+                control: { x: (currentX + endX) / 2, y: (currentY + endY) / 2 },
+                end: { x: endX, y: endY },
+              });
+              currentX = endX;
+              currentY = endY;
+              break;
+            }
+
+            case "Q": // quadraticCurveTo: 直接保留
+              quadraticBeziers.push({
+                type: "quadratic",
+                start: { x: currentX, y: currentY },
+                control: { x: cmd.x1, y: cmd.y1 },
+                end: { x: cmd.x, y: cmd.y },
+              });
+              currentX = cmd.x;
+              currentY = cmd.y;
+              break;
+
+            case "C": {
+              // cubicCurveTo: 分割为多个二次曲线
+              const p0 = { x: currentX, y: currentY };
+              const p1 = { x: cmd.x1, y: cmd.y1 };
+              const p2 = { x: cmd.x2, y: cmd.y2 };
+              const p3 = { x: cmd.x, y: cmd.y };
+
+              // 递归分割三次曲线为二次曲线（此处分割2次以减少误差）
+              splitCubicToQuadratics(p0, p1, p2, p3, 2).forEach((quad) => {
+                quadraticBeziers.push(quad);
+              });
+
+              currentX = p3.x;
+              currentY = p3.y;
+              break;
+            }
+
+            case "Z": // closePath: 生成闭合线段二次曲线
+              if (currentX !== startX || currentY !== startY) {
+                quadraticBeziers.push({
+                  type: "quadratic",
+                  start: { x: currentX, y: currentY },
+                  control: {
+                    x: (currentX + startX) / 2,
+                    y: (currentY + startY) / 2,
+                  },
+                  end: { x: startX, y: startY },
+                });
+                currentX = startX;
+                currentY = startY;
+              }
+              break;
+
+            default:
+              throw new error(`unknown command: ${cmd.type}`);
+          }
+        }
+
+        return quadraticBeziers;
+      }
+      function clamp(number, min, max) {
+        return Math.max(min, Math.min(number, max));
+      }
+      function almostEqual(a, b, epsilon = 1e-6) {
+        return Math.abs(a - b) < epsilon;
+      }
+      function bezierIntersectHorz(bezier, Y) {
+        const { start: A, control: B, end: C } = bezier;
+        const T_Valid = (t) => t >= 0 && t <= 1;
+        const X_From_T = (t) =>
+          (1 - t) ** 2 * A.x + 2 * t * (1 - t) * B.x + t ** 2 * C.x;
+
+        const outX = [];
+        let i = 0;
+
+        // Parts of the bezier function solved for t
+        const a = A.y - 2 * B.y + C.y;
+
+        // In the condition that a=0, the standard formulas won't work
+        if (almostEqual(a, 0)) {
+          const t = (2 * B.y - C.y - Y) / (2 * (B.y - C.y));
+          if (T_Valid(t)) {
+            outX[i++] = X_From_T(t);
+          }
+          return { rootNum: i, roots: outX };
+        }
+
+        const sqrtExpr = Math.sqrt(Y * a + B.y * B.y - A.y * C.y);
+
+        const t1 = (A.y - B.y + sqrtExpr) / a;
+        const t2 = (A.y - B.y - sqrtExpr) / a;
+        if (T_Valid(t1)) {
+          outX[i++] = X_From_T(t1);
+        }
+        if (T_Valid(t2)) {
+          outX[i++] = X_From_T(t2);
+        }
+        return { rootNum: i, roots: outX };
+      }
+
+      function bezierIntersectVert(bezier, X) {
+        const { start, control, end } = bezier;
+
+        const bezierInverse = {
+          start: { x: start.y, y: start.x },
+          control: { x: control.y, y: control.x },
+          end: { x: end.y, y: end.x },
+        };
+        return bezierIntersectHorz(bezierInverse, X);
+      }
+      // 按照网格，将 glyph 贝塞尔曲线做逻辑上的切割，
+      // 如果网格单元格与曲线相交，则该曲线放入该单元格的列表中
+      // 曲线与网格单元相交，是指曲线穿过网格单元的边界。
+      function makeGridOnBezier(normCurves, cboxSize, gridSize) {
+        const { w: gridWidth, h: gridHeight } = gridSize;
+
+        function setgrid(grid, x, y, curveIndex) {
+          const xIndex = clamp(x, 0, gridWidth - 1);
+          const yIndex = clamp(y, 0, gridHeight - 1);
+          const index = yIndex * gridWidth + xIndex;
+          grid[index].push(curveIndex);
+        }
+
+        const grid = new Array(gridWidth * gridHeight);
+        for (let i = 0; i < grid.length; i++) {
+          grid[i] = [];
+        }
+
+        // 遍历所有曲线，将曲线的索引放入网格中
+        normCurves.forEach((curve, curveIndex) => {
+          let hasIntersect = false;
+
+          // 检查垂直网格边界与曲线的交点，包含左右边界
+          for (let x = 0.0; x <= gridWidth; x++) {
+            const x0 = (x / gridWidth) * cboxSize.w;
+
+            const { rootNum, roots } = bezierIntersectVert(curve, x0);
+            if (rootNum > 0) {
+              for (let i = 0; i < rootNum; i++) {
+                let root = roots[i];
+                let y = Math.floor((root / cboxSize.h) * gridHeight);
+                setgrid(grid, x, y, curveIndex); // right edge
+                setgrid(grid, x - 1, y, curveIndex); // left edge
+                hasIntersect = true;
+              }
+            }
+          }
+
+          for (let y = 0.0; y <= gridHeight; y++) {
+            const y0 = (y / gridHeight) * cboxSize.h;
+            const { rootNum, roots } = bezierIntersectHorz(curve, y0);
+            if (rootNum > 0) {
+              for (let i = 0; i < rootNum; i++) {
+                let root = roots[i];
+                let x = Math.floor((root / cboxSize.w) * gridWidth);
+                setgrid(grid, x, y, curveIndex); // top edge
+                setgrid(grid, x, y - 1, curveIndex); // bottom edge
+                hasIntersect = true;
+              }
+            }
+          }
+
+          if (!hasIntersect) {
+            // 如果曲线没有与网格相交，则将曲线放入最近的网格单元格
+            const x = Math.floor((curve.start.x / cboxSize.w) * gridWidth);
+            const y = Math.floor((curve.start.y / cboxSize.h) * gridHeight);
+            setgrid(grid, x, y, curveIndex);
+          }
+        });
+        return grid;
+      }
+
+      function relativeTo(srcPoint, origin) {
+        return {
+          x: srcPoint.x - origin.x,
+          y: srcPoint.y - origin.y,
+        };
+      }
+
+      /**
+       * 将 em 空间内的坐标转换为 cbox 空间内;
+       * 坐标原点在左下角，Y 向上
+       * 单位值域范围是 unitsPerEm(1000)
+       */
+      function translateCurveOrigin(font, glyph, curves) {
+        const cbox = glyph.getMetrics();
+        const origin = {
+          x: cbox.xMin,
+          y: cbox.yMin,
+        };
+        curves.forEach((curve) => {
+          curve.start = relativeTo(curve.start, origin);
+          curve.control = relativeTo(curve.control, origin);
+          curve.end = relativeTo(curve.end, origin);
+        });
+      }
+      // 将 curves 中的坐标转换为 cbox 空间，[0,1]
+      function normCurvesToCBox(cboxSize, curves) {
+        const cbWidth = cboxSize.w;
+        const cbHeight = cboxSize.h;
+
+        const transformScalePoint = (p) => {
+          return {
+            x: p.x / cbWidth,
+            y: p.y / cbHeight,
+          };
+        };
+        curves.forEach((c) => {
+          c.start = transformScalePoint(c.start);
+          c.control = transformScalePoint(c.control);
+          c.end = transformScalePoint(c.end);
+        });
+      }
+      function drawGlyphByGPU(canvas, font, glyph) {
+        const ctx = canvas.getContext("2d");
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+
+        const pathCommands = glyph.path.commands;
+        const curves = convertToQuadraticBezierArray(pathCommands);
+        translateCurveOrigin(font, glyph, curves);
+
+        // 转换为 cbox max 坐标系，但是维持 y 轴向上
+        const cbox = glyph.getMetrics();
+        const cboxSize = {
+          w: cbox.xMax - cbox.xMin,
+          h: cbox.yMax - cbox.yMin,
+        };
+        // normCurvesToCBox(cboxSize, curves);
+
+        const gridWidth = 5;
+        const gridHeight = 5;
+        const gridSize = {
+          w: 5,
+          h: 5,
+        };
+        const grid = makeGridOnBezier(curves, cboxSize, gridSize);
+
+        // 将 canvas y 轴翻转后绘制
+        function paintDot(ctx, p, canvasSize, color) {
+          const x = p.x;
+          const y = p.y;
+          const canvasHeight = canvasSize.h;
+          // 设置填充颜色
+          ctx.fillStyle = color || "rgba(255, 0, 255, 1)";
+          // ctx.fillStyle = "rgba(255, 0, 255, 1)";
+          ctx.fillRect(x - 0.5, canvasHeight - y - 0.5, 2, 2);
+        }
+
+        function paintGridCell(ctx, cellLoc, canvasSize, color) {
+          const { x, y, w, h } = cellLoc;
+          const canvasHeight = canvasSize.h;
+
+          ctx.strokeStyle = "rgba(255, 255, 0, 0.5)";
+          ctx.lineWidth = 1;
+          // strokeRect(x, y, width, height)
+          ctx.strokeRect(x, y, w, h);
+        }
+
+        function paintCurve(ctx, curve, canvasSize) {
+          paintDot(ctx, curve.start, canvasSize);
+          paintDot(ctx, curve.control, canvasSize);
+          paintDot(ctx, curve.end, canvasSize);
+        }
+
+        const canvasSize = {
+          w: canvas.width,
+          h: canvas.height,
+        };
+        // DEBUG 将所有曲线绘制出来
+        for (let i = 0; i < curves.length; i++) {
+          // paintCurve(ctx, curves[i], canvasSize);
+        }
+
+        function distance(p1, p2) {
+          let dx = p1.x - p2.x;
+          let dy = p1.y - p2.y;
+          return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        // 用于存储去重后的 gridCoord 对象
+        const uniqueGridCoords = [];
+        // 用于存储唯一的标识符
+        const seen = new Set();
+
+        function decideColor(x, y, grid, curves) {
+          let gridCoord = {
+            x: Math.floor((x / cboxSize.w) * gridWidth),
+            y: Math.floor((y / cboxSize.h) * gridHeight),
+          };
+
+          // 生成唯一标识符
+          const key = `${gridCoord.x},${gridCoord.y}`;
+
+          // 如果标识符不存在于 Set 中，则添加到结果数组和 Set 中
+          if (!seen.has(key)) {
+            seen.add(key);
+            uniqueGridCoords.push(gridCoord);
+          }
+
+          let isEven = (gridCoord.x + gridCoord.y) % 2 == 0;
+
+          let color = "";
+          if (isEven) {
+            color = "black";
+          } else {
+            color = "red";
+          }
+          let cellIdx = gridCoord.y * gridWidth + gridCoord.x;
+          let curveIdxList = grid[cellIdx];
+
+          // console.log(curveIdxList);
+
+          for (let i = 0; i < curveIdxList.length; i++) {
+            let curve = curves[curveIdxList[i]];
+
+            // console.log(curve);
+
+            let e0 = curve.start;
+            let c = curve.control;
+            let e1 = curve.end;
+
+            let dist_e0 = distance({ x, y }, e0);
+            let dist_c = distance({ x, y }, c);
+            let dist_e1 = distance({ x, y }, e1);
+            if (dist_e0 <= 3 || dist_e1 <= 3) {
+              color = "blue";
+            }
+            if (dist_c <= 3) {
+              color = "rgba(0, 255, 0, 1)"; // 绿色
+            }
+          }
+          return color;
+        }
+
+        // 手动光栅化
+        for (let y = 0.5; y < cboxSize.h; y++) {
+          for (let x = 0.5; x < cboxSize.w; x++) {
+            let color = decideColor(x, y, grid, curves);
+            paintDot(ctx, { x, y }, canvasSize, color);
+          }
+        }
+
+        function rasterGridCell(
+          ctx,
+          grid_x,
+          grid_y,
+          cboxSize,
+          canvasSize,
+          gridData,
+          curves,
+        ) {
+          let grid_x_unit = cboxSize.w / gridWidth;
+          let grid_y_unit = cboxSize.h / gridHeight;
+          for (
+            let y = grid_y * grid_y_unit;
+            y < (grid_y + 1) * grid_y_unit;
+            y++
+          ) {
+            for (
+              let x = grid_x * grid_x_unit;
+              x < (grid_x + 1) * grid_x_unit;
+              x++
+            ) {
+              let color = decideColor(x, y, gridData, curves);
+              paintDot(ctx, { x, y }, canvasSize, color);
+            }
+          }
+        }
+
+        // rasterGridCell(ctx, 1, 0, cboxSize, canvasSize, grid, curves);
+
+        // DEBUG
+        console.log(uniqueGridCoords);
+      }
       async function drawGlyph(fontUrl, char) {
         const font = await loadFont(fontUrl);
         const glyph = font.charToGlyph(char);
@@ -112,7 +514,7 @@
         const ctx = canvas.getContext("2d");
         const canvasWidth = canvas.width;
         const canvasHeight = canvas.height;
-        const fontSize = Math.min(canvasWidth, canvasHeight) * 0.8; // 使字体大小适应画布
+        const fontSize = Math.min(canvasWidth, canvasHeight) * 1.06; // 使字体大小适应画布
 
         const scale = fontSize / font.unitsPerEm;
 
@@ -131,7 +533,7 @@
         const path = glyph.getPath(x, y, fontSize); // x, y, fontSize
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawGrid(ctx, canvasWidth, canvasHeight, 50); // 绘制网格背景，网格大小为 50
+        drawGrid(ctx, canvasWidth, canvasHeight, canvasWidth / 5); // 绘制网格背景，网格大小为 50
 
         path.stroke = "red";
         path.fill = "transparent";
@@ -140,6 +542,9 @@
         // glyph.draw(ctx, x, 400, fontSize, font);
         glyph.drawPoints(ctx, x, y, fontSize, font);
         glyph.drawMetrics(ctx, x, y, fontSize);
+
+        const rasterCanvas = document.getElementById("fontRasterCanvas");
+        drawGlyphByGPU(rasterCanvas, font, glyph);
       }
 
       function drawRulers() {
@@ -147,8 +552,8 @@
         const rulerY = document.getElementById("rulerY");
         const ctxX = rulerX.getContext("2d");
         const ctxY = rulerY.getContext("2d");
-        drawRulerX(ctxX, rulerX.width, 20); // 绘制 X 轴坐标尺，网格大小为 50
-        drawRulerY(ctxY, rulerY.height, 20); // 绘制 Y 轴坐标尺，网格大小为 50
+        drawRulerX(ctxX, rulerX.width, 50); // 绘制 X 轴坐标尺，网格大小为 50
+        drawRulerY(ctxY, rulerY.height, 50); // 绘制 Y 轴坐标尺，网格大小为 50
       }
 
       drawRulers();
