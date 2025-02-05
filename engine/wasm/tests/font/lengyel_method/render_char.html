@@ -122,11 +122,11 @@
         let cellIndex = gridCoord.y * global.gridSize.x + gridCoord.x;
         let curvesInCell = gridCells[cellIndex];
 
-        // for(var i: u32 = 0; i < curvesInCell.length; i++) {
-        //  let curveIndex = curveIndexs[curvesInCell.offset + i];
-        var curveAllNum = arrayLength(&curvesData);
-        for(var i: u32 = 0; i < curveAllNum; i++) {
-          let curveIndex = i;
+        for(var i: u32 = 0; i < curvesInCell.length; i++) {
+          let curveIndex = curveIndexs[curvesInCell.offset + i];
+        // var curveAllNum = arrayLength(&curvesData);
+        // for(var i: u32 = 0; i < curveAllNum; i++) {
+        //   let curveIndex = i;
 
           // Fetch the three 2D control points for the current curve from the
           // curve texture. The first texel contains both p1 and p2 in the
@@ -145,7 +145,7 @@
           let dist_c: f32 = distance(texelNormCoord, c);
           let dist_e1: f32 = distance(texelNormCoord, e1);
           if( dist_e0 <= 0.005 || dist_c <= 0.005 || dist_e1 <= 0.005) {
-            // return vec4f(0.0, 0.0, 1.0, 1.0);
+            return vec4f(0.0, 0.0, 1.0, 1.0);
           }
 
           // 将贝塞尔曲线坐标转换为相对于当前像素的坐标
@@ -642,6 +642,11 @@
             setgrid(grid, x, y, curveIndex);
           }
         });
+
+        // 对 grid 中的数据去重
+        for (let i = 0; i < grid.length; i++) {
+          grid[i] = [...new Set(grid[i])];
+        }
         return grid;
       }
 
@@ -835,7 +840,7 @@
         const normBezier = normalizeFontGlyphBezier(font, char);
         const { curves: normCurves, cbox: normCBox } = normBezier;
 
-        const gridWidth = 5;
+        const gridWidth = 1;
         const gridHeight = 5;
         uGlobalValues.set({
           color: [1, 0, 0, 1],
@@ -955,18 +960,20 @@
 
       drawGlyph("./STSong.ttf", "永");
 
-      let contents = `白日依山尽，黄河入海流。欲穷千里目，更上一层楼。`;
+      function drawContents() {
+        let contents = `白日依山尽，黄河入海流。欲穷千里目，更上一层楼。`;
 
-      let index = 0;
-      function drawChar() {
-        if (index < contents.length) {
-          let c = contents[index];
-          drawGlyph("./STSong.ttf", c);
-          index++;
+        let index = 0;
+        function drawChar() {
+          if (index < contents.length) {
+            let c = contents[index];
+            drawGlyph("./STSong.ttf", c);
+            index++;
+          }
+          setTimeout(drawChar, 1000);
         }
-        setTimeout(drawChar, 1000);
+        drawChar();
       }
-      drawChar();
     </script>
   </body>
 </html>
