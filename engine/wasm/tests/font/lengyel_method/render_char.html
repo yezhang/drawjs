@@ -14,8 +14,8 @@
         position: absolute;
         top: 40px;
         left: 40px;
-        width: 1000px;
-        height: 1000px;
+        width: 500px;
+        height: 500px;
         border: 1px dashed #000;
         box-sizing: border-box;
       }
@@ -145,7 +145,7 @@
           let dist_c: f32 = distance(texelNormCoord, c);
           let dist_e1: f32 = distance(texelNormCoord, e1);
           if( dist_e0 <= 0.005 || dist_c <= 0.005 || dist_e1 <= 0.005) {
-            return vec4f(0.0, 0.0, 1.0, 1.0);
+            // return vec4f(0.0, 0.0, 1.0, 1.0);
           }
 
           // 将贝塞尔曲线坐标转换为相对于当前像素的坐标
@@ -211,7 +211,7 @@
             if ((code & 1u) != 0u) {
               // if(x1 >= 0) {
               //  coverage += 1;
-              //}
+              // }
               coverage += x1_ratio;
             }
             if (code > 1u) {
@@ -954,6 +954,19 @@
       drawRulers();
 
       drawGlyph("./STSong.ttf", "永");
+
+      let contents = `白日依山尽，黄河入海流。欲穷千里目，更上一层楼。`;
+
+      let index = 0;
+      function drawChar() {
+        if (index < contents.length) {
+          let c = contents[index];
+          drawGlyph("./STSong.ttf", c);
+          index++;
+        }
+        setTimeout(drawChar, 1000);
+      }
+      drawChar();
     </script>
   </body>
 </html>
