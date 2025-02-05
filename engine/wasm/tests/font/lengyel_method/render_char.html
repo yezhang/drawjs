@@ -209,6 +209,7 @@
             var x2_ratio = clamp(x2 * pixelsPerEm.x + 0.5, 0.0, 1.0);
 
             if ((code & 1u) != 0u) {
+              // 如果判断 x1 >= 0, 以及下面的判断 x2 >= 0, 可以实现基本渲染（无抗锯齿效果）。
               // if(x1 >= 0) {
               //  coverage += 1;
               // }
@@ -817,8 +818,24 @@
         const defs = makeShaderDataDefinitions(shadercode);
 
         //  xMin = 35, xMax = 976, yMin = -169, yMax = 761
+        const cbox = glyph.getMetrics();
         const vertexData = new Float32Array([
-          35, -169, 0, 0, 976, -169, 1, 0, 35, 761, 0, 1, 976, 761, 1, 1,
+          cbox.xMin,
+          cbox.yMin,
+          0,
+          0,
+          cbox.xMax,
+          cbox.yMin,
+          1,
+          0,
+          cbox.xMin,
+          cbox.yMax,
+          0,
+          1,
+          cbox.xMax,
+          cbox.yMax,
+          1,
+          1,
         ]);
 
         const vertexBuffer = device.createBuffer({
@@ -958,7 +975,8 @@
 
       drawRulers();
 
-      drawGlyph("./STSong.ttf", "永");
+      // drawGlyph("./STSong.ttf", "永");
+      drawGlyph("./STSong.ttf", "。");
 
       function drawContents() {
         let contents = `白日依山尽，黄河入海流。欲穷千里目，更上一层楼。`;
@@ -974,6 +992,7 @@
         }
         drawChar();
       }
+      drawContents();
     </script>
   </body>
 </html>
