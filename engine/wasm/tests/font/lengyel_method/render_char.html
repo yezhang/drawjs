@@ -14,8 +14,8 @@
         position: absolute;
         top: 40px;
         left: 40px;
-        width: 500px;
-        height: 500px;
+        width: 1000px;
+        height: 1000px;
         border: 1px dashed #000;
         box-sizing: border-box;
       }
@@ -72,7 +72,7 @@
       @group(0) @binding(3) var<storage> curvesData: array<CurveData>;
 
       struct Vertex{
-        @location(0) glyphCBoxPos: vec2f, // 字体图元的包围盒位置
+        @location(0) glyphCBoxPos: vec2f, // EM-space，字体图元的包围盒位置
         @location(1) uv: vec2f
       }
 
@@ -80,6 +80,7 @@
         @builtin(position) vtxPos: vec4f, // clip space 空间坐标
         @location(0) texelNormCoord: vec2f,
       }
+
       @vertex fn vs(
         vert: Vertex
       ) -> VertexOutput {
@@ -92,27 +93,49 @@
         return vertOut;
       }
 
+      const kQuadraticEpsilon: f32 = 0.0001;
+
       @fragment fn fs(@location(0) uv: vec2f) -> @location(0) vec4f {
+        var coverage: f32 = 0.0;
+
         // 根据 uv 和 gridSize，计算当前像素所属网格索引
         // 给不同网格绘制棋盘色，黑红相间
         let gridCoord = vec2u(floor(uv * vec2f(global.gridSize)));
+
+        // The effective pixel dimensions of the em square are computed
+        // independently for x and y directions with texcoord derivatives.
+        let pixelsPerEm: vec2f = vec2f(1.0 / fwidth(uv.x), 1.0 / fwidth(uv.y));
+
+        // 将uv坐标转换为归一化的空间坐标,[0,1]
         let texelNormCoord = uv * global.glyphSize;
 
         let isEven = (gridCoord.x + gridCoord.y) % 2 == 0;
         // 根据奇偶性选择颜色
-        var color: vec3<f32>;
+        var color: vec4<f32>;
         if (isEven) {
-            color = vec3<f32>(0.0, 0.0, 0.0); // 黑色
+            color = vec4<f32>(0.0, 0.0, 0.0, 1.0); // 黑色
         } else {
-            color = vec3<f32>(1.0, 0.0, 0.0); // 红色
+            color = vec4<f32>(1.0, 0.0, 0.0, 1.0); // 红色
         }
 
         // 凡是在字形中间的像素，都设置 alpha 为1
         let cellIndex = gridCoord.y * global.gridSize.x + gridCoord.x;
         let curvesInCell = gridCells[cellIndex];
 
-        for(var i: u32 = 0; i < curvesInCell.length; i++) {
-          let curveIndex = curveIndexs[curvesInCell.offset + i];
+        // for(var i: u32 = 0; i < curvesInCell.length; i++) {
+        //  let curveIndex = curveIndexs[curvesInCell.offset + i];
+        var curveAllNum = arrayLength(&curvesData);
+        for(var i: u32 = 0; i < curveAllNum; i++) {
+          let curveIndex = i;
+
+          // Fetch the three 2D control points for the current curve from the
+          // curve texture. The first texel contains both p1 and p2 in the
+          // (x,y) and (z,w) components, respectively, and the the second texel
+          // contains p3 in the (x,y) components. The quadratic Bézier curve
+          // C(t) is given by
+          //
+          //     C(t) = (1 - t)^2 p1 + 2t(1 - t) p2 + t^2 p3
+
           let curve = curvesData[curveIndex];
           let e0 = curve.e0;
           let c = curve.c;
@@ -124,8 +147,97 @@
           if( dist_e0 <= 0.005 || dist_c <= 0.005 || dist_e1 <= 0.005) {
             return vec4f(0.0, 0.0, 1.0, 1.0);
           }
+
+          // 将贝塞尔曲线坐标转换为相对于当前像素的坐标
+          let e0_to_texel = e0 - texelNormCoord;
+          let c_to_texel = c - texelNormCoord;
+          let e1_to_texel = e1 - texelNormCoord;
+
+          // 根据 lengyel 方法，判断当前像素是否在 glyph 的内部
+          // 计算偏移量
+          // ?: 三目运算符会引起语法错误，使用 select 函数代替
+          // let offset: u32 = ((e0_to_texel.y > 0.0) ? 2u : 0u) + ((c_to_texel.y > 0.0) ? 4u : 0u) + ((e1_to_texel.y > 0.0) ? 8u : 0u);
+          let offset: u32 = select(0u, 2u, e0_to_texel.y > 0.0) +
+                            select(0u, 4u, c_to_texel.y > 0.0) +
+                            select(0u, 8u, e1_to_texel.y > 0.0);
+
+          // 右移操作
+          let shiftedValue: u32 = 0x2E74u >> offset;
+
+          // 按位与操作
+          let code: u32 = shiftedValue & 3u;
+
+          if(code != 0u) {
+
+            // At least one root makes a contribution, so solve for the
+            // values of t where the curve crosses y = 0. The quadratic
+            // polynomial in t is given by
+            //
+            //     a t^2 - 2b t + c,
+            //
+            // where a = p1.y - 2 p2.y + p3.y, b = p1.y - p2.y, and c = p1.y.
+            // The discriminant b^2 - ac is clamped to zero, and imaginary
+            // roots are treated as a double root at the global minimum
+            // where t = b / a.
+
+            let ax: f32 = e0_to_texel.x - c_to_texel.x * 2.0 + e1_to_texel.x;
+            let ay: f32 = e0_to_texel.y - c_to_texel.y * 2.0 + e1_to_texel.y;
+            let bx: f32 = e0_to_texel.x - c_to_texel.x;
+            let by: f32 = e0_to_texel.y - c_to_texel.y;
+            let ra: f32 = 1.0 / ay;
+
+            let d: f32 = sqrt(max(by * by - ay * e0_to_texel.y, 0.0));
+            var t1: f32 = (by - d) * ra;
+            var t2: f32 = (by + d) * ra;
+
+            // If the polynomial is nearly linear, then solve -2b t + c = 0.
+
+            if (abs(ay) < kQuadraticEpsilon) {
+              t2 = e0_to_texel.y * 0.5 / by;
+              t1 = t2;
+            }
+
+            // Calculate the x coordinates where C(t) = 0, and transform
+            // them so that the current pixel corresponds to the range
+            // [0,1]. Clamp the results and use them for root contributions.
+
+            var x1: f32 = (ax * t1 - bx * 2.0) * t1 + e0_to_texel.x;
+            var x2: f32 = (ax * t2 - bx * 2.0) * t2 + e0_to_texel.x;
+
+            // Bits in code tell which roots make a contribution.
+            var x1_ratio = clamp(x1 * pixelsPerEm.x + 0.5, 0.0, 1.0);
+            var x2_ratio = clamp(x2 * pixelsPerEm.x + 0.5, 0.0, 1.0);
+
+            if ((code & 1u) != 0u) {
+              // if(x1 >= 0) {
+              //  coverage += 1;
+              //}
+              coverage += x1_ratio;
+            }
+            if (code > 1u) {
+              // if( x2 >= 0) {
+              //   coverage -= 1;
+              // }
+              coverage -= x2_ratio;
+            }
+          }
         }
-        return vec4f(color, 0.3);
+
+        // Take the average of the horizontal and vertical results. The absolute
+        // value ensures that either winding convention works. The square root
+        // approximates gamma correction.
+
+
+        var alpha: f32 = 1.0;
+        coverage = sqrt(clamp(abs(coverage) * 0.5, 0.0, 1.0));
+        alpha = coverage * color.w;
+
+
+        // if coverage == 0, is outer
+        //if((coverage) == 0) {
+        //  alpha = 0.5;
+        // }
+        return vec4f(color.xyz, alpha);
 
       }
     </script>
@@ -273,7 +385,7 @@
               break;
 
             default:
-              throw new Error(`Unknown command: ${cmd.type}`);
+              throw new error(`unknown command: ${cmd.type}`);
           }
         }
 
@@ -509,7 +621,7 @@
             }
           }
 
-          for (let y = 0; y <= gridWidth; y++) {
+          for (let y = 0; y <= gridHeight; y++) {
             const y0 = (y / gridHeight) * cboxHeight;
             const { rootNum, roots } = bezierIntersectHorz(curve, y0);
             if (rootNum > 0) {
