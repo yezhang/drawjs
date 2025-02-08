@@ -18,6 +18,8 @@
         height: 500px;
         border: 1px dashed #000;
         box-sizing: border-box;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
       }
       #rulerX,
       #rulerY {
@@ -52,7 +54,8 @@
         color: vec4f,
         scale: vec2f,
         offset: vec2f,
-        gridSize: vec2u,
+        gridSizeH: vec2u,
+        gridSizeV: vec2u,
         glyphSize: vec2f,
       }
       struct CurvesInCell {
@@ -66,10 +69,12 @@
       }
       @group(0) @binding(0) var<uniform> global: GlobalInfo;
 
-      @group(0) @binding(1) var<storage> gridCells: array<CurvesInCell>;
-      @group(0) @binding(2) var<storage> curveIndexs: array<u32>;
+      @group(0) @binding(1) var<storage> gridCellsH: array<CurvesInCell>;
+      @group(0) @binding(2) var<storage> curveIndexsH: array<u32>;
+      @group(0) @binding(3) var<storage> gridCellsV: array<CurvesInCell>;
+      @group(0) @binding(4) var<storage> curveIndexsV: array<u32>;
 
-      @group(0) @binding(3) var<storage> curvesData: array<CurveData>;
+      @group(0) @binding(5) var<storage> curvesData: array<CurveData>;
 
       struct Vertex{
         @location(0) glyphCBoxPos: vec2f, // EM-space，字体图元的包围盒位置
@@ -95,38 +100,42 @@
 
       const kQuadraticEpsilon: f32 = 0.0001;
 
-      @fragment fn fs(@location(0) uv: vec2f) -> @location(0) vec4f {
-        var coverage: f32 = 0.0;
+      fn rotate90(p: vec2f) -> vec2f {
+        return vec2f(p.y, -p.x);
+      }
 
+      fn makeSureZeroWhenProper(p: vec2f)-> vec2f {
+        let xMayBeZero: f32 = select(p.x, 0.0, abs(p.x) < kQuadraticEpsilon);
+        let yMayBeZero: f32 = select(p.y, 0.0, abs(p.y) < kQuadraticEpsilon);
+        return vec2f(xMayBeZero, yMayBeZero);
+      }
+
+      fn sampleCoverage(
+        uv: vec2f,
+        gridSize: vec2u,
+        glyphSize: vec2f,
+        gridCells: ptr<storage, array<CurvesInCell>>,
+        curveIndexs: ptr<storage, array<u32>>,
+        curvesData: ptr<storage, array<CurveData>>,
+      ) -> f32{
+
+        var coverage: f32 = 0.0;
         // 根据 uv 和 gridSize，计算当前像素所属网格索引
         // 给不同网格绘制棋盘色，黑红相间
-        let gridCoord = vec2u(floor(uv * vec2f(global.gridSize)));
+        let gridCoord = vec2u(floor(uv * vec2f(gridSize)));
 
         // The effective pixel dimensions of the em square are computed
         // independently for x and y directions with texcoord derivatives.
-        let pixelsPerEm: vec2f = vec2f(1.0 / fwidth(uv.x), 1.0 / fwidth(uv.y));
+        var pixelsPerEm: vec2f = vec2f(1.0 / fwidth(uv.x), 1.0 / fwidth(uv.y));
 
-        // 将uv坐标转换为归一化的空间坐标,[0,1]
-        let texelNormCoord = uv * global.glyphSize;
+        // 将uv坐标转换为归一化的glyph空间坐标,[0,1]
+        let texelNormCoord = uv * glyphSize;
 
-        let isEven = (gridCoord.x + gridCoord.y) % 2 == 0;
-        // 根据奇偶性选择颜色
-        var color: vec4<f32>;
-        if (isEven) {
-            color = vec4<f32>(0.0, 0.0, 0.0, 1.0); // 黑色
-        } else {
-            color = vec4<f32>(1.0, 0.0, 0.0, 1.0); // 红色
-        }
-
-        // 凡是在字形中间的像素，都设置 alpha 为1
-        let cellIndex = gridCoord.y * global.gridSize.x + gridCoord.x;
-        let curvesInCell = gridCells[cellIndex];
+        let cellIndex = gridCoord.y * gridSize.x + gridCoord.x;
+        let curvesInCell = (*gridCells)[cellIndex];
 
         for(var i: u32 = 0; i < curvesInCell.length; i++) {
-          let curveIndex = curveIndexs[curvesInCell.offset + i];
-        // var curveAllNum = arrayLength(&curvesData);
-        // for(var i: u32 = 0; i < curveAllNum; i++) {
-        //   let curveIndex = i;
+          let curveIndex = (*curveIndexs)[curvesInCell.offset + i];
 
           // Fetch the three 2D control points for the current curve from the
           // curve texture. The first texel contains both p1 and p2 in the
@@ -136,7 +145,7 @@
           //
           //     C(t) = (1 - t)^2 p1 + 2t(1 - t) p2 + t^2 p3
 
-          let curve = curvesData[curveIndex];
+          let curve = (*curvesData)[curveIndex];
           let e0 = curve.e0;
           let c = curve.c;
           let e1 = curve.e1;
@@ -145,13 +154,18 @@
           let dist_c: f32 = distance(texelNormCoord, c);
           let dist_e1: f32 = distance(texelNormCoord, e1);
           if( dist_e0 <= 0.005 || dist_c <= 0.005 || dist_e1 <= 0.005) {
-            return vec4f(0.0, 0.0, 1.0, 1.0);
+            // return vec4f(0.0, 0.0, 1.0, 1.0);
           }
 
           // 将贝塞尔曲线坐标转换为相对于当前像素的坐标
-          let e0_to_texel = e0 - texelNormCoord;
-          let c_to_texel = c - texelNormCoord;
-          let e1_to_texel = e1 - texelNormCoord;
+          var e0_to_texel = e0 - texelNormCoord;
+          var c_to_texel = c - texelNormCoord;
+          var e1_to_texel = e1 - texelNormCoord;
+
+          // 如果坐标接近为 0，则直接设置为 0.0
+          e0_to_texel = makeSureZeroWhenProper(e0_to_texel);
+          c_to_texel = makeSureZeroWhenProper(c_to_texel);
+          e1_to_texel = makeSureZeroWhenProper(e1_to_texel);
 
           // 根据 lengyel 方法，判断当前像素是否在 glyph 的内部
           // 计算偏移量
@@ -180,7 +194,8 @@
             // roots are treated as a double root at the global minimum
             // where t = b / a.
 
-            let ax: f32 = e0_to_texel.x - c_to_texel.x * 2.0 + e1_to_texel.x;
+            var ax: f32 = 0;
+            ax = e0_to_texel.x - c_to_texel.x * 2.0 + e1_to_texel.x;
             let ay: f32 = e0_to_texel.y - c_to_texel.y * 2.0 + e1_to_texel.y;
             let bx: f32 = e0_to_texel.x - c_to_texel.x;
             let by: f32 = e0_to_texel.y - c_to_texel.y;
@@ -205,13 +220,14 @@
             var x2: f32 = (ax * t2 - bx * 2.0) * t2 + e0_to_texel.x;
 
             // Bits in code tell which roots make a contribution.
+            // x1 * pixelsPerEm 表示 x1 位置占用整个像素的百分比，相当于 x1 / ( 1/unitsPerEm);
             var x1_ratio = clamp(x1 * pixelsPerEm.x + 0.5, 0.0, 1.0);
             var x2_ratio = clamp(x2 * pixelsPerEm.x + 0.5, 0.0, 1.0);
 
             if ((code & 1u) != 0u) {
               // 如果判断 x1 >= 0, 以及下面的判断 x2 >= 0, 可以实现基本渲染（无抗锯齿效果）。
               // if(x1 >= 0) {
-              //  coverage += 1;
+              //   coverage += 1;
               // }
               coverage += x1_ratio;
             }
@@ -223,6 +239,155 @@
             }
           }
         }
+        return coverage;
+      }
+      fn sampleCoverageV(
+        uv: vec2f,
+        gridSize: vec2u,
+        glyphSize: vec2f,
+        gridCells: ptr<storage, array<CurvesInCell>>,
+        curveIndexs: ptr<storage, array<u32>>,
+        curvesData: ptr<storage, array<CurveData>>,
+      ) -> f32{
+
+        var coverage: f32 = 0.0;
+        // 根据 uv 和 gridSize，计算当前像素所属网格索引
+        // 给不同网格绘制棋盘色，黑红相间
+        let gridCoord = vec2u(floor(uv * vec2f(gridSize)));
+
+        // The effective pixel dimensions of the em square are computed
+        // independently for x and y directions with texcoord derivatives.
+        var pixelsPerEm: vec2f = vec2f(1.0 / fwidth(uv.x), 1.0 / fwidth(uv.y));
+
+        // 将uv坐标转换为归一化的glyph空间坐标,[0,1]
+        let texelNormCoord = uv * glyphSize;
+
+        let cellIndex = gridCoord.y * gridSize.x + gridCoord.x;
+        let curvesInCell = (*gridCells)[cellIndex];
+
+        for(var i: u32 = 0; i < curvesInCell.length; i++) {
+          let curveIndex = (*curveIndexs)[curvesInCell.offset + i];
+
+          // Fetch the three 2D control points for the current curve from the
+          // curve texture. The first texel contains both p1 and p2 in the
+          // (x,y) and (z,w) components, respectively, and the the second texel
+          // contains p3 in the (x,y) components. The quadratic Bézier curve
+          // C(t) is given by
+          //
+          //     C(t) = (1 - t)^2 p1 + 2t(1 - t) p2 + t^2 p3
+
+          let curve = (*curvesData)[curveIndex];
+          let e0 = curve.e0;
+          let c = curve.c;
+          let e1 = curve.e1;
+
+          let dist_e0: f32 = distance(texelNormCoord, e0);
+          let dist_c: f32 = distance(texelNormCoord, c);
+          let dist_e1: f32 = distance(texelNormCoord, e1);
+          if( dist_e0 <= 0.005 || dist_c <= 0.005 || dist_e1 <= 0.005) {
+            // return vec4f(0.0, 0.0, 1.0, 1.0);
+          }
+
+          // 将贝塞尔曲线坐标转换为相对于当前像素的坐标
+          var e0_to_texel = e0 - texelNormCoord;
+          var c_to_texel = c - texelNormCoord;
+          var e1_to_texel = e1 - texelNormCoord;
+
+
+
+
+          // 根据 lengyel 方法，判断当前像素是否在 glyph 的内部
+          // 计算偏移量
+          // ?: 三目运算符会引起语法错误，使用 select 函数代替
+          let offset: u32 = select(0u, 2u, e0_to_texel.x > 0.0) +
+                            select(0u, 4u, c_to_texel.x > 0.0) +
+                            select(0u, 8u, e1_to_texel.x > 0.0);
+
+          // 右移操作
+          let shiftedValue: u32 = 0x2E74u >> offset;
+
+          // 按位与操作
+          let code: u32 = shiftedValue & 3u;
+
+          if(code != 0u) {
+
+            // At least one root makes a contribution, so solve for the
+            // values of t where the curve crosses y = 0. The quadratic
+            // polynomial in t is given by
+            //
+            //     a t^2 - 2b t + c,
+            //
+            // where a = p1.y - 2 p2.y + p3.y, b = p1.y - p2.y, and c = p1.y.
+            // The discriminant b^2 - ac is clamped to zero, and imaginary
+            // roots are treated as a double root at the global minimum
+            // where t = b / a.
+
+            var ax: f32 = e0_to_texel.y - c_to_texel.y * 2.0 + e1_to_texel.y;
+            let ay: f32 = e0_to_texel.x - c_to_texel.x * 2.0 + e1_to_texel.x;
+            let bx: f32 = e0_to_texel.y - c_to_texel.y;
+            let by: f32 = e0_to_texel.x - c_to_texel.x;
+            let ra: f32 = 1.0 / ay;
+
+            let d: f32 = sqrt(max(by * by - ay * e0_to_texel.x, 0.0));
+            var t1: f32 = (by - d) * ra;
+            var t2: f32 = (by + d) * ra;
+
+            // If the polynomial is nearly linear, then solve -2b t + c = 0.
+
+            if (abs(ay) < kQuadraticEpsilon) {
+              t2 = e0_to_texel.x * 0.5 / by;
+              t1 = t2;
+            }
+
+            // Calculate the x coordinates where C(t) = 0, and transform
+            // them so that the current pixel corresponds to the range
+            // [0,1]. Clamp the results and use them for root contributions.
+
+            var x1: f32 = (ax * t1 - bx * 2.0) * t1 + e0_to_texel.y;
+            var x2: f32 = (ax * t2 - bx * 2.0) * t2 + e0_to_texel.y;
+
+            // Bits in code tell which roots make a contribution.
+            // x1 * pixelsPerEm 表示 x1 位置占用整个像素的百分比，相当于 x1 / ( 1/unitsPerEm);
+            var x1_ratio = clamp(x1 * pixelsPerEm.y + 0.5, 0.0, 1.0);
+            var x2_ratio = clamp(x2 * pixelsPerEm.y + 0.5, 0.0, 1.0);
+
+            if ((code & 1u) != 0u) {
+              // 如果判断 x1 >= 0, 以及下面的判断 x2 >= 0, 可以实现基本渲染（无抗锯齿效果）。
+              // if(x1 >= 0) {
+              //   coverage += 1;
+              // }
+              coverage += x1_ratio;
+            }
+            if (code > 1u) {
+              // if( x2 >= 0) {
+              //   coverage -= 1;
+              // }
+              coverage -= x2_ratio;
+            }
+          }
+        }
+        return coverage;
+      }
+
+      @fragment fn fs(@location(0) uv: vec2f) -> @location(0) vec4f {
+        var coverage: f32 = 0.0;
+
+        // 根据 uv 和 gridSize，计算当前像素所属网格索引
+        // 给不同网格绘制棋盘色，黑红相间
+        let gridCoord = vec2u(floor(uv * vec2f(global.gridSizeH)));
+
+
+        let isEven = (gridCoord.x + gridCoord.y) % 2 == 0;
+        // 根据奇偶性选择颜色
+        var color: vec4<f32>;
+        if (isEven) {
+            color = vec4<f32>(0.0, 0.0, 0.0, 1.0); // 黑色
+        } else {
+            color = vec4<f32>(255, 0.0, 0.0, 1.0); // 红色
+        }
+
+        var coverage1 = sampleCoverage(uv, global.gridSizeH, global.glyphSize, &gridCellsH, &curveIndexsH, &curvesData );
+        var coverage2 = sampleCoverageV(uv, global.gridSizeV, global.glyphSize, &gridCellsV, &curveIndexsV, &curvesData );
 
         // Take the average of the horizontal and vertical results. The absolute
         // value ensures that either winding convention works. The square root
@@ -230,15 +395,18 @@
 
 
         var alpha: f32 = 1.0;
-        coverage = sqrt(clamp(abs(coverage) * 0.5, 0.0, 1.0));
+        coverage = (abs(coverage1) + abs(coverage2)) / 2.0; // 水平+垂直采样，求平均
+        // coverage = coverage2;
+        coverage = sqrt(clamp(abs(coverage) , 0.0, 1.0));
         alpha = coverage * color.w;
 
 
         // if coverage == 0, is outer
-        //if((coverage) == 0) {
-        //  alpha = 0.5;
-        // }
-        return vec4f(color.xyz, alpha);
+        if((coverage) == 0) {
+          // 有锯齿效果
+          // return vec4f(255, 255, 255, 0);
+        }
+        return vec4f(color.xyz , alpha);
 
       }
     </script>
@@ -510,7 +678,7 @@
         return { curves: curves, cbox: normCBox };
       }
 
-      function almostEqual(a, b, epsilon = 1e-6) {
+      function almostEqual(a, b, epsilon = 1e-4) {
         return Math.abs(a - b) < epsilon;
       }
 
@@ -540,6 +708,14 @@
 
         const outX = [];
         let i = 0;
+
+        // 问题：使用宋体字，划分 1x5 网格时，会出现奇怪的长线。
+        // 推测，可能是网格划分时，曲线归属出现错误。
+        // 利用 slug 算法判断网格归属
+        if (A.y < 0 && B.y < 0 && C.y < 0) {
+          // 认为曲线与贝塞尔曲线没有交点，或无效交点
+          return { rootNum: i, roots: outX };
+        }
 
         // Parts of the bezier function solved for t
         const a = A.y - 2 * B.y + C.y;
@@ -768,6 +944,20 @@
                 type: "read-only-storage",
               },
             },
+            {
+              binding: 4,
+              visibility: GPUShaderStage.FRAGMENT,
+              buffer: {
+                type: "read-only-storage",
+              },
+            },
+            {
+              binding: 5,
+              visibility: GPUShaderStage.FRAGMENT,
+              buffer: {
+                type: "read-only-storage",
+              },
+            },
           ],
         });
 
@@ -863,13 +1053,15 @@
           color: [1, 0, 0, 1],
           scale: [1 / 1000, 1 / 1000],
           offset: [0, 0],
-          gridSize: [gridWidth, gridHeight],
+          gridSizeH: [gridWidth, gridHeight],
+          gridSizeV: [gridHeight, gridWidth],
           glyphSize: [normCBox.xMax, normCBox.yMax],
         });
 
         device.queue.writeBuffer(uniformBuffer, 0, uGlobalValues.arrayBuffer);
 
-        const gridData = makeGridOnBezier(
+        // 按照水平条带划分数据
+        const gridDataH = makeGridOnBezier(
           font,
           glyph,
           normCurves,
@@ -878,24 +1070,58 @@
           gridHeight,
         );
 
-        const { gridIndexArray, curveIndexsArray, curvesArray } =
-          buildGridBezierBuffer(
-            font,
-            glyph,
-            gridData,
-            gridWidth,
-            gridHeight,
-            normCurves,
-          );
+        const {
+          gridIndexArray: gridIndexArrayH,
+          curveIndexsArray: curveIndexsArrayH,
+          curvesArray,
+        } = buildGridBezierBuffer(
+          font,
+          glyph,
+          gridDataH,
+          gridWidth,
+          gridHeight,
+          normCurves,
+        );
+        // 按照垂直条带划分数据
+        const gridDataV = makeGridOnBezier(
+          font,
+          glyph,
+          normCurves,
+          normCBox,
+          gridHeight,
+          gridWidth,
+        );
 
-        const gridCellsBuffer = device.createBuffer({
-          label: "grid cells buffer",
-          size: gridIndexArray.byteLength,
+        const {
+          gridIndexArray: gridIndexArrayV,
+          curveIndexsArray: curveIndexsArrayV,
+        } = buildGridBezierBuffer(
+          font,
+          glyph,
+          gridDataV,
+          gridHeight,
+          gridWidth,
+          normCurves,
+        );
+
+        const gridCellsBufferH = device.createBuffer({
+          label: "grid cells buffer horizontal",
+          size: gridIndexArrayH.byteLength,
           usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
-        const curveIndexsBuffer = device.createBuffer({
-          label: "curve index list buffer",
-          size: curveIndexsArray.byteLength,
+        const curveIndexsBufferH = device.createBuffer({
+          label: "curve index list buffer horizontal",
+          size: curveIndexsArrayH.byteLength,
+          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+        const gridCellsBufferV = device.createBuffer({
+          label: "grid cells buffer vertical",
+          size: gridIndexArrayV.byteLength,
+          usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+        const curveIndexsBufferV = device.createBuffer({
+          label: "curve index list buffer vertical",
+          size: curveIndexsArrayV.byteLength,
           usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
         const curvesDataBuffer = device.createBuffer({
@@ -904,8 +1130,10 @@
           usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
 
-        device.queue.writeBuffer(gridCellsBuffer, 0, gridIndexArray);
-        device.queue.writeBuffer(curveIndexsBuffer, 0, curveIndexsArray);
+        device.queue.writeBuffer(gridCellsBufferH, 0, gridIndexArrayH);
+        device.queue.writeBuffer(curveIndexsBufferH, 0, curveIndexsArrayH);
+        device.queue.writeBuffer(gridCellsBufferV, 0, gridIndexArrayV);
+        device.queue.writeBuffer(curveIndexsBufferV, 0, curveIndexsArrayV);
         device.queue.writeBuffer(curvesDataBuffer, 0, curvesArray);
 
         const bindGroup = device.createBindGroup({
@@ -921,17 +1149,29 @@
             {
               binding: 1,
               resource: {
-                buffer: gridCellsBuffer,
+                buffer: gridCellsBufferH,
               },
             },
             {
               binding: 2,
               resource: {
-                buffer: curveIndexsBuffer,
+                buffer: curveIndexsBufferH,
               },
             },
             {
               binding: 3,
+              resource: {
+                buffer: gridCellsBufferV,
+              },
+            },
+            {
+              binding: 4,
+              resource: {
+                buffer: curveIndexsBufferV,
+              },
+            },
+            {
+              binding: 5,
               resource: {
                 buffer: curvesDataBuffer,
               },
@@ -976,7 +1216,9 @@
       drawRulers();
 
       // drawGlyph("./STSong.ttf", "永");
-      drawGlyph("./STSong.ttf", "。");
+      drawGlyph("./STSong.ttf", "层");
+      // drawGlyph("./STSong.ttf", "1");
+      // drawGlyph("./STSong.ttf", "。");
 
       function drawContents() {
         let contents = `白日依山尽，黄河入海流。欲穷千里目，更上一层楼。`;
@@ -992,7 +1234,7 @@
         }
         drawChar();
       }
-      drawContents();
+      // drawContents();
     </script>
   </body>
 </html>
