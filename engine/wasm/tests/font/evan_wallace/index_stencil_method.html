@@ -23,11 +23,15 @@
         width: 200px;
         height: 200px;
         border: 1px dashed #000;
+        image-rendering: pixelated; /* 配置 低分辨率画布, 参考这里 https://webgpufundamentals.org/webgpu/lessons/webgpu-textures.html#a-min-filter */
+        image-rendering: crisp-edges; /* 配置 低分辨率画布 */
       }
       #fontStencilCanvas {
         width: 200px;
         height: 200px;
         border: 1px dashed violet;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
       }
       #rulerX,
       #rulerY {
@@ -57,10 +61,11 @@
       <canvas id="rulerY" width="40" height="1000"></canvas>
     </div>
 
-    <canvas id="fontStencilCanvas" width="1000" height="1000"></canvas>
-    <canvas id="fontRenderCanvas" width="1000" height="1000"></canvas>
+    <canvas id="fontStencilCanvas" width="100" height="100"></canvas>
+    <canvas id="fontRenderCanvas" width="100" height="100"></canvas>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/opentype.js/1.3.3/opentype.min.js"></script>
     <script type="x-shader" id="stencilShaderCode">
+
       struct GlobalInfo {
         color: vec4f,
         scale: vec2f,
@@ -71,14 +76,22 @@
       struct Vertex {
         @location(0) point: vec2f, // 顶点坐标（以em空间为单位）
       }
+      struct BarycentricVertex {
+        @location(0) point: vec2f, // 贝塞尔线段的三个控制点（em空间），用于选择文字边界
+        @location(1) uv: vec2f, // 每个顶点的纹理坐标，u^2 - v < 0，表示在字体内部
+      }
       struct VertexOutput {
         @builtin(position) pos: vec4f, // clip space, device space
+      }
+
+      struct BarycentricVertexOutput {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
       }
 
       @vertex
       fn vertex_main(
         vert: Vertex,
-        @builtin(vertex_index) vertexIndex : u32
       ) -> VertexOutput {
         let pos = vert.point * global.scale + global.translate;
         var vertOut: VertexOutput = VertexOutput();
@@ -92,8 +105,31 @@
 
       }
 
+      @vertex
+      fn vertex_fix_edge(vert: BarycentricVertex) -> BarycentricVertexOutput {
+
+        let pos = vert.point * global.scale + global.translate;
+
+        var vertOut: BarycentricVertexOutput = BarycentricVertexOutput();
+        vertOut.pos = vec4f(pos, 0.0, 1.0);
+        vertOut.uv = vert.uv;
+
+        return vertOut;
+      }
+
+
+      fn isInside(u: f32, v: f32) -> bool{
+        return pow(u, 2) - v < 0;
+      }
+
       @fragment
-      fn frag_mask_main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
+      fn frag_fix_edge(
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f
+      ) -> @location(0) vec4f {
+        if(!isInside(uv.x, uv.y)) {
+          discard;
+        }
         return vec4f(1.0, 0.0, 0.0, 1.0);
 
       }
@@ -216,11 +252,15 @@
         ];
       }
       function prepareBufferDataByGlyphPath(glyph) {
-        // const pathCommands = glyph.path.commands;
+        const pathCommands = glyph.path.commands;
 
-        const pathCommands = mockPathCommands(glyph); // TODO: 上线前需要更换为真实的 path.commands
+        // const pathCommands = mockPathCommands(glyph); // TODO: 上线前需要更换为真实的 path.commands
         const vertexDataList = [];
         const vertexIndexList = [];
+        const vertexCurveDataList = []; // NOTE: 这里只存储曲线的控制点，一个曲线存储三个控制点(p0, p1, p2)
+        let p0 = { x: 0, y: 0 };
+        let p1 = p0,
+          p2 = p0;
 
         const helperPoint = { x: 0, y: 0 };
         vertexDataList.push(helperPoint);
@@ -232,6 +272,8 @@
             case "M":
               vertexDataList.push(c);
               relativeIndex = 0;
+
+              p0 = c; // 用于后续构造贝塞尔曲线的控制点使用
               break;
             case "L":
               vertexDataList.push(c);
@@ -243,6 +285,8 @@
                 relativeIndex + indexOffset - 1,
                 relativeIndex + indexOffset,
               );
+
+              p0 = c;
               break;
             case "Q":
               vertexDataList.push(c);
@@ -254,6 +298,12 @@
                 relativeIndex + indexOffset - 1,
                 relativeIndex + indexOffset,
               );
+
+              p1 = { x: c.x1, y: c.y1 };
+              p2 = { x: c.x, y: c.y };
+              vertexCurveDataList.push(p0, p1, p2);
+
+              p0 = c;
               break;
             case "Z":
               indexOffset += relativeIndex + 1;
@@ -263,6 +313,7 @@
 
         return {
           vertexDataList,
+          vertexCurveDataList,
           vertexIndexList,
         };
       }
@@ -400,7 +451,8 @@
       }
 
       function buildGlyphBuffer(device, glyph, options) {
-        const { vertexDataList, vertexIndexList } = options;
+        const { vertexDataList, vertexIndexList, vertexCurveDataList } =
+          options;
         const vertices = new Float32Array(
           vertexDataList.flatMap((v) => [v.x, v.y]),
         );
@@ -411,7 +463,7 @@
           size: vertices.byteLength,
           usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
         });
-        console.log("glyph buffer", vertices);
+        // console.log("glyph buffer", vertices);
         device.queue.writeBuffer(vertexBuffer, 0, vertices);
 
         // 创建索引缓冲区
@@ -419,10 +471,34 @@
           size: indices.byteLength,
           usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
         });
-        console.log("index buffer", indices);
+        // console.log("index buffer", indices);
         device.queue.writeBuffer(indexBuffer, 0, indices);
 
-        return { vertexBuffer, indexBuffer, indices };
+        // 创建 glyph 曲线的控制点缓冲，(p0, p1, p2) & [(0,0), (1/2, 0), (1, 1)]
+        const curveControlPoints = new Float32Array(
+          vertexCurveDataList.flatMap((c, index) => {
+            let order = index % 3;
+            let uv_coords = [
+              [0.0, 0.0],
+              [1.0 / 2.0, 0.0],
+              [1.0, 1.0],
+            ];
+            return [c.x, c.y, uv_coords[order]].flat();
+          }),
+        );
+        const curveBuffer = device.createBuffer({
+          size: curveControlPoints.byteLength,
+          usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
+        device.queue.writeBuffer(curveBuffer, 0, curveControlPoints);
+
+        return {
+          vertexBuffer,
+          indexBuffer,
+          indices,
+          curveBuffer,
+          vertexCurveDataList,
+        };
       }
 
       function createVertexBuffer(device, glyph) {
@@ -433,13 +509,14 @@
         //   glyph,
         //   allContours,
         // );
-        const { vertexDataList, vertexIndexList } =
+        const { vertexDataList, vertexIndexList, vertexCurveDataList } =
           prepareBufferDataByGlyphPath(glyph);
-        console.log("vertex data list", vertexDataList);
-        console.log("vertex index list", vertexIndexList);
+        // console.log("vertex data list", vertexDataList);
+        // console.log("vertex index list", vertexIndexList);
         return buildGlyphBuffer(device, glyph, {
           vertexDataList,
           vertexIndexList,
+          vertexCurveDataList,
         });
       }
 
@@ -458,6 +535,7 @@
         context.configure({
           device: device,
           format: presentationFormat,
+          alphaMode: "premultiplied", // 启用 alpha 通道后才能实现透明效果
         });
 
         return {
@@ -535,7 +613,7 @@
           colorAttachments: [
             {
               view: canvasTexture.createView(),
-              clearValue: [0, 0, 0.5, 1],
+              clearValue: [0, 0, 0.0, 0],
               loadOp: "clear",
               storeOp: "store",
             },
@@ -616,6 +694,38 @@
         };
         const stencilSetPipeline = device.createRenderPipeline(pipelineDesc);
 
+        // 补充第一阶段的曲线边缘绘制
+        const curveStencilDesc = {
+          label: "curve stencil set pipeline",
+          vertex: {
+            module: shaderModule,
+            entryPoint: "vertex_fix_edge",
+            buffers: [
+              {
+                arrayStride: 4 * 4,
+                attributes: [
+                  { shaderLocation: 0, offset: 0, format: "float32x2" },
+                  { shaderLocation: 1, offset: 2 * 4, format: "float32x2" },
+                ],
+              },
+            ],
+          },
+          fragment: {
+            module: shaderModule,
+            entryPoint: "frag_fix_edge",
+            targets: [{ format: format }],
+          },
+        };
+        const curveStencilSetPipelineDesc = Object.assign(
+          {},
+          pipelineDesc,
+          curveStencilDesc,
+        );
+
+        const curveStencilSetPipeline = device.createRenderPipeline(
+          curveStencilSetPipelineDesc,
+        );
+
         pipelineDesc.label = "stencil mask pipiline";
         pipelineDesc.fragment.entry = "frag_mask_main";
         pipelineDesc.depthStencil.stencilFront = {
@@ -630,7 +740,11 @@
         // 当使用第二阶段绘制时，只需要绘制全屏内容即可，根据 stencil 模板自动保留剩余的区域
         const stencilMaskPipeline = device.createRenderPipeline(pipelineDesc);
 
-        return { stencilSetPipeline, stencilMaskPipeline };
+        return {
+          stencilSetPipeline,
+          curveStencilSetPipeline,
+          stencilMaskPipeline,
+        };
       }
       async function renderWithStencil(glyph) {
         const { device, presentationFormat: format } =
@@ -649,17 +763,24 @@
           bindGroupLayout: globalBindGroupLayout,
         } = createBindGroupForUniform(device, stencilShaderCode);
 
-        const { stencilSetPipeline, stencilMaskPipeline } = createPipeline(
+        const {
+          stencilSetPipeline,
+          stencilMaskPipeline,
+          curveStencilSetPipeline,
+        } = createPipeline(
           device,
           format,
           globalBindGroupLayout,
           stencilShaderCode,
         );
 
-        const { vertexBuffer, indexBuffer, indices } = createVertexBuffer(
-          device,
-          glyph,
-        );
+        const {
+          vertexBuffer,
+          indexBuffer,
+          indices,
+          curveBuffer,
+          vertexCurveDataList,
+        } = createVertexBuffer(device, glyph);
         const encoder = device.createCommandEncoder({ label: "glyph encoder" });
 
         // 生成 stencil 模板使用
@@ -683,6 +804,11 @@
         stencilPass.setIndexBuffer(indexBuffer, "uint32"); // NOTE: 注意这里的第二个参数类型，需要与 indexbuffer 中的类型保持一致。
         stencilPass.drawIndexed(indices.length); // 应该是 indices.length, 这里使用 3 做测试
 
+        // 第一阶段：修补曲线边缘
+        stencilPass.setPipeline(curveStencilSetPipeline);
+        stencilPass.setVertexBuffer(0, curveBuffer);
+        stencilPass.draw(vertexCurveDataList.length);
+
         stencilPass.end();
 
         const { renderPass: glyphPass } = createRenderPass(
@@ -701,7 +827,7 @@
         device.queue.writeBuffer(fullscreenBuffer, 0, fullscreenVertices);
         //
         // 第二阶段：筛选并绘制模板区域
-        glyphPass.setStencilReference(0.0);
+        glyphPass.setStencilReference(1.0);
         glyphPass.setPipeline(stencilMaskPipeline);
         glyphPass.setBindGroup(0, globalBindGroup);
         glyphPass.setVertexBuffer(0, fullscreenBuffer);
@@ -754,8 +880,9 @@
         renderWithStencil(glyph);
       }
 
-      drawGlyph("./STSong.ttf", "永");
-      drawGlyphWithStencil("./STSong.ttf", "永");
+      let testChar = "郁"; // "永"
+      drawGlyph("./STSong.ttf", testChar);
+      drawGlyphWithStencil("./STSong.ttf", testChar);
     </script>
   </body>
 </html>

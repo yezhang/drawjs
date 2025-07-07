@@ -31,7 +31,7 @@
           - compare = 'always'
           - passOp = 'invert'
     - 执行绘制
-      每个三角形调用一次 draw，并触发一次 stencil 翻转
+      所有三角形只调用一次 draw，并触发多次 stencil 翻转
 
   - [ ] 阶段2，绘制字体颜色
     - render pass 配置
