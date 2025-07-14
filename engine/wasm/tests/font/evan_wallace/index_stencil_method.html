@@ -20,15 +20,15 @@
         box-sizing: border-box;
       }
       #fontRenderCanvas {
-        width: 200px;
-        height: 200px;
+        width: 300px;
+        height: 300px;
         border: 1px dashed #000;
         image-rendering: pixelated; /* 配置 低分辨率画布, 参考这里 https://webgpufundamentals.org/webgpu/lessons/webgpu-textures.html#a-min-filter */
         image-rendering: crisp-edges; /* 配置 低分辨率画布 */
       }
       #fontStencilCanvas {
-        width: 200px;
-        height: 200px;
+        width: 300px;
+        height: 300px;
         border: 1px dashed violet;
         image-rendering: pixelated;
         image-rendering: crisp-edges;
@@ -880,7 +880,7 @@
         renderWithStencil(glyph);
       }
 
-      let testChar = "郁"; // "永"
+      let testChar = "永"; // "永"
       drawGlyph("./STSong.ttf", testChar);
       drawGlyphWithStencil("./STSong.ttf", testChar);
     </script>
