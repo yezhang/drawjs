@@ -11,11 +11,13 @@
 - [x] 读取 glyph 的控制点数据（在线点、离线点）
   - glyph.path.commands
 - [x] 准备三角形绘图数据（存储缓冲区）
+
   - 多个轮廓
   - topology = triangle-list，使用 drawIndexed 绘制。
-- [-] 使用 stencil 方法绘制“多边形”字体（在线点）
 
-  - [ ] 阶段1，绘制 stencil 模板
+- [x] 使用 stencil 方法绘制“多边形”字体（在线点）
+
+  - [x] 阶段1，绘制 stencil 模板
 
     - render pass 配置
       - stencilLoadOp = 'clear'; // 如果是初次 renderpass 的 stencil 附件，默认是0，可以使用 'load' 配置。
@@ -33,7 +35,7 @@
     - 执行绘制
       所有三角形只调用一次 draw，并触发多次 stencil 翻转
 
-  - [ ] 阶段2，绘制字体颜色
+  - [x] 阶段2，绘制字体颜色
     - render pass 配置
       - stencilLoadOp = 'load'
       - stencilStoreOp = 'discard' // passOp = keep 时，StoreOp 可以保持为 store，具有相同效果（都是不写入）
@@ -50,8 +52,20 @@
     - 执行
       pass.setStencilReference(1.0)
       pass.draw(), 绘制一个超出范围的大三角形
+  - [ ] 抗锯齿，给绘制字体添加抗锯齿效果
+    - [ ] 只在最后上屏幕的时候，添加抗锯齿效果；前面绘制 stencil 过程中，不使用抗锯齿
+      - [x] 在 pipeline desc 上配置 multisample 多重采样
+      - [x] 创建 msaa 纹理（sampleCount = 3)
+      - [x] 在 render pass 中配置 resolve target
+      - [x] 深度纹理配置 sampleCount = 4；在 MSAA 技术中，深度附件采样数需要与view中的msaa Texture 采样数是相同的。
 
-- [ ] 使用 add blending 方法绘制“多边形”字体（在线点）
+- [x] 使用 add blending 方法绘制“多边形”字体（在线点）
+  - [x] 阶段1，绘制颜色 blend 创建顶点缓冲区
+    - 使用 纹理坐标 $u^2 -v < 0$ 修复曲线边缘
+    - pipeline 配置 blend 模式
+    - 着色器，输出 1/255 颜色值
+    -
+  - [x] 阶段2，绘制字体颜色
 
 ### 一些发现
 
@@ -61,6 +75,41 @@
   - 条件：context.configure({device,...}) <-- 这里的 device-A
 - encoder = device.createCommandEncoder() <-- 这里的 device-B
 - device-A，必须与 device-B 一致。
+
+片段着色器中，纹理写入的几种方法：
+
+- 使用 color colorAttachments, 片段着色器返回值。
+- 在片段着色器中，使用 textureStore 函数，写入 bind group 中的纹理。
+  - 与 textureStore 配合使用的是 textureLoad，textureLoad 函数直接从纹理中返回纹素，而不进行采样（sample）或过滤（Filter）。
+
+context.configure 配置时的 alphaMode:
+
+- 当设置为 premultiplied 时，片段着色器返回的颜色必须是 RGB\*A 的预乘颜色值 vec4f。
+  为了达到每次混合时，RGB 新增 1/255, alpha 通道新增 1/255，那么，需要配置 blend 模式中的 dstFactor 为 “one-minus-src-alpha”。
+
+```
+context.configure({
+  device: device,
+  format: presentationFormat,
+  alphaMode: "premultiplied", // 启用 alpha 通道后才能实现透明效果
+});
+
+```
+
+```json
+blend: {
+  color: {
+    operation: 'add',   // 源颜色 + 目标颜色
+    srcFactor: 'one',   // 源权重 = 1.0（因已预乘）
+    dstFactor: 'one-minus-src-alpha' // 目标权重 = 1 - 源Alpha
+  },
+  alpha: {
+    operation: 'add',   // 透明度叠加
+    srcFactor: 'one',   // 源透明度权重 = 1.0
+    dstFactor: 'one'    // 目标透明度权重 = 1.0
+  }
+}
+```
 
 ### 参考资料
 
