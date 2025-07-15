@@ -597,10 +597,11 @@
       function createDepthTexture(device, context) {
         const canvasTexture = context.getCurrentTexture();
         const depthTexture = device.createTexture({
-          label: device.label + "texture",
+          label: device.label + " depth texture",
           size: [canvasTexture.width, canvasTexture.height],
           format: "depth24plus-stencil8", // stencil8
           usage: GPUTextureUsage.RENDER_ATTACHMENT,
+          sampleCount: 4,
         });
 
         return { canvasTexture, depthTexture };
@@ -608,14 +609,23 @@
 
       function createRenderPass(label, canvasTexture, depthTexture, encoder) {
         console.log("begin", label);
+
+      function createRenderPassMSAA(
+        label,
+        canvasTexture,
+        depthTexture,
+        msaaTexture,
+        encoder,
+      ) {
         const stencilPassDesc = {
           label: label,
           colorAttachments: [
             {
-              view: canvasTexture.createView(),
+              view: msaaTexture.createView(),
+              resolveTarget: canvasTexture.createView(),
               clearValue: [0, 0, 0.0, 0],
               loadOp: "clear",
-              storeOp: "store",
+              storeOp: "discard", // MSAA纹理无需保留
             },
           ],
           depthStencilAttachment: {
@@ -691,6 +701,9 @@
               passOp: "invert",
             },
           },
+          multisample: {
+            count: 4,
+          },
         };
         const stencilSetPipeline = device.createRenderPipeline(pipelineDesc);
 
@@ -736,6 +749,11 @@
         pipelineDesc.depthStencil.stencilBack = {
           compare: "equal", // 仅保留模板值为1的区域
           passOp: "keep",
+        };
+
+        // 在最后绘制阶段，添加抗锯齿效果
+        pipelineDesc.multisample = {
+          count: 4,
         };
         // 当使用第二阶段绘制时，只需要绘制全屏内容即可，根据 stencil 模板自动保留剩余的区域
         const stencilMaskPipeline = device.createRenderPipeline(pipelineDesc);
@@ -788,10 +806,18 @@
           device,
           stencilContext,
         );
-        const { renderPass: stencilPass } = createRenderPass(
+        const msaaTexture = device.createTexture({
+          label: "msaaTexture",
+          format: format,
+          usage: GPUTextureUsage.RENDER_ATTACHMENT,
+          size: [canvasTexture.width, canvasTexture.height],
+          sampleCount: 4,
+        });
+        const { renderPass: stencilPass } = createRenderPassMSAA(
           "stencil render pass",
           canvasTexture,
           depthTexture,
+          msaaTexture,
           encoder,
         );
 
@@ -811,10 +837,13 @@
 
         stencilPass.end();
 
-        const { renderPass: glyphPass } = createRenderPass(
+        // 第二阶段：创建 MSAA 多重采样纹理
+        const fontRenderTexture = fontRenderContext.getCurrentTexture();
+        const { renderPass: glyphPass } = createRenderPassMSAA(
           "glyph render pass",
           fontRenderContext.getCurrentTexture(),
           depthTexture,
+          msaaTexture,
           encoder,
         );
         const fullscreenVertices = new Float32Array([
