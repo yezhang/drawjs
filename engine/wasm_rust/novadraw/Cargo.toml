@@ -1,0 +1,19 @@
+[workspace]
+resolver = "3"
+members = [
+  "novadraw",
+
+  "apps/editor",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[workspace.dependencies]
+vello = "0.5.1" # 或 { git = "https://github.com/linebender/vello.git" }
+anyhow = "1.0.99"
+
+wgpu = { version = "26.0.1", default-features = false, features = ["std", "wgsl"] }
+log = "0.4.27"
+env_logger = "0.11.8"

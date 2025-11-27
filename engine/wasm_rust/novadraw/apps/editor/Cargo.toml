@@ -1,0 +1,10 @@
+[package]
+name = "editor"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+winit = "0.30.12"
+log = { workspace = true }
+env_logger = { workspace = true }
+novadraw = { path = "../../novadraw" }
