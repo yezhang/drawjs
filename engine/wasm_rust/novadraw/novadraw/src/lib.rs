@@ -1,3 +1,10 @@
+mod color;
+mod block;
+mod render_ir;
+mod render_ctx;
+
+use block::SceneGraph;
+
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
