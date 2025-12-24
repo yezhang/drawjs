@@ -1,9 +1,14 @@
-mod color;
 mod block;
-mod render_ir;
+mod color;
 mod render_ctx;
+mod render_ir;
+mod vello_renderer;
 
-use block::SceneGraph;
+// API 重新导出
+pub use block::SceneGraph;
+pub use render_ctx::RenderContext;
+
+pub use vello_renderer::VelloRenderer as Renderer;
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
