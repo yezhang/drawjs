@@ -1,99 +1,81 @@
-use std::{env::Args, sync::Arc};
+use std::sync::Arc;
 
-use novadraw::{self};
-use vello::{
-    AaConfig,
-    peniko::color::palette,
-    util::{RenderContext, RenderSurface},
-    wgpu,
-};
+use crate::scene_manager::SceneManager;
+use novadraw::{Color, VelloRenderer, VelloSurface};
+use winit::window::WindowAttributes;
 use winit::{
     application::ApplicationHandler,
     dpi,
     event::WindowEvent,
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
     keyboard::{KeyCode, PhysicalKey},
-    window::{Window, WindowAttributes, WindowId},
+    window::{Window, WindowId},
 };
 
-struct RenderState {
-    surface: RenderSurface<'static>,
-    window: Arc<Window>,
-}
-
 pub struct GraphicsApp {
-    context: RenderContext,
-    scene_graph: Option<novadraw::SceneGraph>,
-    state: Option<RenderState>,
+    renderer: VelloRenderer,
+    surface: Option<VelloSurface>,
+    scene_manager: Option<SceneManager>,
     cached_window: Option<Arc<Window>>,
 }
 
 impl GraphicsApp {
-    fn new(render_context: RenderContext, render_state: Option<RenderState>) -> Self {
-        let scene_graph = novadraw::SceneGraph::new();
-
-        Self {
-            context: render_context,
-            scene_graph: Some(scene_graph),
-            state: render_state,
+    fn new() -> Self {
+        GraphicsApp {
+            renderer: VelloRenderer::new(),
+            surface: None,
+            scene_manager: None,
             cached_window: None,
         }
     }
-    fn redraw(&self) {
-        if let Some(scene_graph) = &self.scene_graph {
-            let gc = scene_graph.render();
-            let Some(RenderState { surface, window }) = &self.state else {
-                return;
-            };
-            let width = surface.config.width;
-            let height = surface.config.height;
-            let device_handle = &self.context.devices[surface.dev_id];
 
-            let base_color = palette::css::BLACK;
-            let antialiasing_method = AaConfig::Area; // 可以修改为其他配置
-            let render_params = vello::RenderParams {
-                base_color,
-                width,
-                height,
-                antialiasing_method,
-            };
-            // 输出到渲染后端
-            let vello_renderer = novadraw::Renderer::new();
+    fn redraw(&mut self) {
+        let Some(surface) = &mut self.surface else {
+            return;
+        };
 
-            vello_renderer.submit_commands(&gc.commands);
-        }
+        let Some(scene_manager) = &self.scene_manager else {
+            return;
+        };
+
+        let render_ctx = scene_manager.scene().render();
+        self.renderer.render(surface, &render_ctx.commands);
     }
 }
 
 impl ApplicationHandler<()> for GraphicsApp {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let None = self.state else {
+        let Some(_) = self.surface else {
+            let window_attributes = WindowAttributes::default()
+                .with_title("Novadraw Editor - 场景图引擎演示")
+                .with_inner_size(dpi::LogicalSize::new(800, 600))
+                .with_resizable(true)
+                .with_transparent(true);
+
+            let window = self
+                .cached_window
+                .take()
+                .unwrap_or_else(|| Arc::new(event_loop.create_window(window_attributes).unwrap()));
+
+            let width = 800;
+            let height = 600;
+
+            let surface = self
+                .renderer
+                .create_surface(Arc::clone(&window), width, height);
+            self.surface = Some(surface);
+
+            if self.scene_manager.is_none() {
+                let mut manager = SceneManager::new();
+
+                manager.add_rectangle(100.0, 100.0, 200.0, 150.0, Color::hex("#3498db"));
+                manager.add_rectangle(400.0, 200.0, 150.0, 150.0, Color::hex("#3498db"));
+                manager.add_rectangle_at_center(400.0, 300.0, 200.0, 100.0, Color::hex("#e74c3c"));
+
+                self.scene_manager = Some(manager);
+            }
             return;
         };
-
-        let window_attributes = WindowAttributes::default()
-            .with_title("Vello 图形工具框架")
-            .with_inner_size(dpi::LogicalSize::new(800, 600))
-            .with_resizable(true);
-        let window = self
-            .cached_window
-            .take()
-            .unwrap_or_else(|| Arc::new(event_loop.create_window(window_attributes).unwrap()));
-        let size = window.inner_size();
-        let present_mode = wgpu::PresentMode::AutoVsync;
-        let surface_future =
-            self.context
-                .create_surface(Arc::clone(&window), size.width, size.height, present_mode);
-        // 阻塞在这里，防止 Suspended 事件发生
-        let surface = pollster::block_on(surface_future).expect("error: 创建 surface");
-        self.state = {
-            let render_state = RenderState { window, surface };
-            Some(render_state)
-        };
-
-        if self.scene_graph.is_none() {
-            self.scene_graph = Some(novadraw::SceneGraph::new());
-        }
     }
 
     fn window_event(
@@ -102,7 +84,7 @@ impl ApplicationHandler<()> for GraphicsApp {
         _window_id: WindowId,
         event: WindowEvent,
     ) {
-        let Some(render_state) = &mut self.state else {
+        let Some(_surface) = &mut self.surface else {
             return;
         };
         match event {
@@ -111,12 +93,6 @@ impl ApplicationHandler<()> for GraphicsApp {
                 event_loop.exit();
             }
             WindowEvent::RedrawRequested => {
-                // 后续在这里添加渲染逻辑
-                // 创建 novadraw 场景图，创建渲染后端，执行渲染；
-                // 如果是导出其他格式，那么使用不同的渲染后端，执行渲染。
-
-                render_state.window.request_redraw();
-
                 self.redraw();
             }
             WindowEvent::Resized(new_size) => {
@@ -132,16 +108,15 @@ impl ApplicationHandler<()> for GraphicsApp {
         }
     }
 
-    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
-        // 请求重绘以保持动画循环
-        if let Some(render_state) = &mut self.state {
-            render_state.window.request_redraw();
+    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) -> () {
+        if let Some(surface) = &mut self.surface {
+            surface.window.request_redraw();
         }
     }
 
-    fn suspended(&mut self, event_loop: &ActiveEventLoop) {
-        if let Some(render_state) = self.state.take() {
-            self.cached_window = Some(render_state.window);
+    fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
+        if let Some(surface) = self.surface.take() {
+            self.cached_window = Some(surface.window);
         }
     }
 }
@@ -150,10 +125,10 @@ pub fn start_app() -> Result<(), Box<dyn std::error::Error>> {
     let event_loop = EventLoop::new()?;
     event_loop.set_control_flow(ControlFlow::Wait);
 
-    let render_cx = RenderContext::new();
-    let mut app = GraphicsApp::new(render_cx, None);
+    let mut app = GraphicsApp::new();
 
-    println!("启动事件循环...");
+    println!("启动事件循环... (按 ESC 退出)");
     event_loop.run_app(&mut app)?;
+
     Ok(())
 }

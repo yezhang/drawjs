@@ -3,6 +3,7 @@ use slotmap::{SlotMap, new_key_type};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+use crate::color::Color;
 use crate::render_ctx;
 
 // 1. 定义运行时的高速 ID (SlotKey)
@@ -50,7 +51,7 @@ pub struct RectangleFigure {
     pub y: f64,
     pub width: f64,
     pub height: f64,
-    pub fill_color: String,
+    pub fill_color: Color,
 }
 
 impl RectangleFigure {
@@ -60,16 +61,24 @@ impl RectangleFigure {
             y,
             width,
             height,
-            fill_color: "#3498db".to_string(),
+            fill_color: Color::hex("#3498db"),
+        }
+    }
+
+    pub fn new_with_color(x: f64, y: f64, width: f64, height: f64, color: Color) -> Self {
+        Self {
+            x,
+            y,
+            width,
+            height,
+            fill_color: color,
         }
     }
 }
 
 impl Paint for RectangleFigure {
     fn paint(&self, gc: &mut render_ctx::RenderContext) {
-        // 设置填充和边框样式
-        gc.set_fill_style(&self.fill_color);
-        // 绘制直角矩形
+        gc.set_fill_style(self.fill_color);
         gc.draw_rect(self.x, self.y, self.width, self.height);
     }
 }
@@ -173,9 +182,15 @@ impl SceneGraph {
         self.uuid_map.insert(uuid, id);
 
         // 4. 维护树结构 (使用 SlotKey)
-        if let Some(pid) = parent_id {
-            if let Some(parent) = self.blocks.get_mut(pid) {
-                parent.children.push(id);
+        match parent_id {
+            Some(pid) => {
+                if let Some(parent) = self.blocks.get_mut(pid) {
+                    parent.children.push(id);
+                }
+            }
+            None => {
+                // parent_id 为 None 时，添加到根节点
+                self.blocks[self.root].children.push(id);
             }
         }
 
