@@ -5,45 +5,72 @@ use uuid::Uuid;
 
 use crate::color::Color;
 use crate::render_ctx;
+use glam::DVec2;
 
 // 1. 定义运行时的高速 ID (SlotKey)
 new_key_type! { pub struct BlockId; }
 
-// 注意：这里的 children 存的是高速 BlockId，而不是 UUID
-pub struct RuntimeBlock {
-    pub id: BlockId, // 自己的运行时 ID
-    pub uuid: Uuid,  // 自己的持久化 ID (身份证)
-
-    pub children: Vec<BlockId>, // 树状结构使用运行时 ID 连接
-    pub parent: Option<BlockId>,
-
-    pub figure: Box<dyn Paint>,
-    // ... 其他属性 (Rect, Color, Data)
+#[derive(Clone, Copy, Debug)]
+pub struct Rect {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
 }
 
-// 绘制特性定义
-pub trait Paint {
-    fn paint(&self, gc: &mut render_ctx::RenderContext) {
-        // 提供默认实现
+impl Rect {
+    pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
+        Self { x, y, width, height }
     }
-    //fn bounds(&self) -> Rect;
-    //fn hit_test(&self, point: (f32, f32)) -> bool;
+
+    pub fn contains(&self, point: DVec2) -> bool {
+        point.x >= self.x && point.x <= self.x + self.width
+            && point.y >= self.y && point.y <= self.y + self.height
+    }
+
+    pub fn center(&self) -> DVec2 {
+        DVec2::new(self.x + self.width / 2.0, self.y + self.height / 2.0)
+    }
 }
 
-//impl<T> Paint for T {}
+pub trait Paint {
+    fn bounds(&self) -> Rect;
+    fn hit_test(&self, point: DVec2) -> bool {
+        self.bounds().contains(point)
+    }
+    fn paint(&self, gc: &mut render_ctx::RenderContext);
+    fn paint_highlight(&self, gc: &mut render_ctx::RenderContext) {
+        let bounds = self.bounds();
+        gc.set_fill_style(Color::rgba(0.0, 0.0, 0.0, 0.0));
+        gc.set_stroke_style(Color::hex("#f39c12"), 2.0);
+        gc.draw_stroke_rect(bounds.x, bounds.y, bounds.width, bounds.height);
+    }
+    fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+        None
+    }
+}
 
-pub struct NullFigure {}
+pub trait Interactive {
+    fn on_mouse_enter(&mut self);
+    fn on_mouse_leave(&mut self);
+    fn on_mouse_move(&mut self, x: f64, y: f64);
+    fn on_mouse_press(&mut self, x: f64, y: f64);
+    fn on_mouse_release(&mut self, x: f64, y: f64);
+}
+
+pub struct NullFigure;
 
 impl NullFigure {
-    fn new() -> Self {
+    pub fn new() -> Self {
         NullFigure {}
     }
 }
 
 impl Paint for NullFigure {
-    fn paint(&self, _gc: &mut render_ctx::RenderContext) {
-        // keep empty
+    fn bounds(&self) -> Rect {
+        Rect::new(0.0, 0.0, 0.0, 0.0)
     }
+    fn paint(&self, _gc: &mut render_ctx::RenderContext) {}
 }
 
 pub struct RectangleFigure {
@@ -52,6 +79,8 @@ pub struct RectangleFigure {
     pub width: f64,
     pub height: f64,
     pub fill_color: Color,
+    pub stroke_color: Option<Color>,
+    pub stroke_width: f64,
 }
 
 impl RectangleFigure {
@@ -62,6 +91,8 @@ impl RectangleFigure {
             width,
             height,
             fill_color: Color::hex("#3498db"),
+            stroke_color: None,
+            stroke_width: 0.0,
         }
     }
 
@@ -72,44 +103,96 @@ impl RectangleFigure {
             width,
             height,
             fill_color: color,
+            stroke_color: None,
+            stroke_width: 0.0,
         }
+    }
+
+    pub fn with_stroke(mut self, color: Color, width: f64) -> Self {
+        self.stroke_color = Some(color);
+        self.stroke_width = width;
+        self
+    }
+
+    pub fn translate(&mut self, dx: f64, dy: f64) {
+        self.x += dx;
+        self.y += dy;
     }
 }
 
 impl Paint for RectangleFigure {
+    fn bounds(&self) -> Rect {
+        Rect::new(self.x, self.y, self.width, self.height)
+    }
+
     fn paint(&self, gc: &mut render_ctx::RenderContext) {
         gc.set_fill_style(self.fill_color);
         gc.draw_rect(self.x, self.y, self.width, self.height);
+
+        if let Some(color) = self.stroke_color {
+            gc.set_stroke_style(color, self.stroke_width);
+            gc.draw_stroke_rect(self.x, self.y, self.width, self.height);
+        }
     }
+
+    fn paint_highlight(&self, gc: &mut render_ctx::RenderContext) {
+        let bounds = self.bounds();
+        gc.set_fill_style(Color::rgba(0.0, 0.0, 0.0, 0.0));
+        gc.set_stroke_style(Color::hex("#f39c12"), 3.0);
+        gc.draw_stroke_rect(bounds.x - 2.0, bounds.y - 2.0, bounds.width + 4.0, bounds.height + 4.0);
+    }
+
+    fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+        Some(self)
+    }
+}
+
+pub struct RuntimeBlock {
+    pub id: BlockId,
+    pub uuid: Uuid,
+    pub children: Vec<BlockId>,
+    pub parent: Option<BlockId>,
+    pub figure: Box<dyn Paint>,
+    pub is_hovered: bool,
+    pub is_selected: bool,
 }
 
 impl RuntimeBlock {
     fn paint(&self, gc: &mut render_ctx::RenderContext) {
         self.figure.paint(gc);
+        if self.is_hovered || self.is_selected {
+            self.figure.paint_highlight(gc);
+        }
     }
 
     pub fn set_figure(&mut self, figure: Box<dyn Paint>) {
         self.figure = figure;
     }
+
+    pub fn hit_test(&self, point: DVec2) -> bool {
+        self.figure.hit_test(point)
+    }
+
+    pub fn translate(&mut self, dx: f64, dy: f64) {
+        if let Some(rect) = self.figure.as_rectangle_mut() {
+            rect.translate(dx, dy);
+        }
+    }
+
+    pub fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+        self.figure.as_rectangle_mut()
+    }
 }
 
-// 存档用的结构体 (只认 UUID)
 #[derive(Serialize, Deserialize)]
 struct SerializedBlock {
     uuid: Uuid,
-    children: Vec<Uuid>, // 存档里存的是 UUID 树
-                         // data...
+    children: Vec<Uuid>,
 }
 
-// 3. 场景管理器 (Arena + 索引)
 pub struct SceneGraph {
-    // 主存储：Arena (数据的所有者)
     pub blocks: SlotMap<BlockId, RuntimeBlock>,
-
-    // 辅助索引：UUID -> BlockId 的快速查找表
-    // 用于解析双链、加载存档、网络同步
     pub uuid_map: HashMap<Uuid, BlockId>,
-
     pub root: BlockId,
 }
 
@@ -124,6 +207,8 @@ impl SceneGraph {
             children: Vec::new(),
             parent: None,
             figure: Box::new(NullFigure::new()),
+            is_hovered: false,
+            is_selected: false,
         });
 
         SceneGraph {
@@ -138,6 +223,7 @@ impl SceneGraph {
         self.render_to_context(&mut gc);
         gc
     }
+
     fn render_to_context(&self, gc: &mut render_ctx::RenderContext) {
         self.traverse_dfs_stack(|block_id| {
             if let Some(runtime_block) = self.blocks.get(block_id) {
@@ -157,7 +243,6 @@ impl SceneGraph {
             visitor(node_id);
 
             if let Some(node) = self.blocks.get(node_id) {
-                // 反向压栈以保证正向遍历顺序
                 for &child_id in node.children.iter().rev() {
                     stack.push(child_id);
                 }
@@ -166,22 +251,20 @@ impl SceneGraph {
     }
 
     pub fn new_block(&mut self, parent_id: Option<BlockId>, figure: Box<dyn Paint>) -> BlockId {
-        let uuid = Uuid::new_v4(); // 1. 生成身份证
+        let uuid = Uuid::new_v4();
 
-        // 2. 插入 SlotMap，获得运行时 ID
         let id = self.blocks.insert_with_key(|key| RuntimeBlock {
             id: key,
             uuid,
             children: Vec::new(),
             parent: parent_id,
             figure,
-            // ...
+            is_hovered: false,
+            is_selected: false,
         });
 
-        // 3. 建立映射索引
         self.uuid_map.insert(uuid, id);
 
-        // 4. 维护树结构 (使用 SlotKey)
         match parent_id {
             Some(pid) => {
                 if let Some(parent) = self.blocks.get_mut(pid) {
@@ -189,7 +272,6 @@ impl SceneGraph {
                 }
             }
             None => {
-                // parent_id 为 None 时，添加到根节点
                 self.blocks[self.root].children.push(id);
             }
         }
@@ -197,61 +279,65 @@ impl SceneGraph {
         id
     }
 
-    // 1. 保存：运行时 -> 硬盘
-    pub fn save(&self) -> String {
-        let export_list: Vec<SerializedBlock> = self
-            .blocks
-            .values()
-            .map(|b| {
-                SerializedBlock {
-                    uuid: b.uuid,
-                    // 关键：把 Runtime ID 列表转回 UUID 列表
-                    children: b
-                        .children
-                        .iter()
-                        .map(|&cid| self.blocks[cid].uuid)
-                        .collect(),
-                }
-            })
-            .collect();
+    pub fn hit_test(&self, point: DVec2) -> Option<BlockId> {
+        let mut stack = Vec::new();
 
-        serde_json::to_string(&export_list).unwrap()
-    }
-
-    // 2. 加载：硬盘 -> 运行时 (两步构建法)
-    pub fn load(json: &str) -> Self {
-        let loaded_data: Vec<SerializedBlock> = serde_json::from_str(json).unwrap();
-
-        let mut scene = SceneGraph::new(); // 初始化空的
-
-        // 第一步：创建所有节点，建立 UUID -> BlockId 映射
-        // 此时 children 关系还是空的，因为子节点可能还没创建出来
-        for item in &loaded_data {
-            let id = scene.blocks.insert_with_key(|key| RuntimeBlock {
-                id: key,
-                uuid: item.uuid,
-                children: Vec::new(), // 先留空
-                parent: None,
-                figure: Box::new(NullFigure::new()), // TODO 临时占位符
-                                                     // ...
-            });
-            scene.uuid_map.insert(item.uuid, id);
-        }
-
-        // 第二步：重建树形关系
-        // 现在所有节点都在内存里了，可以通过 UUID 查到 BlockId 了
-        for item in &loaded_data {
-            let parent_id = scene.uuid_map[&item.uuid];
-
-            for child_uuid in &item.children {
-                let child_id = scene.uuid_map[child_uuid];
-
-                // 连接父子 (使用 BlockId)
-                scene.blocks[parent_id].children.push(child_id);
-                scene.blocks[child_id].parent = Some(parent_id);
+        // 先把 root 的所有子节点入栈
+        if let Some(root) = self.blocks.get(self.root) {
+            for &child_id in root.children.iter() {
+                stack.push(child_id);
             }
         }
 
-        scene
+        while let Some(node_id) = stack.pop() {
+            if let Some(node) = self.blocks.get(node_id) {
+                // 先push子节点（后进先出，保证上层元素先被检查）
+                for &child_id in node.children.iter() {
+                    stack.push(child_id);
+                }
+
+                // 再检查当前节点
+                if node.hit_test(point) {
+                    return Some(node_id);
+                }
+            }
+        }
+        None
+    }
+
+    pub fn set_hovered(&mut self, block_id: Option<BlockId>) {
+        // 清除所有 hover 状态
+        for block in self.blocks.values_mut() {
+            block.is_hovered = false;
+        }
+        // 设置新的 hover 状态
+        if let Some(id) = block_id {
+            if let Some(block) = self.blocks.get_mut(id) {
+                block.is_hovered = true;
+            }
+        }
+    }
+
+    pub fn set_selected(&mut self, block_id: Option<BlockId>) {
+        // 清除所有 selected 状态
+        for block in self.blocks.values_mut() {
+            block.is_selected = false;
+        }
+        // 设置新的 selected 状态
+        if let Some(id) = block_id {
+            if let Some(block) = self.blocks.get_mut(id) {
+                block.is_selected = true;
+            }
+        }
+    }
+
+    pub fn get_block(&self, id: BlockId) -> Option<&RuntimeBlock> {
+        self.blocks.get(id)
+    }
+
+    pub fn translate(&mut self, id: BlockId, dx: f64, dy: f64) {
+        if let Some(block) = self.blocks.get_mut(id) {
+            block.translate(dx, dy);
+        }
     }
 }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use vello::kurbo::Affine;
+use vello::kurbo::{Affine, Stroke};
 use vello::peniko::Color;
 use vello::util::{RenderContext, RenderSurface};
 use vello::{AaConfig, Renderer, RendererOptions};
@@ -13,27 +13,17 @@ pub struct VelloRenderer {
     render_context: RenderContext,
     renderers: Vec<Option<Renderer>>,
     scene: Scene,
+    surface: RenderSurface<'static>,
+    window: Arc<Window>,
 }
 
 type Scene = vello::Scene;
 
 impl VelloRenderer {
-    pub fn new() -> Self {
-        VelloRenderer {
-            render_context: RenderContext::new(),
-            renderers: vec![],
-            scene: Scene::new(),
-        }
-    }
-
-    pub fn create_surface(
-        &mut self,
-        window: Arc<Window>,
-        width: u32,
-        height: u32,
-    ) -> VelloSurface {
+    pub fn new(window: Arc<Window>, width: u32, height: u32) -> Self {
+        let mut render_context = RenderContext::new();
         let size = PhysicalSize::new(width, height);
-        let surface_future = self.render_context.create_surface(
+        let surface_future = render_context.create_surface(
             Arc::clone(&window),
             size.width,
             size.height,
@@ -41,43 +31,39 @@ impl VelloRenderer {
         );
         let surface = pollster::block_on(surface_future).expect("Failed to create surface");
 
-        self.renderers
-            .resize_with(self.render_context.devices.len(), || None);
-        self.renderers[surface.dev_id]
-            .get_or_insert_with(|| create_renderer(&self.render_context, &surface));
+        let mut renderers = vec![];
+        renderers.resize_with(render_context.devices.len(), || None);
+        renderers[surface.dev_id]
+            .get_or_insert_with(|| create_renderer(&render_context, &surface));
 
-        VelloSurface {
+        VelloRenderer {
+            render_context,
+            renderers,
+            scene: Scene::new(),
+            surface,
             window,
-            surface: Box::new(surface),
-            width,
-            height,
-            valid_surface: true,
         }
     }
 
-    pub fn render(&mut self, surface: &mut VelloSurface, commands: &[RenderCommand]) {
-        if !surface.valid_surface {
-            return;
-        }
-
+    pub fn render(&mut self, commands: &[RenderCommand]) {
         self.scene.reset();
 
         for cmd in commands {
             Self::render_command(&mut self.scene, cmd);
         }
 
-        let device_handle = &self.render_context.devices[surface.surface.dev_id];
-        let width = surface.surface.config.width;
-        let height = surface.surface.config.height;
+        let device_handle = &self.render_context.devices[self.surface.dev_id];
+        let width = self.surface.config.width;
+        let height = self.surface.config.height;
 
-        self.renderers[surface.surface.dev_id]
+        self.renderers[self.surface.dev_id]
             .as_mut()
             .unwrap()
             .render_to_texture(
                 &device_handle.device,
                 &device_handle.queue,
                 &self.scene,
-                &surface.surface.target_view,
+                &self.surface.target_view,
                 &vello::RenderParams {
                     base_color: Color::new([0.0, 0.0, 0.0, 0.0]),
                     width,
@@ -87,7 +73,7 @@ impl VelloRenderer {
             )
             .expect("Failed to render to texture");
 
-        let surface_texture = surface
+        let surface_texture = self
             .surface
             .surface
             .get_current_texture()
@@ -99,10 +85,10 @@ impl VelloRenderer {
                 label: Some("Surface Blit"),
             });
 
-        surface.surface.blitter.copy(
+        self.surface.blitter.copy(
             &device_handle.device,
             &mut encoder,
-            &surface.surface.target_view,
+            &self.surface.target_view,
             &surface_texture
                 .texture
                 .create_view(&vello::wgpu::TextureViewDescriptor::default()),
@@ -114,7 +100,7 @@ impl VelloRenderer {
 
     fn render_command(scene: &mut Scene, cmd: &RenderCommand) {
         match cmd {
-            RenderCommand::FillRect { rect, color, .. } => {
+            RenderCommand::FillRect { rect, color, stroke_color, stroke_width } => {
                 let kurbo_rect = vello::kurbo::Rect::new(
                     rect[0].x, rect[0].y,
                     rect[1].x, rect[1].y,
@@ -124,15 +110,50 @@ impl VelloRenderer {
                     Color::new([c.r as f32, c.g as f32, c.b as f32, c.a as f32])
                 }).unwrap_or_else(|| Color::new([0.2, 0.6, 0.86, 1.0]));
 
-                scene.fill(
-                    vello::peniko::Fill::NonZero,
-                    Affine::IDENTITY,
-                    vello_color,
-                    None,
-                    &kurbo_rect,
-                );
+                let alpha = vello_color.components[3];
+                if alpha == 0.0 {
+                    // 只绘制描边
+                    let stroke_vello_color = stroke_color.map(|c| {
+                        Color::new([c.r as f32, c.g as f32, c.b as f32, c.a as f32])
+                    }).unwrap_or_else(|| Color::new([0.95, 0.61, 0.07, 1.0]));
+
+                    let stroke = Stroke::new(*stroke_width as f64);
+
+                    let stroke_width = *stroke_width;
+                    if stroke_width > 0.0 {
+                        let inset = stroke_width / 2.0;
+                        let stroke_rect = vello::kurbo::Rect::new(
+                            rect[0].x + inset, rect[0].y + inset,
+                            rect[1].x - inset, rect[1].y - inset,
+                        );
+                        scene.stroke(
+                            &Stroke::new(stroke_width as f64),
+                            Affine::IDENTITY,
+                            stroke_vello_color,
+                            None,
+                            &stroke_rect,
+                        );
+                    }
+                } else {
+                    scene.fill(
+                        vello::peniko::Fill::NonZero,
+                        Affine::IDENTITY,
+                        vello_color,
+                        None,
+                        &kurbo_rect,
+                    );
+                }
             }
         }
+    }
+
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.surface.config.width = width;
+        self.surface.config.height = height;
+    }
+
+    pub fn window(&self) -> &Arc<Window> {
+        &self.window
     }
 }
 
@@ -142,12 +163,4 @@ fn create_renderer(render_cx: &RenderContext, surface: &RenderSurface<'_>) -> Re
         RendererOptions::default(),
     )
     .expect("Couldn't create renderer")
-}
-
-pub struct VelloSurface {
-    pub window: Arc<Window>,
-    pub surface: Box<RenderSurface<'static>>,
-    pub width: u32,
-    pub height: u32,
-    pub valid_surface: bool,
 }

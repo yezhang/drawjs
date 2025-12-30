@@ -8,4 +8,4 @@ pub use block::{BlockId, Paint, RectangleFigure, RuntimeBlock, SceneGraph};
 pub use color::Color;
 pub use render_ctx::RenderContext;
 pub use render_ir::RenderCommand;
-pub use vello_renderer::{VelloRenderer, VelloSurface};
+pub use vello_renderer::VelloRenderer;
