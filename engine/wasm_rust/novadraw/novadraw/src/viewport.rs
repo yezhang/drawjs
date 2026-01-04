@@ -45,16 +45,16 @@ impl Viewport {
         self.origin += offset;
     }
 
-    pub fn zoom_to_fit(&mut self, rect: &super::block::Rect, padding: f64) {
+    pub fn zoom_to_fit(&mut self, rect: &super::block::Rect, viewport_width: f64, viewport_height: f64, padding: f64) {
         if rect.width <= 0.0 || rect.height <= 0.0 {
             return;
         }
-        let scale_x = rect.width / rect.width;
-        let scale_y = rect.height / rect.height;
+        let scale_x = (viewport_width - padding * 2.0) / rect.width;
+        let scale_y = (viewport_height - padding * 2.0) / rect.height;
         self.zoom = scale_x.min(scale_y);
         self.origin = DVec2::new(
-            rect.x - padding,
-            rect.y - padding,
+            rect.x - padding / self.zoom,
+            rect.y - padding / self.zoom,
         );
     }
 
@@ -75,7 +75,9 @@ impl Viewport {
     }
 
     pub fn to_transform(&self) -> Transform {
-        Transform::from_scale_2d(self.zoom, self.zoom)
+        let scale = Transform::from_scale_2d(self.zoom, self.zoom);
+        let translation = Transform::from_translation_2d(self.origin.x, self.origin.y);
+        scale.compose(&translation)
     }
 
     pub fn to_inverse_transform(&self) -> Transform {
@@ -129,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_to_transform_identity() {
-        let viewport = Viewport::new().with_zoom(1.0);
+        let viewport = Viewport::new().with_origin(0.0, 0.0).with_zoom(1.0);
         let transform = viewport.to_transform();
         let point = glam::DVec2::new(100.0, 200.0);
         let transformed = transform.multiply_point_2d(point);

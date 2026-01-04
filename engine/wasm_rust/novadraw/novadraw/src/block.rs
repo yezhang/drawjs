@@ -25,6 +25,14 @@ impl Rect {
         Self { x, y, width, height }
     }
 
+    pub fn from_corners(corner1: Point, corner2: Point) -> Self {
+        let x = corner1.x.min(corner2.x);
+        let y = corner1.y.min(corner2.y);
+        let width = (corner2.x - corner1.x).abs();
+        let height = (corner2.y - corner1.y).abs();
+        Self { x, y, width, height }
+    }
+
     pub fn contains(&self, point: Point) -> bool {
         point.x >= self.x
             && point.x <= self.x + self.width
@@ -292,6 +300,16 @@ impl SceneGraph {
         id
     }
 
+    pub fn promote_ui_block_to_content(&mut self, ui_id: BlockId) -> Option<BlockId> {
+        if let Some(ui_block) = self.blocks.get_mut(ui_id) {
+            if ui_block.block_type == BlockType::UILayer {
+                ui_block.block_type = BlockType::Content;
+                return Some(ui_id);
+            }
+        }
+        None
+    }
+
     pub fn hit_test_content(&self, point: Point) -> Option<BlockId> {
         self.hit_test_with_transform(point, Transform::identity())
     }
@@ -363,14 +381,14 @@ impl SceneGraph {
                     }
 
                     let bounds = node.figure.bounds();
-                    let center = cumulative_transform.multiply_point_2d(bounds.center());
-                    let world_rect = Rect::new(
-                        center.x - bounds.width / 2.0,
-                        center.y - bounds.height / 2.0,
-                        bounds.width,
-                        bounds.height,
-                    );
-                    if rect_intersects(&rect, &world_rect) {
+                    let corners = [
+                        cumulative_transform.multiply_point_2d(DVec2::new(bounds.x, bounds.y)),
+                        cumulative_transform.multiply_point_2d(DVec2::new(bounds.x + bounds.width, bounds.y)),
+                        cumulative_transform.multiply_point_2d(DVec2::new(bounds.x + bounds.width, bounds.y + bounds.height)),
+                        cumulative_transform.multiply_point_2d(DVec2::new(bounds.x, bounds.y + bounds.height)),
+                    ];
+                    let transformed_bounds = Rect::from_corners(corners[0], corners[2]);
+                    if rect_intersects(&rect, &transformed_bounds) {
                         selected.push(node_id);
                     }
                 }
@@ -426,7 +444,7 @@ impl SceneGraph {
         })
     }
 
-    fn render_to_context_with_viewport(&self, gc: &mut render_ctx::RenderContext, _viewport_transform: Transform) {
+    fn render_to_context_with_viewport(&self, gc: &mut render_ctx::RenderContext, viewport_transform: Transform) {
         let mut stack = Vec::new();
         let mut viewport_stack = Vec::new();
 
@@ -440,7 +458,7 @@ impl SceneGraph {
                     || runtime_block.block_type == BlockType::Content;
 
                 if apply_viewport {
-                    gc.push_transform(Transform::identity());
+                    gc.push_transform(viewport_transform);
                 } else {
                     gc.push_transform(Transform::identity());
                 }

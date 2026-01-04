@@ -24,8 +24,21 @@ pub struct GraphicsApp {
     drag_state: Option<DragState>,
     selection_state: Option<SelectionState>,
     draw_state: Option<DrawState>,
+    viewport_drag_state: Option<ViewportDragState>,
+    space_drag_state: Option<SpaceDragState>,
     last_mouse_pos: Option<DVec2>,
     active_tool: crate::scene_manager::Tool,
+    space_pressed: bool,
+}
+
+struct ViewportDragState {
+    start_pos: DVec2,
+    start_origin: DVec2,
+}
+
+struct SpaceDragState {
+    start_pos: DVec2,
+    start_origin: DVec2,
 }
 
 struct DragState {
@@ -53,8 +66,11 @@ impl GraphicsApp {
             drag_state: None,
             selection_state: None,
             draw_state: None,
+            viewport_drag_state: None,
+            space_drag_state: None,
             last_mouse_pos: None,
             active_tool: crate::scene_manager::Tool::Select,
+            space_pressed: false,
         }
     }
 
@@ -151,7 +167,13 @@ impl ApplicationHandler<()> for GraphicsApp {
                         PhysicalKey::Code(KeyCode::KeyV) => self.set_tool(crate::scene_manager::Tool::Select),
                         PhysicalKey::Code(KeyCode::KeyR) => self.set_tool(crate::scene_manager::Tool::Rectangle),
                         PhysicalKey::Code(KeyCode::KeyC) => self.set_tool(crate::scene_manager::Tool::Circle),
+                        PhysicalKey::Code(KeyCode::Space) => self.space_pressed = true,
                         _ => {}
+                    }
+                } else if event.state == ElementState::Released {
+                    if let PhysicalKey::Code(KeyCode::Space) = event.physical_key {
+                        self.space_pressed = false;
+                        self.space_drag_state = None;
                     }
                 }
             }
@@ -169,7 +191,30 @@ impl ApplicationHandler<()> for GraphicsApp {
                 if let Some(scene_manager) = &mut self.scene_manager {
                     let tool = scene_manager.active_tool();
 
-                    if tool == crate::scene_manager::Tool::Select {
+                    if let Some(drag_state) = &self.viewport_drag_state {
+                        let dx = current_pos.x - drag_state.start_pos.x;
+                        let dy = current_pos.y - drag_state.start_pos.y;
+                        let zoom = scene_manager.viewport().zoom;
+                        scene_manager.viewport_mut().set_origin(
+                            drag_state.start_origin.x - dx / zoom,
+                            drag_state.start_origin.y - dy / zoom,
+                        );
+                    } else if self.space_pressed {
+                        if let Some(drag_state) = &self.space_drag_state {
+                            let dx = current_pos.x - drag_state.start_pos.x;
+                            let dy = current_pos.y - drag_state.start_pos.y;
+                            let zoom = scene_manager.viewport().zoom;
+                            scene_manager.viewport_mut().set_origin(
+                                drag_state.start_origin.x - dx / zoom,
+                                drag_state.start_origin.y - dy / zoom,
+                            );
+                        } else {
+                            self.space_drag_state = Some(SpaceDragState {
+                                start_pos: current_pos,
+                                start_origin: scene_manager.viewport().origin,
+                            });
+                        }
+                    } else if tool == crate::scene_manager::Tool::Select {
                         if let Some(drag_state) = &self.drag_state {
                             let dx = current_pos.x - drag_state.start_pos.x;
                             let dy = current_pos.y - drag_state.start_pos.y;
@@ -179,15 +224,18 @@ impl ApplicationHandler<()> for GraphicsApp {
                         } else if self.selection_state.is_some() {
                             scene_manager.update_selection_box(current_pos);
                         } else {
-                            let hit_id = scene_manager.scene().hit_test(current_pos);
+                            let world_pos = scene_manager.viewport().screen_to_world(current_pos);
+                            let hit_id = scene_manager.scene().hit_test(world_pos);
                             scene_manager.set_hovered(hit_id);
                         }
                     } else if tool == crate::scene_manager::Tool::Rectangle {
                         if let Some(draw_state) = &mut self.draw_state {
+                            let world_start = draw_state.start_pos;
+                            let world_end = scene_manager.viewport().screen_to_world(current_pos);
                             scene_manager.update_temp_rectangle(
                                 draw_state.temp_rect_id,
-                                draw_state.start_pos,
-                                current_pos,
+                                world_start,
+                                world_end,
                             );
                         }
                     }
@@ -204,7 +252,9 @@ impl ApplicationHandler<()> for GraphicsApp {
                     if state == ElementState::Pressed {
                         if let Some(mouse_pos) = self.last_mouse_pos {
                             if tool == crate::scene_manager::Tool::Select {
-                                let hover_id = scene_manager.scene().hit_test(mouse_pos);
+                                let hover_id = scene_manager.scene().hit_test(
+                                    scene_manager.viewport().screen_to_world(mouse_pos)
+                                );
                                 if let Some(id) = hover_id {
                                     scene_manager.scene_mut().set_selected(Some(id));
                                     let start_transform = scene_manager.scene()
@@ -225,9 +275,10 @@ impl ApplicationHandler<()> for GraphicsApp {
                                     scene_manager.start_selection_box(mouse_pos);
                                 }
                             } else if tool == crate::scene_manager::Tool::Rectangle {
-                                let temp_id = scene_manager.create_temp_rectangle(mouse_pos);
+                                let world_pos = scene_manager.viewport().screen_to_world(mouse_pos);
+                                let temp_id = scene_manager.create_temp_rectangle(world_pos);
                                 self.draw_state = Some(DrawState {
-                                    start_pos: mouse_pos,
+                                    start_pos: world_pos,
                                     temp_rect_id: temp_id,
                                 });
                             }
@@ -248,6 +299,47 @@ impl ApplicationHandler<()> for GraphicsApp {
                         }
                     }
                     renderer.window().request_redraw();
+                }
+            }
+            WindowEvent::MouseInput { button: MouseButton::Middle, state, .. } => {
+                let Some(renderer) = &self.renderer else {
+                    return;
+                };
+                if let Some(scene_manager) = &mut self.scene_manager {
+                    if let Some(mouse_pos) = self.last_mouse_pos {
+                        if state == ElementState::Pressed {
+                            self.viewport_drag_state = Some(ViewportDragState {
+                                start_pos: mouse_pos,
+                                start_origin: scene_manager.viewport().origin,
+                            });
+                        } else {
+                            self.viewport_drag_state = None;
+                        }
+                    }
+                    renderer.window().request_redraw();
+                }
+            }
+            WindowEvent::MouseWheel { delta, .. } => {
+                let Some(renderer) = &self.renderer else {
+                    return;
+                };
+                let Some(mouse_pos) = self.last_mouse_pos else {
+                    return;
+                };
+                if let Some(scene_manager) = &mut self.scene_manager {
+                    let zoom_factor = match delta {
+                        winit::event::MouseScrollDelta::LineDelta(_, y) => {
+                            if y > 0.0 { 1.1 } else if y < 0.0 { 0.9 } else { 1.0 }
+                        }
+                        winit::event::MouseScrollDelta::PixelDelta(p) => {
+                            let factor = 1.0 + p.y * 0.001;
+                            if factor > 0.0 { factor } else { 1.0 }
+                        }
+                    };
+                    if zoom_factor != 1.0 {
+                        scene_manager.viewport_mut().zoom_at(zoom_factor, mouse_pos);
+                        renderer.window().request_redraw();
+                    }
                 }
             }
             _ => {}

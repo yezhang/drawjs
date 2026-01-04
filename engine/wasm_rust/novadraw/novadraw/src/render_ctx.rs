@@ -65,4 +65,8 @@ impl RenderContext {
     pub fn transform_point(&self, point: DVec2) -> DVec2 {
         self.transform_stack.current().multiply_point_2d(point)
     }
+
+    pub fn inverse_transform_point(&self, point: DVec2) -> DVec2 {
+        self.transform_stack.current().inverse().multiply_point_2d(point)
+    }
 }

@@ -121,7 +121,7 @@ impl SceneManager {
         }
     }
 
-    pub fn end_selection_box(&mut self, end: DVec2) {
+    pub fn end_selection_box(&mut self, screen_end: DVec2) {
         let start = if let Some(id) = self.selection_box {
             if let Some(block) = self.scene.blocks.get_mut(id) {
                 if let Some(rect) = block.figure.as_rectangle_mut() {
@@ -137,10 +137,16 @@ impl SceneManager {
         };
 
         if let Some(start_pos) = start {
-            let x = start_pos.x.min(end.x);
-            let y = start_pos.y.min(end.y);
-            let width = (end.x - start_pos.x).abs();
-            let height = (end.y - start_pos.y).abs();
+            let _screen_width = (screen_end.x - start_pos.x).abs();
+            let _screen_height = (screen_end.y - start_pos.y).abs();
+
+            let world_start = self.viewport.screen_to_world(start_pos);
+            let world_end = self.viewport.screen_to_world(screen_end);
+
+            let x = world_start.x.min(world_end.x);
+            let y = world_start.y.min(world_end.y);
+            let width = (world_end.x - world_start.x).abs();
+            let height = (world_end.y - world_start.y).abs();
 
             self.scene.select_by_rect(novadraw::Rect::new(x, y, width, height));
         }
@@ -156,8 +162,9 @@ impl SceneManager {
     }
 
     pub fn create_temp_rectangle(&mut self, pos: DVec2) -> BlockId {
+        let screen_pos = self.viewport.world_to_screen(pos);
         let rect = RectangleFigure::new_with_color(
-            pos.x, pos.y, 0.0, 0.0,
+            screen_pos.x, screen_pos.y, 0.0, 0.0,
             Color::rgba(0.2, 0.6, 0.86, 0.5),
         );
         let id = self.scene.new_ui_block(Box::new(rect));
@@ -167,10 +174,12 @@ impl SceneManager {
     pub fn update_temp_rectangle(&mut self, id: BlockId, start: DVec2, end: DVec2) {
         if let Some(block) = self.scene.blocks.get_mut(id) {
             if let Some(rect) = block.figure.as_rectangle_mut() {
-                let x = start.x.min(end.x);
-                let y = start.y.min(end.y);
-                let width = (end.x - start.x).abs();
-                let height = (end.y - start.y).abs();
+                let screen_start = self.viewport.world_to_screen(start);
+                let screen_end = self.viewport.world_to_screen(end);
+                let x = screen_start.x.min(screen_end.x);
+                let y = screen_start.y.min(screen_end.y);
+                let width = (screen_end.x - screen_start.x).abs();
+                let height = (screen_end.y - screen_start.y).abs();
                 rect.x = x;
                 rect.y = y;
                 rect.width = width;
@@ -179,11 +188,29 @@ impl SceneManager {
         }
     }
 
-    pub fn finalize_temp_rectangle(&mut self, id: BlockId) {
-        if let Some(block) = self.scene.blocks.get_mut(id) {
-            if let Some(rect) = block.figure.as_rectangle_mut() {
-                rect.fill_color = Color::hex("#3498db");
+    pub fn finalize_temp_rectangle(&mut self, ui_id: BlockId) -> BlockId {
+        if let Some(new_id) = self.scene.promote_ui_block_to_content(ui_id) {
+            if let Some(block) = self.scene.blocks.get_mut(new_id) {
+                if let Some(rect) = block.figure.as_rectangle_mut() {
+                    let screen_x = rect.x;
+                    let screen_y = rect.y;
+                    let screen_w = rect.width;
+                    let screen_h = rect.height;
+
+                    let world_top_left = self.viewport.screen_to_world(DVec2::new(screen_x, screen_y));
+                    let world_bottom_right = self.viewport.screen_to_world(DVec2::new(screen_x + screen_w, screen_y + screen_h));
+
+                    rect.x = world_top_left.x;
+                    rect.y = world_top_left.y;
+                    rect.width = (world_bottom_right.x - world_top_left.x).abs();
+                    rect.height = (world_bottom_right.y - world_top_left.y).abs();
+
+                    rect.fill_color = Color::hex("#3498db");
+                }
             }
+            new_id
+        } else {
+            ui_id
         }
     }
 }
