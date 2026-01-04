@@ -1,11 +1,17 @@
 mod block;
 mod color;
+mod engine;
 mod render_ctx;
 mod render_ir;
-mod vello_renderer;
+mod transform;
+mod viewport;
 
-pub use block::{BlockId, Paint, RectangleFigure, RuntimeBlock, SceneGraph};
+pub mod renderer;
+
+pub use block::{BlockId, BlockType, Paint, Rect, RectangleFigure, RuntimeBlock, SceneGraph};
 pub use color::Color;
+pub use engine::{Renderer, WindowProxy};
 pub use render_ctx::RenderContext;
 pub use render_ir::RenderCommand;
-pub use vello_renderer::VelloRenderer;
+pub use transform::{Transform, TransformStack};
+pub use viewport::Viewport;

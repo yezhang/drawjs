@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use crate::scene_manager::SceneManager;
 use glam::DVec2;
-use novadraw::{BlockId, Color, VelloRenderer};
+use novadraw::{BlockId, Color, Transform};
+use novadraw::renderer::{VelloRenderer, WinitWindowProxy};
+use novadraw::{Renderer, WindowProxy};
 use winit::event::MouseButton;
 use winit::event::ElementState;
 use winit::window::WindowAttributes;
@@ -20,13 +22,26 @@ pub struct GraphicsApp {
     scene_manager: Option<SceneManager>,
     cached_window: Option<Arc<Window>>,
     drag_state: Option<DragState>,
+    selection_state: Option<SelectionState>,
+    draw_state: Option<DrawState>,
     last_mouse_pos: Option<DVec2>,
+    active_tool: crate::scene_manager::Tool,
 }
 
 struct DragState {
     block_id: BlockId,
     start_pos: DVec2,
-    initial_block_pos: DVec2,
+    start_transform: Transform,
+}
+
+struct SelectionState {
+    #[allow(dead_code)]
+    start_pos: DVec2,
+}
+
+struct DrawState {
+    start_pos: DVec2,
+    temp_rect_id: BlockId,
 }
 
 impl GraphicsApp {
@@ -36,7 +51,10 @@ impl GraphicsApp {
             scene_manager: None,
             cached_window: None,
             drag_state: None,
+            selection_state: None,
+            draw_state: None,
             last_mouse_pos: None,
+            active_tool: crate::scene_manager::Tool::Select,
         }
     }
 
@@ -49,8 +67,19 @@ impl GraphicsApp {
             return;
         };
 
-        let render_ctx = scene_manager.scene().render();
+        let viewport = scene_manager.viewport();
+        let viewport_transform = viewport.to_transform();
+
+        let render_ctx = scene_manager.scene().render_with_viewport(viewport_transform);
+
         renderer.render(&render_ctx.commands);
+    }
+
+    fn set_tool(&mut self, tool: crate::scene_manager::Tool) {
+        self.active_tool = tool;
+        if let Some(scene_manager) = &mut self.scene_manager {
+            scene_manager.set_tool(tool);
+        }
     }
 }
 
@@ -60,30 +89,29 @@ impl ApplicationHandler<()> for GraphicsApp {
             return;
         }
 
-        let window_attributes = WindowAttributes::default()
-            .with_title("Novadraw Editor - 场景图引擎演示")
-            .with_inner_size(dpi::LogicalSize::new(800, 600))
-            .with_resizable(true)
-            .with_transparent(true);
-
         let window = self
             .cached_window
             .take()
-            .unwrap_or_else(|| Arc::new(event_loop.create_window(window_attributes).unwrap()));
+            .unwrap_or_else(|| Arc::new(event_loop.create_window(
+                WindowAttributes::default()
+                    .with_title("Novadraw Editor")
+                    .with_inner_size(dpi::LogicalSize::new(800, 600))
+                    .with_resizable(true),
+            ).unwrap()));
 
-        let width = 800;
-        let height = 600;
+        let logical_width = 800.0;
+        let logical_height = 600.0;
 
-        let renderer = VelloRenderer::new(Arc::clone(&window), width, height);
+        let window_proxy = WinitWindowProxy::new(window);
+        let renderer = VelloRenderer::new(Arc::new(window_proxy), logical_width, logical_height);
         self.renderer = Some(renderer);
 
         if self.scene_manager.is_none() {
             let mut manager = SceneManager::new();
-
             manager.add_rectangle(100.0, 100.0, 200.0, 150.0, Color::hex("#3498db"));
             manager.add_rectangle(400.0, 200.0, 150.0, 150.0, Color::hex("#3498db"));
             manager.add_rectangle_at_center(400.0, 300.0, 200.0, 100.0, Color::hex("#e74c3c"));
-
+            manager.set_tool(self.active_tool);
             self.scene_manager = Some(manager);
         }
     }
@@ -96,22 +124,35 @@ impl ApplicationHandler<()> for GraphicsApp {
     ) {
         match event {
             WindowEvent::CloseRequested => {
-                println!("收到窗口关闭请求，退出程序");
                 event_loop.exit();
             }
             WindowEvent::RedrawRequested => {
                 self.redraw();
             }
             WindowEvent::Resized(new_size) => {
-                println!("窗口大小调整为: {}x{}", new_size.width, new_size.height);
                 if let Some(renderer) = &mut self.renderer {
+                    let scale_factor = renderer.window().scale_factor();
+                    let logical_width = new_size.width as f64 / scale_factor;
+                    let logical_height = new_size.height as f64 / scale_factor;
+
+                    if let Some(scene_manager) = &mut self.scene_manager {
+                        scene_manager.set_window_size(logical_width, logical_height);
+                    }
+
                     renderer.resize(new_size.width, new_size.height);
                 }
             }
             WindowEvent::KeyboardInput { event, .. } => {
                 if let PhysicalKey::Code(KeyCode::Escape) = event.physical_key {
-                    println!("按下ESC键，退出程序");
                     event_loop.exit();
+                }
+                if event.state == ElementState::Pressed {
+                    match event.physical_key {
+                        PhysicalKey::Code(KeyCode::KeyV) => self.set_tool(crate::scene_manager::Tool::Select),
+                        PhysicalKey::Code(KeyCode::KeyR) => self.set_tool(crate::scene_manager::Tool::Rectangle),
+                        PhysicalKey::Code(KeyCode::KeyC) => self.set_tool(crate::scene_manager::Tool::Circle),
+                        _ => {}
+                    }
                 }
             }
             WindowEvent::CursorMoved { position, .. } => {
@@ -126,14 +167,29 @@ impl ApplicationHandler<()> for GraphicsApp {
                 self.last_mouse_pos = Some(current_pos);
 
                 if let Some(scene_manager) = &mut self.scene_manager {
-                    if let Some(drag_state) = &mut self.drag_state {
-                        let dx = current_pos.x - drag_state.start_pos.x;
-                        let dy = current_pos.y - drag_state.start_pos.y;
-                        scene_manager.scene_mut().translate(drag_state.block_id, dx, dy);
-                        drag_state.start_pos = current_pos;
-                    } else {
-                        let hit_id = scene_manager.scene().hit_test(current_pos);
-                        scene_manager.scene_mut().set_hovered(hit_id);
+                    let tool = scene_manager.active_tool();
+
+                    if tool == crate::scene_manager::Tool::Select {
+                        if let Some(drag_state) = &self.drag_state {
+                            let dx = current_pos.x - drag_state.start_pos.x;
+                            let dy = current_pos.y - drag_state.start_pos.y;
+                            let translate = Transform::from_translation_2d(dx, dy);
+                            let new_transform = drag_state.start_transform * translate;
+                            scene_manager.scene_mut().set_block_transform(drag_state.block_id, new_transform);
+                        } else if self.selection_state.is_some() {
+                            scene_manager.update_selection_box(current_pos);
+                        } else {
+                            let hit_id = scene_manager.scene().hit_test(current_pos);
+                            scene_manager.set_hovered(hit_id);
+                        }
+                    } else if tool == crate::scene_manager::Tool::Rectangle {
+                        if let Some(draw_state) = &mut self.draw_state {
+                            scene_manager.update_temp_rectangle(
+                                draw_state.temp_rect_id,
+                                draw_state.start_pos,
+                                current_pos,
+                            );
+                        }
                     }
                     renderer.window().request_redraw();
                 }
@@ -142,33 +198,63 @@ impl ApplicationHandler<()> for GraphicsApp {
                 let Some(renderer) = &self.renderer else {
                     return;
                 };
-                if state == ElementState::Pressed {
-                    if let Some(mouse_pos) = self.last_mouse_pos {
-                        if let Some(scene_manager) = &mut self.scene_manager {
-                            let hover_id = scene_manager.scene().hit_test(mouse_pos);
-                            if let Some(id) = hover_id {
-                                scene_manager.scene_mut().set_selected(Some(id));
-                                if let Some(block) = scene_manager.scene().get_block(id) {
-                                    let bounds = block.figure.bounds();
+                if let Some(scene_manager) = &mut self.scene_manager {
+                    let tool = scene_manager.active_tool();
+
+                    if state == ElementState::Pressed {
+                        if let Some(mouse_pos) = self.last_mouse_pos {
+                            if tool == crate::scene_manager::Tool::Select {
+                                let hover_id = scene_manager.scene().hit_test(mouse_pos);
+                                if let Some(id) = hover_id {
+                                    scene_manager.scene_mut().set_selected(Some(id));
+                                    let start_transform = scene_manager.scene()
+                                        .get_block(id)
+                                        .map(|b| b.transform)
+                                        .unwrap_or_else(Transform::identity);
                                     self.drag_state = Some(DragState {
                                         block_id: id,
                                         start_pos: mouse_pos,
-                                        initial_block_pos: DVec2::new(bounds.x, bounds.y),
+                                        start_transform,
                                     });
+                                    self.selection_state = None;
+                                } else {
+                                    scene_manager.scene_mut().set_selected(None);
+                                    self.selection_state = Some(SelectionState {
+                                        start_pos: mouse_pos,
+                                    });
+                                    scene_manager.start_selection_box(mouse_pos);
                                 }
+                            } else if tool == crate::scene_manager::Tool::Rectangle {
+                                let temp_id = scene_manager.create_temp_rectangle(mouse_pos);
+                                self.draw_state = Some(DrawState {
+                                    start_pos: mouse_pos,
+                                    temp_rect_id: temp_id,
+                                });
+                            }
+                        }
+                    } else {
+                        if tool == crate::scene_manager::Tool::Select {
+                            if let Some(mouse_pos) = self.last_mouse_pos {
+                                if self.selection_state.is_some() {
+                                    scene_manager.end_selection_box(mouse_pos);
+                                }
+                            }
+                            self.drag_state = None;
+                            self.selection_state = None;
+                        } else if tool == crate::scene_manager::Tool::Rectangle {
+                            if let Some(draw_state) = self.draw_state.take() {
+                                scene_manager.finalize_temp_rectangle(draw_state.temp_rect_id);
                             }
                         }
                     }
-                } else {
-                    self.drag_state = None;
+                    renderer.window().request_redraw();
                 }
-                renderer.window().request_redraw();
             }
             _ => {}
         }
     }
 
-    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) -> () {
+    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
         if let Some(renderer) = &self.renderer {
             renderer.window().request_redraw();
         }
@@ -176,7 +262,7 @@ impl ApplicationHandler<()> for GraphicsApp {
 
     fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
         if let Some(renderer) = self.renderer.take() {
-            self.cached_window = Some(renderer.window().clone());
+            self.cached_window = Some(renderer.window().clone_window());
         }
     }
 }
@@ -188,6 +274,7 @@ pub fn start_app() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = GraphicsApp::new();
 
     println!("启动事件循环... (按 ESC 退出)");
+    println!("快捷键: V=选择, R=矩形, C=圆形, L=线条");
     event_loop.run_app(&mut app)?;
 
     Ok(())

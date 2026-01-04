@@ -1,11 +1,13 @@
 use crate::color::Color;
 use crate::render_ir::RenderCommand;
+use crate::transform::{Transform, TransformStack};
 use glam::DVec2;
 
 pub struct RenderContext {
     pub commands: Vec<RenderCommand>,
     current_fill: Option<Color>,
     current_stroke: Option<(Color, f64)>,
+    transform_stack: TransformStack,
 }
 
 impl RenderContext {
@@ -14,6 +16,7 @@ impl RenderContext {
             commands: Vec::new(),
             current_fill: None,
             current_stroke: None,
+            transform_stack: TransformStack::new(),
         }
     }
 
@@ -45,5 +48,21 @@ impl RenderContext {
             stroke_color: stroke.map(|s| s.0),
             stroke_width: stroke.map(|s| s.1).unwrap_or(0.0),
         });
+    }
+
+    pub fn push_transform(&mut self, transform: Transform) {
+        self.transform_stack.push(transform);
+    }
+
+    pub fn pop_transform(&mut self) {
+        self.transform_stack.pop();
+    }
+
+    pub fn current_transform(&self) -> Transform {
+        self.transform_stack.current()
+    }
+
+    pub fn transform_point(&self, point: DVec2) -> DVec2 {
+        self.transform_stack.current().multiply_point_2d(point)
     }
 }
