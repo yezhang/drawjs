@@ -1,14 +1,15 @@
-use serde::{Deserialize, Serialize};
-use slotmap::{SlotMap, new_key_type};
-use std::collections::HashMap;
+pub mod figure;
+
+pub use figure::{Figure, RectangleFigure};
+
+use slotmap::SlotMap;
 use uuid::Uuid;
 
-use crate::color::Color;
-use crate::render_ctx;
-use crate::transform::Transform;
+use crate::core::transform::Transform;
+use crate::render::RenderContext;
 use glam::DVec2;
 
-new_key_type! { pub struct BlockId; }
+slotmap::new_key_type! { pub struct BlockId; }
 
 pub type Point = DVec2;
 
@@ -49,101 +50,6 @@ fn rect_intersects(a: &Rect, b: &Rect) -> bool {
     a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 }
 
-pub trait Paint {
-    fn bounds(&self) -> Rect;
-    fn hit_test(&self, point: Point) -> bool {
-        self.bounds().contains(point)
-    }
-    fn paint(&self, gc: &mut render_ctx::RenderContext);
-    fn paint_highlight(&self, gc: &mut render_ctx::RenderContext) {
-        let bounds = self.bounds();
-        let origin = gc.transform_point(Point::new(bounds.x, bounds.y));
-        gc.set_fill_style(Color::rgba(0.0, 0.0, 0.0, 0.0));
-        gc.set_stroke_style(Color::hex("#f39c12"), 2.0);
-        gc.draw_stroke_rect(origin.x - 2.0, origin.y - 2.0, bounds.width + 4.0, bounds.height + 4.0);
-    }
-    fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-        None
-    }
-}
-
-pub struct NullFigure;
-
-impl NullFigure {
-    pub fn new() -> Self {
-        NullFigure {}
-    }
-}
-
-impl Paint for NullFigure {
-    fn bounds(&self) -> Rect {
-        Rect::new(0.0, 0.0, 0.0, 0.0)
-    }
-    fn paint(&self, _gc: &mut render_ctx::RenderContext) {}
-}
-
-pub struct RectangleFigure {
-    pub x: f64,
-    pub y: f64,
-    pub width: f64,
-    pub height: f64,
-    pub fill_color: Color,
-    pub stroke_color: Option<Color>,
-    pub stroke_width: f64,
-}
-
-impl RectangleFigure {
-    pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
-        Self {
-            x, y, width, height,
-            fill_color: Color::hex("#3498db"),
-            stroke_color: None,
-            stroke_width: 0.0,
-        }
-    }
-
-    pub fn new_with_color(x: f64, y: f64, width: f64, height: f64, color: Color) -> Self {
-        Self {
-            x, y, width, height,
-            fill_color: color,
-            stroke_color: None,
-            stroke_width: 0.0,
-        }
-    }
-
-    pub fn with_stroke(mut self, color: Color, width: f64) -> Self {
-        self.stroke_color = Some(color);
-        self.stroke_width = width;
-        self
-    }
-
-    pub fn translate(&mut self, dx: f64, dy: f64) {
-        self.x += dx;
-        self.y += dy;
-    }
-}
-
-impl Paint for RectangleFigure {
-    fn bounds(&self) -> Rect {
-        Rect::new(self.x, self.y, self.width, self.height)
-    }
-
-    fn paint(&self, gc: &mut render_ctx::RenderContext) {
-        let origin = gc.transform_point(Point::new(self.x, self.y));
-        gc.set_fill_style(self.fill_color);
-        gc.draw_rect(origin.x, origin.y, self.width, self.height);
-
-        if let Some(color) = self.stroke_color {
-            gc.set_stroke_style(color, self.stroke_width);
-            gc.draw_stroke_rect(origin.x, origin.y, self.width, self.height);
-        }
-    }
-
-    fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-        Some(self)
-    }
-}
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BlockType {
     Root,
@@ -158,13 +64,13 @@ pub struct RuntimeBlock {
     pub block_type: BlockType,
     pub children: Vec<BlockId>,
     pub parent: Option<BlockId>,
-    pub figure: Box<dyn Paint>,
+    pub figure: Box<dyn Figure>,
     pub transform: Transform,
     pub is_selected: bool,
 }
 
 impl RuntimeBlock {
-    fn paint(&self, gc: &mut render_ctx::RenderContext) {
+    fn paint(&self, gc: &mut RenderContext) {
         gc.push_transform(self.transform);
         self.figure.paint(gc);
         if self.is_selected && self.block_type == BlockType::Content {
@@ -173,7 +79,7 @@ impl RuntimeBlock {
         gc.pop_transform();
     }
 
-    pub fn set_figure(&mut self, figure: Box<dyn Paint>) {
+    pub fn set_figure(&mut self, figure: Box<dyn Figure>) {
         self.figure = figure;
     }
 
@@ -198,21 +104,11 @@ impl RuntimeBlock {
             self.transform = self.transform * translate;
         }
     }
-
-    pub fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-        self.figure.as_rectangle_mut()
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-struct SerializedBlock {
-    uuid: Uuid,
-    children: Vec<Uuid>,
 }
 
 pub struct SceneGraph {
     pub blocks: SlotMap<BlockId, RuntimeBlock>,
-    pub uuid_map: HashMap<Uuid, BlockId>,
+    pub uuid_map: std::collections::HashMap<Uuid, BlockId>,
     pub root: BlockId,
 }
 
@@ -227,23 +123,23 @@ impl SceneGraph {
             block_type: BlockType::Root,
             children: Vec::new(),
             parent: None,
-            figure: Box::new(NullFigure::new()),
+            figure: Box::new(figure::NullFigure::new()),
             transform: Transform::identity(),
             is_selected: false,
         });
 
         SceneGraph {
             blocks,
-            uuid_map: HashMap::new(),
+            uuid_map: std::collections::HashMap::new(),
             root: root_id,
         }
     }
 
-    pub fn new_content_block(&mut self, figure: Box<dyn Paint>) -> BlockId {
+    pub fn new_content_block(&mut self, figure: Box<dyn Figure>) -> BlockId {
         self.new_content_block_with_transform(figure, Transform::identity())
     }
 
-    pub fn new_content_block_with_transform(&mut self, figure: Box<dyn Paint>, transform: Transform) -> BlockId {
+    pub fn new_content_block_with_transform(&mut self, figure: Box<dyn Figure>, transform: Transform) -> BlockId {
         let uuid = Uuid::new_v4();
         let id = self.blocks.insert_with_key(|key| RuntimeBlock {
             id: key,
@@ -260,30 +156,7 @@ impl SceneGraph {
         id
     }
 
-    pub fn new_content_block_with_parent(
-        &mut self,
-        parent_id: BlockId,
-        figure: Box<dyn Paint>,
-    ) -> BlockId {
-        let uuid = Uuid::new_v4();
-        let id = self.blocks.insert_with_key(|key| RuntimeBlock {
-            id: key,
-            uuid,
-            block_type: BlockType::Content,
-            children: Vec::new(),
-            parent: Some(parent_id),
-            figure,
-            transform: Transform::identity(),
-            is_selected: false,
-        });
-        self.uuid_map.insert(uuid, id);
-        if let Some(parent) = self.blocks.get_mut(parent_id) {
-            parent.children.push(id);
-        }
-        id
-    }
-
-    pub fn new_ui_block(&mut self, figure: Box<dyn Paint>) -> BlockId {
+    pub fn new_ui_block(&mut self, figure: Box<dyn Figure>) -> BlockId {
         let uuid = Uuid::new_v4();
         let id = self.blocks.insert_with_key(|key| RuntimeBlock {
             id: key,
@@ -310,8 +183,8 @@ impl SceneGraph {
         None
     }
 
-    pub fn hit_test_content(&self, point: Point) -> Option<BlockId> {
-        self.hit_test_with_transform(point, Transform::identity())
+    pub fn hit_test(&self, point: Point) -> Option<BlockId> {
+        self.hit_test_content(point)
     }
 
     fn hit_test_with_transform(&self, point: Point, parent_transform: Transform) -> Option<BlockId> {
@@ -347,6 +220,10 @@ impl SceneGraph {
             }
         }
         None
+    }
+
+    pub fn hit_test_content(&self, point: Point) -> Option<BlockId> {
+        self.hit_test_with_transform(point, Transform::identity())
     }
 
     pub fn hit_test_rect(&self, rect: Rect) -> Vec<BlockId> {
@@ -424,19 +301,23 @@ impl SceneGraph {
         }
     }
 
-    pub fn render(&self) -> render_ctx::RenderContext {
-        let mut gc = render_ctx::RenderContext::new();
+    pub fn set_selected(&mut self, block_id: Option<BlockId>) {
+        self.select_single(block_id);
+    }
+
+    pub fn render(&self) -> RenderContext {
+        let mut gc = RenderContext::new();
         self.render_to_context(&mut gc);
         gc
     }
 
-    pub fn render_with_viewport(&self, viewport_transform: Transform) -> render_ctx::RenderContext {
-        let mut gc = render_ctx::RenderContext::new();
+    pub fn render_with_viewport(&self, viewport_transform: Transform) -> RenderContext {
+        let mut gc = RenderContext::new();
         self.render_to_context_with_viewport(&mut gc, viewport_transform);
         gc
     }
 
-    fn render_to_context(&self, gc: &mut render_ctx::RenderContext) {
+    fn render_to_context(&self, gc: &mut RenderContext) {
         self.traverse_dfs_stack(|block_id| {
             if let Some(runtime_block) = self.blocks.get(block_id) {
                 runtime_block.paint(gc);
@@ -444,7 +325,7 @@ impl SceneGraph {
         })
     }
 
-    fn render_to_context_with_viewport(&self, gc: &mut render_ctx::RenderContext, viewport_transform: Transform) {
+    fn render_to_context_with_viewport(&self, gc: &mut RenderContext, viewport_transform: Transform) {
         let mut stack = Vec::new();
         let mut viewport_stack = Vec::new();
 
@@ -477,7 +358,7 @@ impl SceneGraph {
         }
     }
 
-    pub fn traverse_dfs_stack<F>(&self, mut visitor: F)
+    fn traverse_dfs_stack<F>(&self, mut visitor: F)
     where
         F: FnMut(BlockId),
     {
@@ -493,44 +374,6 @@ impl SceneGraph {
                 }
             }
         }
-    }
-
-    pub fn new_block(&mut self, parent_id: Option<BlockId>, figure: Box<dyn Paint>) -> BlockId {
-        let uuid = Uuid::new_v4();
-
-        let id = self.blocks.insert_with_key(|key| RuntimeBlock {
-            id: key,
-            uuid,
-            block_type: BlockType::Content,
-            children: Vec::new(),
-            parent: parent_id,
-            figure,
-            transform: Transform::identity(),
-            is_selected: false,
-        });
-
-        self.uuid_map.insert(uuid, id);
-
-        match parent_id {
-            Some(pid) => {
-                if let Some(parent) = self.blocks.get_mut(pid) {
-                    parent.children.push(id);
-                }
-            }
-            None => {
-                self.blocks[self.root].children.push(id);
-            }
-        }
-
-        id
-    }
-
-    pub fn hit_test(&self, point: Point) -> Option<BlockId> {
-        self.hit_test_content(point)
-    }
-
-    pub fn set_selected(&mut self, block_id: Option<BlockId>) {
-        self.select_single(block_id);
     }
 
     pub fn get_block(&self, id: BlockId) -> Option<&RuntimeBlock> {

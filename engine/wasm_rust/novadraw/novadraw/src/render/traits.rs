@@ -10,7 +10,7 @@ pub trait Renderer {
 
     fn window(&self) -> &Self::Window;
 
-    fn render(&mut self, commands: &[super::RenderCommand]);
+    fn render(&mut self, commands: &[crate::render::RenderCommand]);
 
     fn resize(&mut self, width: u32, height: u32);
 }

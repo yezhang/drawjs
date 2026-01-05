@@ -5,9 +5,9 @@ pub mod vello;
 pub use vello::{VelloRenderer, WinitWindowProxy};
 
 #[cfg(not(feature = "vello"))]
-pub mod vello {
-    use crate::engine::{Renderer, WindowProxy};
-    use crate::render_ir::RenderCommand;
+mod vello {
+    use crate::render::traits::{Renderer, WindowProxy};
+    use crate::render::RenderCommand;
 
     pub struct WinitWindowProxy;
 

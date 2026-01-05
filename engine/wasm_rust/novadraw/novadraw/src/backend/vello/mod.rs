@@ -1,55 +1,20 @@
 use std::sync::Arc;
 
-use vello::kurbo::{Affine, Stroke};
+use vello::kurbo::Stroke;
 use vello::peniko::Color as VelloColor;
 use vello::util::{RenderContext, RenderSurface};
 use vello::{AaConfig, Renderer, RendererOptions};
 
-use crate::engine::{Renderer as RendererTrait, WindowProxy};
-use crate::render_ir::RenderCommand;
+use crate::render::command::RenderCommand;
+use crate::render::traits::{Renderer as RendererTrait, WindowProxy};
 
-pub struct WinitWindowProxy {
-    window: Arc<winit::window::Window>,
-}
-
-impl WinitWindowProxy {
-    pub fn new(window: Arc<winit::window::Window>) -> Self {
-        Self { window }
-    }
-
-    pub fn window(&self) -> &Arc<winit::window::Window> {
-        &self.window
-    }
-
-    pub fn clone_window(&self) -> Arc<winit::window::Window> {
-        Arc::clone(&self.window)
-    }
-}
-
-impl WindowProxy for WinitWindowProxy {
-    fn request_redraw(&self) {
-        self.window.request_redraw();
-    }
-
-    fn scale_factor(&self) -> f64 {
-        self.window.scale_factor()
-    }
-
-    fn width(&self) -> u32 {
-        self.window.inner_size().width
-    }
-
-    fn height(&self) -> u32 {
-        self.window.inner_size().height
-    }
-}
-
-type Scene = vello::Scene;
+mod winit;
+pub use winit::{WinitWindowProxy, WinitWindowProxyInner};
 
 pub struct VelloRenderer {
     render_context: RenderContext,
     renderers: Vec<Option<Renderer>>,
-    scene: Scene,
+    scene: vello::Scene,
     surface: RenderSurface<'static>,
     window: Arc<WinitWindowProxy>,
     scale_factor: f64,
@@ -78,16 +43,16 @@ impl VelloRenderer {
         VelloRenderer {
             render_context,
             renderers,
-            scene: Scene::new(),
+            scene: vello::Scene::new(),
             surface,
             window,
             scale_factor,
         }
     }
 
-    fn render_command(scene: &mut Scene, cmd: &RenderCommand, scale: f64) {
-        match cmd {
-            RenderCommand::FillRect { rect, color, stroke_color, stroke_width } => {
+    fn render_command(scene: &mut vello::Scene, cmd: &RenderCommand, scale: f64) {
+        match &cmd.kind {
+            crate::render::command::RenderCommandKind::FillRect { rect, color, stroke_color, stroke_width } => {
                 let x0 = rect[0].x * scale;
                 let y0 = rect[0].y * scale;
                 let x1 = rect[1].x * scale;
@@ -113,7 +78,7 @@ impl VelloRenderer {
                         );
                         scene.stroke(
                             &Stroke::new(stroke_width as f64),
-                            Affine::IDENTITY,
+                            vello::kurbo::Affine::IDENTITY,
                             stroke_vello_color,
                             None,
                             &stroke_rect,
@@ -122,7 +87,7 @@ impl VelloRenderer {
                 } else {
                     scene.fill(
                         vello::peniko::Fill::NonZero,
-                        Affine::IDENTITY,
+                        vello::kurbo::Affine::IDENTITY,
                         vello_color,
                         None,
                         &kurbo_rect,

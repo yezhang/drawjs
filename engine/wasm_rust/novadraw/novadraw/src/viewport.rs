@@ -1,4 +1,4 @@
-use crate::transform::Transform;
+use crate::core::transform::Transform;
 use glam::DVec2;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -45,7 +45,7 @@ impl Viewport {
         self.origin += offset;
     }
 
-    pub fn zoom_to_fit(&mut self, rect: &super::block::Rect, viewport_width: f64, viewport_height: f64, padding: f64) {
+    pub fn zoom_to_fit(&mut self, rect: &super::scene::Rect, viewport_width: f64, viewport_height: f64, padding: f64) {
         if rect.width <= 0.0 || rect.height <= 0.0 {
             return;
         }
