@@ -1,0 +1,19 @@
+[package]
+name = "novadraw-render"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+novadraw-math = { path = "../novadraw-math" }
+novadraw-core = { path = "../novadraw-core" }
+glam.workspace = true
+serde.workspace = true
+
+vello = { workspace = true, optional = true }
+wgpu = { workspace = true, optional = true }
+winit = { workspace = true, optional = true }
+pollster = { version = "0.4.0", optional = true }
+
+[features]
+default = []
+vello = ["dep:vello", "dep:wgpu", "dep:winit", "dep:pollster"]
