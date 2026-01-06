@@ -1,0 +1,13 @@
+[package]
+name = "novadraw-gef"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+novadraw-scene = { path = "../novadraw-scene" }
+novadraw-math = { path = "../novadraw-math" }
+novadraw-core = { path = "../novadraw-core" }
+glam.workspace = true
+slotmap.workspace = true
+uuid.workspace = true
+serde.workspace = true
