@@ -2,6 +2,11 @@
 resolver = "3"
 members = [
   "novadraw",
+  "novadraw-math",
+  "novadraw-core",
+  "novadraw-render",
+  "novadraw-scene",
+  "novadraw-gef",
 
   "apps/editor",
 ]
@@ -11,14 +16,14 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace.dependencies]
-vello = "0.5.1" # 或 { git = "https://github.com/linebender/vello.git" }
+vello = "0.5.1"
 glam = "0.30.9"
 slotmap = "1.0.7"
-uuid = { version = "1.18.1", features = ["v4", "serde", ] }
+uuid = { version = "1.18.1", features = ["v4", "serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 anyhow = "1.0.99"
-
 wgpu = { version = "26.0.1", default-features = false, features = ["std", "wgsl"] }
+winit = "0.30.12"
 log = "0.4.27"
 env_logger = "0.11.8"
