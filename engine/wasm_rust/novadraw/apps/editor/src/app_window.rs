@@ -206,9 +206,10 @@ impl ApplicationHandler<()> for GraphicsApp {
                 if let Some(scene_manager) = &mut self.scene_manager {
                     if state == ElementState::Pressed {
                         if let Some(mouse_pos) = self.last_mouse_pos {
-                            let hover_id = scene_manager.scene().hit_test(
-                                scene_manager.viewport().screen_to_world(mouse_pos)
-                            );
+                            let world_pos = scene_manager.viewport().screen_to_world(mouse_pos);
+                            println!("[MouseClick] screen=({}, {}) world=({}, {})", mouse_pos.x, mouse_pos.y, world_pos.x, world_pos.y);
+                            let hover_id = scene_manager.scene().hit_test(world_pos);
+                            println!("[MouseClick] hover_id={:?}", hover_id);
                             scene_manager.scene_mut().set_selected(hover_id);
                         }
                     }
@@ -281,10 +282,10 @@ pub fn start_app() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("启动事件循环... (按 ESC 退出)");
     println!("操作: ");
-    println!("  - 中键拖拽 或 WASD/方向键 = 平移视图");
-    println!("  - 滚轮 或 +/- 键 = 缩放");
-    println!("  - 点击 = 选择图形");
-    println!("  - R 键 = 重置视图");
+    println!(r"  - 中键拖拽 或 WASD/方向键 = 平移视图");
+    println!(r"  - 滚轮 或 +/- 键 = 缩放");
+    println!(r"  - 点击 = 选择图形");
+    println!(r"  - R 键 = 重置视图");
     event_loop.run_app(&mut app)?;
 
     Ok(())

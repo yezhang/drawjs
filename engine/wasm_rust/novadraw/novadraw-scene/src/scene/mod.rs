@@ -131,7 +131,6 @@ impl RuntimeBlock {
         gc.push_transform(self.transform);
         self.figure.paint(gc);
         if self.is_selected {
-            println!("[paint] node_id={:?} painting highlight", self.id);
             self.figure.paint_highlight(gc);
         }
         gc.pop_transform();
@@ -514,7 +513,6 @@ impl SceneGraph {
 
     /// 设置选中状态
     pub fn set_selected(&mut self, block_id: Option<BlockId>) {
-        println!("[set_selected] block_id={:?}", block_id);
         self.select_single(block_id);
     }
 

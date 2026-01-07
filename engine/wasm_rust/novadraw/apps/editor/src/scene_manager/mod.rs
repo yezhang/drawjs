@@ -12,13 +12,19 @@ impl SceneManager {
     pub fn new() -> Self {
         let mut scene = SceneGraph::new();
 
+        // 设置布局管理器
         scene.set_layout_manager(Arc::new(FillLayout::new()));
 
+        // 创建背景块
         let bg = RectangleFigure::new_with_color(
             0.0, 0.0, 800.0, 600.0,
             Color::rgba(1.0, 1.0, 1.0, 1.0),
         );
         let bg_id = scene.new_ui_block(Box::new(bg));
+
+        // 创建内容块（类似 Draw2d 的 setContents）
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        scene.set_contents(Box::new(contents));
 
         Self {
             scene,
@@ -51,7 +57,8 @@ impl SceneManager {
     pub fn add_rectangle(&mut self, x: f64, y: f64, width: f64, height: f64, color: Color) -> BlockId {
         println!("[SceneManager::add_rectangle] x={}, y={}, w={}, h={}", x, y, width, height);
         let rect = RectangleFigure::new_with_color(x, y, width, height, color);
-        self.scene.new_content_block(Box::new(rect))
+        let contents_id = self.scene.get_contents().expect("contents not set");
+        self.scene.add_child_to(contents_id, Box::new(rect))
     }
 
     #[allow(dead_code)]

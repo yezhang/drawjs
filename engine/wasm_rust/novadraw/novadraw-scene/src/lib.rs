@@ -15,7 +15,7 @@ pub mod layout;
 pub mod scene;
 pub mod viewport;
 
-pub use figure::{Figure, NullFigure, Rectangle, RectangleFigure};
+pub use figure::{BaseFigure, Figure, Rectangle, RectangleFigure};
 pub use layout::{FillLayout, LayoutManager, XYLayout};
 pub use scene::{BlockId, Point, Rect, RuntimeBlock, SceneGraph};
 pub use viewport::Viewport;

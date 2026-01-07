@@ -18,4 +18,4 @@ pub use novadraw_render::backend;
 pub use novadraw_render::traits;
 
 #[cfg(feature = "vello")]
-pub use novadraw_scene::{BlockId, Figure, FillLayout, LayoutManager, Point, Rectangle, RectangleFigure, Rect, RuntimeBlock, SceneGraph, Viewport, XYLayout};
+pub use novadraw_scene::{BaseFigure, BlockId, Figure, FillLayout, LayoutManager, Point, Rectangle, RectangleFigure, Rect, RuntimeBlock, SceneGraph, Viewport, XYLayout};

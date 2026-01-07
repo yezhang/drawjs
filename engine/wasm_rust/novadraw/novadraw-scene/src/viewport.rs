@@ -37,7 +37,8 @@ impl Viewport {
 
     /// 屏幕坐标转世界坐标
     pub fn screen_to_world(&self, screen: DVec2) -> DVec2 {
-        (screen / self.zoom) + self.origin
+        let world = (screen / self.zoom) + self.origin;
+        world
     }
 
     /// 世界坐标转屏幕坐标

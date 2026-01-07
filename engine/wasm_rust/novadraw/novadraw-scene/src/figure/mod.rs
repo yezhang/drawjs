@@ -48,19 +48,33 @@ pub trait Figure: Send + Sync {
     }
 }
 
-/// 空图形（用于占位）
-pub struct NullFigure;
+/// 基础图形（默认实现）
+///
+/// 简单的图形实现，包含边界矩形。
+/// 可用于创建占位图形或作为自定义图形的基础。
+#[derive(Clone, Copy, Debug)]
+pub struct BaseFigure {
+    /// 边界矩形
+    pub bounds: Rect,
+}
 
-impl NullFigure {
-    /// 创建新的空图形
-    pub fn new() -> Self {
-        NullFigure {}
+impl BaseFigure {
+    /// 创建新的基础图形
+    pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
+        Self {
+            bounds: Rect::new(x, y, width, height),
+        }
+    }
+
+    /// 设置边界
+    pub fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        self.bounds = Rect::new(x, y, width, height);
     }
 }
 
-impl Figure for NullFigure {
+impl Figure for BaseFigure {
     fn bounds(&self) -> Rect {
-        Rect::new(0.0, 0.0, 0.0, 0.0)
+        self.bounds
     }
 
     fn paint(&self, _gc: &mut RenderContext) {}
@@ -68,6 +82,6 @@ impl Figure for NullFigure {
     fn paint_highlight(&self, _gc: &mut RenderContext) {}
 
     fn name(&self) -> &'static str {
-        "NullFigure"
+        "BaseFigure"
     }
 }
