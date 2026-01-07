@@ -20,7 +20,7 @@ pub type Point = DVec2;
 /// 矩形区域
 ///
 /// 用于表示二维空间中的矩形区域。
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub struct Rect {
     /// X 坐标
     pub x: f64,
@@ -114,6 +114,16 @@ impl RuntimeBlock {
         }
     }
 
+    /// 添加子块（类似 Draw2d 的 figure.addChild()）
+    pub fn add_child(&mut self, child_id: BlockId) {
+        self.children.push(child_id);
+    }
+
+    /// 获取子块数量
+    pub fn children_count(&self) -> usize {
+        self.children.len()
+    }
+
     fn paint(&self, gc: &mut RenderContext) {
         if !self.is_visible {
             return;
@@ -121,6 +131,7 @@ impl RuntimeBlock {
         gc.push_transform(self.transform);
         self.figure.paint(gc);
         if self.is_selected {
+            println!("[paint] node_id={:?} painting highlight", self.id);
             self.figure.paint_highlight(gc);
         }
         gc.pop_transform();
@@ -134,17 +145,11 @@ impl RuntimeBlock {
         self.transform = transform;
     }
 
-    pub fn hit_test(&self, point: Point, parent_transform: &Transform) -> bool {
+    pub fn hit_test(&self, point: Point) -> bool {
         if !self.is_visible || !self.is_enabled {
             return false;
         }
-        let cumulative_transform = *parent_transform * self.transform;
-        let local_point = if let Some(inv) = cumulative_transform.inverse() {
-            vec2_to_dvec2(inv.transform_point(dvec2_to_vec2(point)))
-        } else {
-            return false;
-        };
-        self.figure.hit_test(local_point)
+        self.figure.hit_test(point)
     }
 
     /// 获取首选尺寸
@@ -200,10 +205,10 @@ impl RuntimeBlock {
     pub fn translate(&mut self, dx: f64, dy: f64) {
         if let Some(rect) = self.figure.as_rectangle_mut() {
             rect.translate(dx, dy);
-        } else {
-            let translate = Transform::from_translation(dx, dy);
-            self.transform = self.transform * translate;
+            return;
         }
+        let translate = Transform::from_translation(dx, dy);
+        self.transform = self.transform * translate;
     }
 }
 
@@ -219,11 +224,30 @@ fn vec2_to_dvec2(v: Vec2) -> DVec2 {
 
 /// 场景图
 ///
-/// 管理所有图形块的层次结构。
+/// 管理所有图形块的层次结构，参考 Eclipse Draw2d 设计模式。
+///
+/// # 使用示例
+///
+/// ```
+/// use novadraw_scene::{Figure, RectangleFigure, SceneGraph};
+///
+/// let mut scene = SceneGraph::new();
+///
+/// // 创建根内容块（类似 Draw2d 的 setContents）
+/// let contents = RectangleFigure::new(0.0, 0.0, 100.0, 50.0);
+/// let contents_id = scene.set_contents(Box::new(contents));
+///
+/// // 添加子块到指定父块（类似 Draw2d 的 parent.addChild(child)）
+/// let child = RectangleFigure::new(10.0, 10.0, 80.0, 30.0);
+/// scene.add_child_to(contents_id, Box::new(child));
+/// ```
 pub struct SceneGraph {
     pub blocks: SlotMap<BlockId, RuntimeBlock>,
     pub uuid_map: std::collections::HashMap<Uuid, BlockId>,
-    pub root: BlockId,
+    /// 根块（内部使用）
+    root: BlockId,
+    /// 内容块（用户可访问的根容器）
+    contents: Option<BlockId>,
     pub layout_manager: Option<Arc<dyn LayoutManager>>,
     /// 布局是否有效，false 表示需要重新计算布局
     pub layout_valid: bool,
@@ -240,7 +264,7 @@ impl SceneGraph {
             uuid,
             children: Vec::new(),
             parent: None,
-            figure: Box::new(super::figure::NullFigure::new()),
+            figure: Box::new(super::figure::BaseFigure::new(0.0, 0.0, 0.0, 0.0)),
             transform: Transform::IDENTITY,
             is_selected: false,
             is_visible: true,
@@ -254,9 +278,52 @@ impl SceneGraph {
             blocks,
             uuid_map: std::collections::HashMap::new(),
             root: root_id,
+            contents: None,
             layout_manager: None,
             layout_valid: true,
         }
+    }
+
+    /// 设置内容块（类似 Draw2d 的 LightweightSystem.setContents）
+    ///
+    /// 设置场景的根容器，后续添加的子块将作为此容器的子元素。
+    pub fn set_contents(&mut self, figure: Box<dyn super::Figure>) -> BlockId {
+        let contents_id = self.new_block_with_parent(figure, self.root);
+        self.contents = Some(contents_id);
+        contents_id
+    }
+
+    /// 获取内容块
+    pub fn get_contents(&self) -> Option<BlockId> {
+        self.contents
+    }
+
+    /// 添加子块到指定父块（类似 Draw2d 的 parent.addChild(child)）
+    pub fn add_child_to(&mut self, parent_id: BlockId, figure: Box<dyn super::Figure>) -> BlockId {
+        self.new_block_with_parent(figure, parent_id)
+    }
+
+    /// 创建带父块的块
+    fn new_block_with_parent(&mut self, figure: Box<dyn super::Figure>, parent_id: BlockId) -> BlockId {
+        let uuid = Uuid::new_v4();
+        let id = self.blocks.insert_with_key(|key| RuntimeBlock {
+            id: key,
+            uuid,
+            children: Vec::new(),
+            parent: Some(parent_id),
+            figure,
+            transform: Transform::IDENTITY,
+            is_selected: false,
+            is_visible: true,
+            is_enabled: true,
+            preferred_size: None,
+            minimum_size: None,
+            maximum_size: None,
+        });
+        self.uuid_map.insert(uuid, id);
+        self.blocks[parent_id].children.push(id);
+        self.layout_valid = false;
+        id
     }
 
     /// 创建内容块
@@ -289,6 +356,11 @@ impl SceneGraph {
 
     /// 创建 UI 层块
     pub fn new_ui_block(&mut self, figure: Box<dyn super::Figure>) -> BlockId {
+        self.new_ui_block_with_transform(figure)
+    }
+
+    /// 创建带变换的 UI 层块
+    pub fn new_ui_block_with_transform(&mut self, figure: Box<dyn super::Figure>) -> BlockId {
         let uuid = Uuid::new_v4();
         let id = self.blocks.insert_with_key(|key| RuntimeBlock {
             id: key,
@@ -333,24 +405,32 @@ impl SceneGraph {
         self.hit_test_content(point)
     }
 
-    fn hit_test_with_transform(&self, point: Point, _parent_transform: Transform) -> Option<BlockId> {
-        let mut stack = Vec::new();
-
-        if let Some(root) = self.blocks.get(self.root) {
-            for &child_id in root.children.iter() {
-                stack.push((child_id, Transform::IDENTITY));
-            }
+    fn hit_test_from(&self, start_id: BlockId, point: Point) -> Option<BlockId> {
+        #[derive(Clone, Copy)]
+        enum StackItem {
+            Node(BlockId),
+            Check(BlockId),
         }
 
-        while let Some((node_id, parent_t)) = stack.pop() {
-            if let Some(node) = self.blocks.get(node_id) {
-                let cumulative_transform = parent_t * node.transform;
+        let mut stack: Vec<StackItem> = Vec::new();
+        stack.push(StackItem::Node(start_id));
 
-                for &child_id in node.children.iter() {
-                    stack.push((child_id, cumulative_transform));
+        while let Some(item) = stack.pop() {
+            match item {
+                StackItem::Node(node_id) => {
+                    if let Some(node) = self.blocks.get(node_id) {
+                        stack.push(StackItem::Check(node_id));
+                        for &child_id in node.children.iter().rev() {
+                            stack.push(StackItem::Node(child_id));
+                        }
+                    }
                 }
-                if node.hit_test(point, &parent_t) {
-                    return Some(node_id);
+                StackItem::Check(node_id) => {
+                    if let Some(node) = self.blocks.get(node_id) {
+                        if node.hit_test(point) {
+                            return Some(node_id);
+                        }
+                    }
                 }
             }
         }
@@ -359,7 +439,11 @@ impl SceneGraph {
 
     /// 内容块命中测试
     pub fn hit_test_content(&self, point: Point) -> Option<BlockId> {
-        self.hit_test_with_transform(point, Transform::IDENTITY)
+        if let Some(contents) = self.contents {
+            self.hit_test_from(contents, point)
+        } else {
+            self.hit_test_from(self.root, point)
+        }
     }
 
     /// 矩形选择命中测试
@@ -430,6 +514,7 @@ impl SceneGraph {
 
     /// 设置选中状态
     pub fn set_selected(&mut self, block_id: Option<BlockId>) {
+        println!("[set_selected] block_id={:?}", block_id);
         self.select_single(block_id);
     }
 
