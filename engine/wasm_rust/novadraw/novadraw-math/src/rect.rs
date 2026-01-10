@@ -56,6 +56,12 @@ impl From<Size> for (f64, f64) {
     }
 }
 
+impl std::fmt::Display for Size {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Size({:.4} × {:.4})", self.width, self.height)
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct SizeSerde(f64, f64);
 
@@ -222,6 +228,12 @@ impl From<Rect> for (f64, f64, f64, f64) {
     #[inline]
     fn from(rect: Rect) -> Self {
         (rect.x, rect.y, rect.width, rect.height)
+    }
+}
+
+impl std::fmt::Display for Rect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Rect({:.4}, {:.4}, {:.4} × {:.4})", self.x, self.y, self.width, self.height)
     }
 }
 

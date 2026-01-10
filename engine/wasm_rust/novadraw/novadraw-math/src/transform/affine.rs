@@ -214,6 +214,20 @@ impl std::ops::Mul for AffineTransform {
     }
 }
 
+impl std::fmt::Display for AffineTransform {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // 按数学矩阵布局显示：
+        // | a  b  tx |
+        // | c  d  ty |
+        write!(
+            f,
+            "AffineTransform({:.4}, {:.4}, {:.4}\n                {:.4}, {:.4}, {:.4})",
+            self.a, self.b, self.tx,
+            self.c, self.d, self.ty
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

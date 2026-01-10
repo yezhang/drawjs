@@ -2,7 +2,7 @@
 //!
 //! 提供 ScalableFigure 装饰器，支持运行时缩放。
 
-use novadraw_render::RenderContext;
+use novadraw_render::NdCanvas;
 use novadraw_math::Transform;
 
 use super::{Figure, Point, Rect};
@@ -67,7 +67,7 @@ impl<F: Figure> Figure for ScalableFigure<F> {
         self.inner.hit_test(scaled_point)
     }
 
-    fn paint(&self, gc: &mut RenderContext) {
+    fn paint(&self, gc: &mut NdCanvas) {
         if self.scale == 1.0 {
             self.inner.paint(gc);
         } else {
@@ -78,7 +78,7 @@ impl<F: Figure> Figure for ScalableFigure<F> {
         }
     }
 
-    fn paint_highlight(&self, gc: &mut RenderContext) {
+    fn paint_highlight(&self, gc: &mut NdCanvas) {
         let transform = Transform::from_scale(self.scale, self.scale);
         gc.push_transform(transform);
         self.inner.paint_highlight(gc);

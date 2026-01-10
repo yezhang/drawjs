@@ -166,6 +166,12 @@ impl std::ops::MulAssign for Transform {
     }
 }
 
+impl std::fmt::Display for Transform {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Transform({}, {})", self.matrix, self.translation)
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct TransformSerde {
     matrix: [[f64; 3]; 3],

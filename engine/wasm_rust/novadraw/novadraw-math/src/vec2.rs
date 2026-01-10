@@ -206,6 +206,12 @@ impl From<[f64; 2]> for Vec2 {
     }
 }
 
+impl std::fmt::Display for Vec2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Vec2({:.4}, {:.4})", self.x(), self.y())
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct Vec2Serde(f64, f64);
 

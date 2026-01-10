@@ -202,6 +202,21 @@ impl From<Mat3> for DMat3 {
     }
 }
 
+impl std::fmt::Display for Mat3 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // 按数学行布局显示，底层 glam 为列向量约定
+        // v' = M × v
+        let m = self.to_array();
+        write!(
+            f,
+            "Mat3({:.4}, {:.4}, {:.4}\n     {:.4}, {:.4}, {:.4}\n     {:.4}, {:.4}, {:.4})",
+            m[0][0], m[0][1], m[0][2],
+            m[1][0], m[1][1], m[1][2],
+            m[2][0], m[2][1], m[2][2]
+        )
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 struct Mat3Serde(pub [[f64; 3]; 3]);
 
