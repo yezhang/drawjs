@@ -6,11 +6,14 @@ use std::sync::Arc;
 
 use glam::DVec2;
 use novadraw_math::{Transform, Vec2};
-use novadraw_render::RenderContext;
+use novadraw_render::NdCanvas;
 use slotmap::SlotMap;
 use uuid::Uuid;
 
 use super::layout::LayoutManager;
+
+pub mod trampoline;
+pub use trampoline::{FigureRenderer, PaintTask, SceneGraphRenderRef};
 
 slotmap::new_key_type! { pub struct BlockId; }
 
@@ -35,7 +38,12 @@ pub struct Rect {
 impl Rect {
     /// 创建矩形
     pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     /// 从两个角点创建矩形
@@ -44,7 +52,12 @@ impl Rect {
         let y = corner1.y.min(corner2.y);
         let width = (corner2.x - corner1.x).abs();
         let height = (corner2.y - corner1.y).abs();
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     /// 检查点是否在矩形内
@@ -124,30 +137,13 @@ impl RuntimeBlock {
         self.children.len()
     }
 
-    fn paint(&self, gc: &mut RenderContext) {
-        if !self.is_visible {
-            return;
-        }
-        gc.push_transform(self.transform);
-        self.figure.paint(gc);
-        if self.is_selected {
-            self.figure.paint_highlight(gc);
-        }
-        gc.pop_transform();
+    /// 获取图形的边界（局部坐标）
+    pub fn figure_bounds(&self) -> Rect {
+        self.figure.bounds()
     }
 
-    pub fn set_figure(&mut self, figure: Box<dyn super::Figure>) {
-        self.figure = figure;
-    }
-
-    pub fn set_transform(&mut self, transform: Transform) {
-        self.transform = transform;
-    }
-
-    pub fn hit_test(&self, point: Point) -> bool {
-        if !self.is_visible || !self.is_enabled {
-            return false;
-        }
+    /// 检查点在图形边界内（局部坐标）
+    pub fn contains_local(&self, point: Point) -> bool {
         self.figure.hit_test(point)
     }
 
@@ -201,11 +197,15 @@ impl RuntimeBlock {
         self.is_enabled = enabled;
     }
 
+    pub fn set_figure(&mut self, figure: Box<dyn super::Figure>) {
+        self.figure = figure;
+    }
+
+    pub fn set_transform(&mut self, transform: Transform) {
+        self.transform = transform;
+    }
+
     pub fn translate(&mut self, dx: f64, dy: f64) {
-        if let Some(rect) = self.figure.as_rectangle_mut() {
-            rect.translate(dx, dy);
-            return;
-        }
         let translate = Transform::from_translation(dx, dy);
         self.transform = self.transform * translate;
     }
@@ -292,6 +292,11 @@ impl SceneGraph {
         contents_id
     }
 
+    /// 获取内容块（用于视口操作）
+    pub fn get_contents_block_id(&self) -> Option<BlockId> {
+        self.contents
+    }
+
     /// 获取内容块
     pub fn get_contents(&self) -> Option<BlockId> {
         self.contents
@@ -302,8 +307,45 @@ impl SceneGraph {
         self.new_block_with_parent(figure, parent_id)
     }
 
+    /// 添加子块到指定父块，并设置相对于父节点的局部位置和尺寸（类似 Draw2d 的 Figure.setBounds）
+    ///
+    /// # 与 Draw2D 的一致性
+    ///
+    /// - Figure 的 bounds (x, y, width, height) 直接存储在 RectangleFigure 中
+    /// - bounds 的 x, y 就是相对于父节点的位置
+    /// - Transform 用于运行时变换（移动、缩放等），不是基本位置设置
+    ///
+    /// # 示例
+    ///
+    /// ```
+    /// use novadraw_core::Color;
+    /// use novadraw_scene::{figure::Rectangle, SceneGraph};
+    ///
+    /// let mut scene = SceneGraph::new();
+    /// let parent_id = scene.set_contents(Box::new(Rectangle::new(0.0, 0.0, 100.0, 100.0)));
+    /// let color = Color::hex("#3498db");
+    /// // 添加子节点，相对于父节点位于 (10, 10)，尺寸 50x50
+    /// let _child_id = scene.add_child_with_bounds(parent_id, 10.0, 10.0, 50.0, 50.0, color);
+    /// ```
+    pub fn add_child_with_bounds(
+        &mut self,
+        parent_id: BlockId,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        color: novadraw_core::Color,
+    ) -> BlockId {
+        let figure = super::figure::Rectangle::new_with_color(x, y, width, height, color);
+        self.new_block_with_parent(Box::new(figure), parent_id)
+    }
+
     /// 创建带父块的块
-    fn new_block_with_parent(&mut self, figure: Box<dyn super::Figure>, parent_id: BlockId) -> BlockId {
+    fn new_block_with_parent(
+        &mut self,
+        figure: Box<dyn super::Figure>,
+        parent_id: BlockId,
+    ) -> BlockId {
         let uuid = Uuid::new_v4();
         let id = self.blocks.insert_with_key(|key| RuntimeBlock {
             id: key,
@@ -331,7 +373,11 @@ impl SceneGraph {
     }
 
     /// 创建带变换的内容块
-    pub fn new_content_block_with_transform(&mut self, figure: Box<dyn super::Figure>, transform: Transform) -> BlockId {
+    pub fn new_content_block_with_transform(
+        &mut self,
+        figure: Box<dyn super::Figure>,
+        transform: Transform,
+    ) -> BlockId {
         let uuid = Uuid::new_v4();
         let id = self.blocks.insert_with_key(|key| RuntimeBlock {
             id: key,
@@ -405,30 +451,29 @@ impl SceneGraph {
     }
 
     fn hit_test_from(&self, start_id: BlockId, point: Point) -> Option<BlockId> {
-        #[derive(Clone, Copy)]
-        enum StackItem {
-            Node(BlockId),
-            Check(BlockId),
-        }
+        let mut stack = vec![(start_id, Transform::IDENTITY)];
 
-        let mut stack: Vec<StackItem> = Vec::new();
-        stack.push(StackItem::Node(start_id));
-
-        while let Some(item) = stack.pop() {
-            match item {
-                StackItem::Node(node_id) => {
-                    if let Some(node) = self.blocks.get(node_id) {
-                        stack.push(StackItem::Check(node_id));
-                        for &child_id in node.children.iter().rev() {
-                            stack.push(StackItem::Node(child_id));
-                        }
-                    }
+        while let Some((node_id, parent_transform)) = stack.pop() {
+            if let Some(block) = self.blocks.get(node_id) {
+                if !block.is_visible || !block.is_enabled {
+                    continue;
                 }
-                StackItem::Check(node_id) => {
-                    if let Some(node) = self.blocks.get(node_id) {
-                        if node.hit_test(point) {
-                            return Some(node_id);
-                        }
+
+                let bounds = block.figure_bounds();
+                let bounds_transform = Transform::from_translation(bounds.x, bounds.y);
+                let local_transform = block.transform * bounds_transform;
+                let cumulative_transform = parent_transform * local_transform;
+
+                // 先检查子节点（后添加的在上层）
+                for &child_id in block.children.iter().rev() {
+                    stack.push((child_id, cumulative_transform));
+                }
+
+                // 再检查当前节点
+                if let Some(inv) = cumulative_transform.inverse() {
+                    let local_point = vec2_to_dvec2(inv.transform_point(dvec2_to_vec2(point)));
+                    if block.contains_local(local_point) {
+                        return Some(node_id);
                     }
                 }
             }
@@ -447,35 +492,39 @@ impl SceneGraph {
 
     /// 矩形选择命中测试
     pub fn hit_test_rect(&self, rect: Rect) -> Vec<BlockId> {
-        self.hit_test_rect_with_transform(rect, Transform::IDENTITY)
-    }
-
-    fn hit_test_rect_with_transform(&self, rect: Rect, _parent_transform: Transform) -> Vec<BlockId> {
         let mut selected = Vec::new();
-        let mut stack = Vec::new();
+        let mut stack = vec![(self.root, Transform::IDENTITY)];
 
-        if let Some(root) = self.blocks.get(self.root) {
-            for &child_id in root.children.iter() {
-                if let Some(_block) = self.blocks.get(child_id) {
-                    stack.push((child_id, Transform::IDENTITY));
+        while let Some((node_id, parent_transform)) = stack.pop() {
+            if let Some(block) = self.blocks.get(node_id) {
+                if !block.is_visible {
+                    continue;
                 }
-            }
-        }
 
-        while let Some((node_id, parent_t)) = stack.pop() {
-            if let Some(node) = self.blocks.get(node_id) {
-                let cumulative_transform = parent_t * node.transform;
+                let bounds = block.figure_bounds();
+                let bounds_transform = Transform::from_translation(bounds.x, bounds.y);
+                let local_transform = block.transform * bounds_transform;
+                let cumulative_transform = parent_transform * local_transform;
 
-                for &child_id in node.children.iter() {
+                // 先处理子节点
+                for &child_id in block.children.iter().rev() {
                     stack.push((child_id, cumulative_transform));
                 }
 
-                let bounds = node.figure.bounds();
+                // 检查矩形相交
                 let corners = [
-                    vec2_to_dvec2(cumulative_transform.transform_point(dvec2_to_vec2(DVec2::new(bounds.x, bounds.y)))),
-                    vec2_to_dvec2(cumulative_transform.transform_point(dvec2_to_vec2(DVec2::new(bounds.x + bounds.width, bounds.y)))),
-                    vec2_to_dvec2(cumulative_transform.transform_point(dvec2_to_vec2(DVec2::new(bounds.x + bounds.width, bounds.y + bounds.height)))),
-                    vec2_to_dvec2(cumulative_transform.transform_point(dvec2_to_vec2(DVec2::new(bounds.x, bounds.y + bounds.height)))),
+                    vec2_to_dvec2(cumulative_transform.transform_point(dvec2_to_vec2(
+                        DVec2::new(bounds.x, bounds.y),
+                    ))),
+                    vec2_to_dvec2(cumulative_transform.transform_point(dvec2_to_vec2(
+                        DVec2::new(bounds.x + bounds.width, bounds.y),
+                    ))),
+                    vec2_to_dvec2(cumulative_transform.transform_point(dvec2_to_vec2(
+                        DVec2::new(bounds.x + bounds.width, bounds.y + bounds.height),
+                    ))),
+                    vec2_to_dvec2(cumulative_transform.transform_point(dvec2_to_vec2(
+                        DVec2::new(bounds.x, bounds.y + bounds.height),
+                    ))),
                 ];
                 let transformed_bounds = Rect::from_corners(corners[0], corners[2]);
                 if rect_intersects(&rect, &transformed_bounds) {
@@ -516,64 +565,273 @@ impl SceneGraph {
         self.select_single(block_id);
     }
 
-    /// 渲染场景图
-    pub fn render(&self) -> RenderContext {
-        let mut gc = RenderContext::new();
+    /// 获取当前选中的块 ID
+    pub fn selected_block(&self) -> Option<BlockId> {
+        for (id, block) in self.blocks.iter() {
+            if block.is_selected {
+                return Some(id);
+            }
+        }
+        None
+    }
+
+    /// 渲染场景图（Trampoline 模式）
+    ///
+    /// 使用 Trampoline 模式实现 Figure 树的渲染遍历。
+    /// 核心思想：将所有操作转换为任务，放入队列中顺序执行。
+    ///
+    /// 渲染顺序（参考 d2）：
+    /// 1. paintClientArea() - 客户区域（包含子元素）
+    /// 2. paintBorder() - 绘制边框
+    /// 3. paintHighlight() - 绘制选中高亮
+    ///
+    /// # 优势
+    /// - 避免递归导致的栈溢出
+    /// - 任务在堆上，无深度限制
+    /// - 状态完全由任务队列控制
+    pub fn render(&self) -> NdCanvas {
+        let mut gc = NdCanvas::new();
         self.render_to_context(&mut gc);
         gc
     }
 
-    /// 使用视口变换渲染
-    pub fn render_with_viewport(&self, viewport_transform: Transform) -> RenderContext {
-        let mut gc = RenderContext::new();
-        self.render_to_context_with_viewport(&mut gc, viewport_transform);
+    /// 使用 Trampoline 模式渲染（推荐）
+    ///
+    /// 替代 render()，使用任务队列方式渲染。
+    /// 未来将成为默认渲染方式。
+    pub fn render_trampoline(&self) -> NdCanvas {
+        let mut gc = NdCanvas::new();
+        self.render_trampoline_to(&mut gc);
         gc
     }
 
-    fn render_to_context(&self, gc: &mut RenderContext) {
-        self.traverse_dfs_stack(|block_id| {
-            if let Some(runtime_block) = self.blocks.get(block_id) {
-                runtime_block.paint(gc);
-            }
-        })
+    /// 使用 Trampoline 模式渲染到上下文
+    fn render_trampoline_to(&self, gc: &mut NdCanvas) {
+        let start_id = self.contents.unwrap_or(self.root);
+        let scene_ref = SceneGraphRenderRef {
+            blocks: &self.blocks,
+        };
+        let mut renderer = FigureRenderer::new(&scene_ref, gc);
+        renderer.render(start_id);
     }
 
-    fn render_to_context_with_viewport(&self, gc: &mut RenderContext, viewport_transform: Transform) {
-        let mut stack = Vec::new();
+    /// 使用视口变换渲染（已废弃，请使用 ViewportFigure）
+    #[deprecated(since = "0.1.0", note = "Use ViewportFigure instead for viewport control")]
+    pub fn render_with_viewport(&self, _viewport_transform: Transform) -> NdCanvas {
+        self.render()
+    }
 
-        gc.push_transform(viewport_transform);
+    /// 渲染到上下文（迭代遍历）
+    ///
+    /// 核心算法：
+    /// 1. 初始化渲染任务栈
+    /// 2. while pop task → 处理节点
+    /// 3. 子节点逆序入栈（实现 Z-order）
+    ///
+    /// 变换累加规则：
+    /// - cumulative_transform = parent_transform * block.transform
+    /// - 每个节点渲染时：actual_transform = cumulative_transform * from_translation(bounds.x, bounds.y)
+    ///   其中 bounds.x, bounds.y 是 Figure 的局部坐标
+    ///
+    /// 视口容器处理：
+    /// - ViewportFigure 在 paint_figure() 中应用变换
+    /// - 子元素在此变换下绘制，无需额外 set_transform
+    fn render_to_context(&self, gc: &mut NdCanvas) {
+        // 确定起始节点（内容层或根节点）
+        let start_id = self.contents.unwrap_or(self.root);
 
-        stack.push(self.root);
+        // 渲染任务栈：(block_id, parent_cumulative_transform, clip_depth)
+        // parent_cumulative_transform 不包含当前节点的 bounds 变换
+        let mut stack: Vec<(BlockId, Transform, usize)> = Vec::new();
+        stack.push((start_id, Transform::IDENTITY, gc.clip_depth()));
 
-        while let Some(node_id) = stack.pop() {
-            if let Some(runtime_block) = self.blocks.get(node_id) {
-                runtime_block.paint(gc);
+        // 渲染顺序追踪（用于调试验证）
+        #[cfg(feature = "debug_render")]
+        let mut render_order: Vec<(BlockId, String)> = Vec::new();
 
-                for &child_id in runtime_block.children.iter().rev() {
-                    stack.push(child_id);
+        // 迭代遍历（后进先出 = 深度优先）
+        while let Some((block_id, parent_transform, _clip_depth)) = stack.pop() {
+            let block = match self.blocks.get(block_id) {
+                Some(b) if b.is_visible => b,
+                _ => continue,
+            };
+
+            let bounds = block.figure_bounds();
+
+            // 调试日志
+            #[cfg(feature = "debug_render")]
+            {
+                eprintln!(
+                    "[RENDER] id={:?} name={} bounds=({:.0},{:.0},{:.0},{:.0})",
+                    block_id,
+                    block.figure.name(),
+                    bounds.x,
+                    bounds.y,
+                    bounds.width,
+                    bounds.height
+                );
+            }
+
+            // 计算累积变换（不包含当前节点的 bounds 变换）
+            // 公式：cumulative = parent_transform * block.transform
+            let cumulative_transform = parent_transform * block.transform;
+
+            // 实际变换 = 累积变换 * bounds 变换（bounds 变换用于定位到 Figure 的局部坐标）
+            let actual_transform = cumulative_transform * Transform::from_translation(bounds.x, bounds.y);
+
+            #[cfg(feature = "debug_render")]
+            {
+                eprintln!("[DEBUG] parent_transform=({:.1},{:.1})", parent_transform.translation().x(), parent_transform.translation().y());
+                eprintln!("[DEBUG] block.transform=({:.1},{:.1})", block.transform.translation().x(), block.transform.translation().y());
+                eprintln!("[DEBUG] cumulative_transform=({:.1},{:.1})", cumulative_transform.translation().x(), cumulative_transform.translation().y());
+                eprintln!("[DEBUG] actual_transform=({:.1},{:.1})", actual_transform.translation().x(), actual_transform.translation().y());
+            }
+
+            // ========== 检查是否为视口容器 ==========
+            if block.figure.is_viewport_container() {
+                // 视口容器：paint_figure() 会应用变换并处理子元素
+                // 不调用 set_transform，让视口容器自行管理变换
+                gc.save();
+                block.figure.paint_figure(gc);
+
+                // 视口容器负责 save/restore，在其变换下绘制子元素
+                // 子元素的 parent_transform = Identity（因为视口已处理变换）
+                for &child_id in block.children.iter().rev() {
+                    if let Some(child) = self.blocks.get(child_id) {
+                        if child.is_visible {
+                            stack.push((child_id, Transform::IDENTITY, gc.clip_depth()));
+                        }
+                    }
+                }
+            } else {
+                // 普通 Figure：使用 set_transform 设置绝对位置
+                gc.save();
+                gc.set_transform(
+                    1.0, 0.0, 0.0, 1.0,
+                    actual_transform.translation().x(),
+                    actual_transform.translation().y(),
+                );
+                block.figure.paint_figure(gc);
+
+                // ========== 2. paintBorder() - 绘制边框 ==========
+                block.figure.paint_border(gc);
+
+                // ========== 3. paintHighlight() - 绘制选中高亮 ==========
+                if block.is_selected {
+                    block.figure.paint_highlight(gc);
+                }
+
+                gc.restore();
+
+                // 记录渲染顺序
+                #[cfg(feature = "debug_render")]
+                render_order.push((block_id, format!("{:?}", bounds)));
+
+                // ========== 子元素入栈 ==========
+                // 逆序遍历：先处理后添加的节点（在上层）
+                // 子元素的 parent_transform 需要是当前节点的 actual_transform
+                // 因为子节点的局部坐标是相对于父节点 bounds 原点的
+                for &child_id in block.children.iter().rev() {
+                    if let Some(child) = self.blocks.get(child_id) {
+                        if child.is_visible {
+                            stack.push((child_id, actual_transform, gc.clip_depth()));
+                        }
+                    }
                 }
             }
+        }
+
+        // 打印渲染顺序（调试验证）
+        #[cfg(feature = "debug_render")]
+        {
+            eprintln!("\n=== 渲染顺序（先渲染的在下面） ===");
+            for (i, (_, info)) in render_order.iter().enumerate() {
+                eprintln!("  {}: {}", i, info);
+            }
+            eprintln!("================================\n");
         }
 
         gc.pop_transform();
     }
 
-    fn traverse_dfs_stack<F>(&self, mut visitor: F)
-    where
-        F: FnMut(BlockId),
-    {
-        let mut stack = Vec::new();
-        stack.push(self.root);
+    // ========== 调试验证方法 ==========
 
-        while let Some(node_id) = stack.pop() {
-            visitor(node_id);
+    /// 打印场景图树结构（用于调试）
+    ///
+    /// 使用 `eprintln!` 输出到 stderr，格式示例：
+    /// ```text
+    /// V BlockId(0x1): Figure bounds=(0,0,100,100)
+    ///   V BlockId(0x2): Rectangle bounds=(10,10,50,50)
+    ///   H BlockId(0x3): Rectangle bounds=(50,50,50,50)  // 不可见
+    /// ```
+    #[cfg(feature = "debug_render")]
+    pub fn print_tree(&self) {
+        eprintln!("\n========== 场景图结构 ==========");
+        self.print_block(self.root, 0);
+        eprintln!("=================================\n");
+    }
 
-            if let Some(node) = self.blocks.get(node_id) {
-                for &child_id in node.children.iter().rev() {
-                    stack.push(child_id);
+    /// 递归打印单个块（内部使用）
+    #[cfg(feature = "debug_render")]
+    fn print_block(&self, block_id: BlockId, depth: usize) {
+        let indent = "  ".repeat(depth);
+        if let Some(block) = self.blocks.get(block_id) {
+            let bounds = block.figure_bounds();
+            let visibility = if block.is_visible { "V" } else { "H" };
+            let selected = if block.is_selected { " *" } else { "" };
+            eprintln!(
+                "{}{} {:?}: {} bounds=({:.0},{:.0},{:.0},{:.0}){}",
+                indent,
+                visibility,
+                block_id,
+                block.figure.name(),
+                bounds.x,
+                bounds.y,
+                bounds.width,
+                bounds.height,
+                selected
+            );
+
+            // 正序打印子节点（视觉上：先添加的在上面）
+            for &child_id in &block.children {
+                self.print_block(child_id, depth + 1);
+            }
+        }
+    }
+
+    /// 打印渲染顺序（调试）
+    ///
+    /// 在渲染前调用，渲染后会打印渲染顺序
+    #[cfg(feature = "debug_render")]
+    pub fn print_render_order(&self) {
+        let start_id = self.contents.unwrap_or(self.root);
+        let mut stack: Vec<(BlockId, Transform)> = Vec::new();
+        stack.push((start_id, Transform::IDENTITY));
+
+        eprintln!("\n========== 渲染顺序 ==========");
+        let mut order = Vec::new();
+
+        while let Some((block_id, _parent_transform)) = stack.pop() {
+            if let Some(block) = self.blocks.get(block_id) {
+                if block.is_visible {
+                    let bounds = block.figure_bounds();
+                    order.push(format!("{}: {:?}", block.figure.name(), bounds));
+
+                    for &child_id in block.children.iter().rev() {
+                        if let Some(child) = self.blocks.get(child_id) {
+                            if child.is_visible {
+                                stack.push((child_id, Transform::IDENTITY));
+                            }
+                        }
+                    }
                 }
             }
         }
+
+        for (i, info) in order.iter().enumerate() {
+            eprintln!("  {}: {}", i, info);
+        }
+        eprintln!("================================\n");
     }
 
     /// 获取块
@@ -656,5 +914,190 @@ impl SceneGraph {
 impl Default for SceneGraph {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::figure::Rectangle;
+    use novadraw_core::Color;
+
+    /// 测试渲染顺序：Z-order 验证
+    ///
+    /// 场景：父容器包含三个子矩形（从下到上添加）
+    /// 期望：渲染顺序应为 parent → child1 → child2 → child3
+    ///       即先添加的在下面（被遮挡），后添加的在上面（遮挡别人）
+    #[test]
+    fn test_render_order_z_order() {
+        let mut scene = SceneGraph::new();
+
+        // 创建父容器（100x100）
+        let parent = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+        let parent_id = scene.set_contents(Box::new(parent));
+
+        // 添加三个子矩形（从下到上添加）
+        let child1 = Rectangle::new(10.0, 10.0, 20.0, 20.0);
+        let c1 = scene.add_child_to(parent_id, Box::new(child1));
+
+        let child2 = Rectangle::new(30.0, 30.0, 20.0, 20.0);
+        let _c2 = scene.add_child_to(parent_id, Box::new(child2));
+
+        let child3 = Rectangle::new(50.0, 50.0, 20.0, 20.0);
+        let _c3 = scene.add_child_to(parent_id, Box::new(child3));
+
+        // 打印树结构（用于手动验证）
+        #[cfg(test)]
+        {
+            eprintln!("\n=== 场景图树结构 ===");
+            scene.print_block(parent_id, 0);
+            eprintln!("====================\n");
+
+            // 打印预期渲染顺序
+            eprintln!("预期渲染顺序（先渲染的在下面）:");
+            eprintln!("  0: parent");
+            eprintln!("  1: child1 (最早添加，在最下层)");
+            eprintln!("  2: child2");
+            eprintln!("  3: child3 (最晚添加，在最上层)");
+            eprintln!();
+        }
+
+        // 渲染并验证命令数量
+        let gc = scene.render();
+        let cmd_count = gc.command_count();
+
+        // 每个矩形产生 1 个 FillRect 命令
+        // parent + child1 + child2 + child3 = 4 个
+        assert_eq!(cmd_count, 4, "应有 4 个渲染命令");
+    }
+
+    /// 测试渲染顺序：嵌套层次
+    ///
+    /// 场景：父 → 子1 → 孙1
+    /// 期望渲染顺序：parent → child1 → grandchild1
+    #[test]
+    fn test_render_order_nested() {
+        let mut scene = SceneGraph::new();
+
+        // 根
+        let root = Rectangle::new(0.0, 0.0, 200.0, 200.0);
+        let root_id = scene.set_contents(Box::new(root));
+
+        // 子
+        let child = Rectangle::new(50.0, 50.0, 100.0, 100.0);
+        let child_id = scene.add_child_to(root_id, Box::new(child));
+
+        // 孙
+        let grandchild = Rectangle::new(60.0, 60.0, 30.0, 30.0);
+        let _gc_id = scene.add_child_to(child_id, Box::new(grandchild));
+
+        // 打印树结构
+        #[cfg(test)]
+        {
+            eprintln!("\n=== 嵌套场景图树结构 ===");
+            scene.print_block(root_id, 0);
+            eprintln!("=======================\n");
+
+            // 预期渲染顺序：root → child → grandchild
+            eprintln!("预期渲染顺序:");
+            eprintln!("  0: root");
+            eprintln!("  1: child");
+            eprintln!("  2: grandchild");
+            eprintln!();
+        }
+
+        let gc = scene.render();
+        let cmd_count = gc.command_count();
+
+        assert_eq!(cmd_count, 3, "应有 3 个渲染命令");
+    }
+
+    /// 测试可见性过滤
+    ///
+    /// 场景：父容器包含可见子元素和不可见子元素
+    /// 期望：只渲染可见元素
+    #[test]
+    fn test_visibility_filter() {
+        let mut scene = SceneGraph::new();
+
+        let parent = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+        let parent_id = scene.set_contents(Box::new(parent));
+
+        // 可见子元素
+        let visible_child = Rectangle::new(10.0, 10.0, 20.0, 20.0);
+        let _ = scene.add_child_to(parent_id, Box::new(visible_child));
+
+        // 不可见子元素
+        let invisible_child = Rectangle::new(50.0, 50.0, 20.0, 20.0);
+        let invisible_id = scene.add_child_to(parent_id, Box::new(invisible_child));
+
+        // 设置不可见
+        scene.blocks.get_mut(invisible_id).unwrap().is_visible = false;
+
+        let gc = scene.render();
+        let cmd_count = gc.command_count();
+
+        // parent + visible_child = 2
+        assert_eq!(cmd_count, 2, "应只渲染可见元素");
+    }
+
+    /// 测试变换累加
+    ///
+    /// 场景：子元素有非零位置
+    /// 期望：渲染命令包含正确的变换矩阵
+    #[test]
+    fn test_transform_accumulation() {
+        let mut scene = SceneGraph::new();
+
+        let parent = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+        let parent_id = scene.set_contents(Box::new(parent));
+
+        let child = Rectangle::new(25.0, 25.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+        // 打印场景结构
+        #[cfg(test)]
+        {
+            eprintln!("\n=== 测试变换累加 ===");
+            eprintln!("Parent bounds: {:?}", scene.blocks.get(parent_id).unwrap().figure_bounds());
+            eprintln!("Child bounds: {:?}", scene.blocks.get(child_id).unwrap().figure_bounds());
+        }
+
+        let gc = scene.render();
+
+        // 验证变换被正确累加到命令中
+        // 第二个命令（child 的 FillRect）应该有变换
+        if gc.commands.len() >= 2 {
+            let parent_cmd = &gc.commands[0];
+            let parent_trans = parent_cmd.transform.translation();
+            #[cfg(test)]
+            {
+                eprintln!("Parent 命令变换: {:?}", parent_cmd.transform);
+                eprintln!("Parent 平移量: ({}, {})", parent_trans.x(), parent_trans.y());
+            }
+
+            let child_cmd = &gc.commands[1];
+            let child_trans = child_cmd.transform.translation();
+            #[cfg(test)]
+            {
+                eprintln!("Child 命令变换: {:?}", child_cmd.transform);
+                eprintln!("Child 平移量: ({}, {})", child_trans.x(), child_trans.y());
+            }
+
+            // 期望：parent 平移 (0, 0)，child 平移 (25, 25)
+            // 即 child 相对于 parent 的位置
+            assert!(
+                (child_trans.x() - 25.0).abs() < 1e-6,
+                "子元素 X 平移应为 25.0，实际为 {:.1}",
+                child_trans.x()
+            );
+            assert!(
+                (child_trans.y() - 25.0).abs() < 1e-6,
+                "子元素 Y 平移应为 25.0，实际为 {:.1}",
+                child_trans.y()
+            );
+        } else {
+            panic!("命令数量不足: {}", gc.commands.len());
+        }
     }
 }

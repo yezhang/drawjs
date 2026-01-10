@@ -3,9 +3,9 @@
 //! 提供矩形、椭圆等基础图形实现。
 
 use novadraw_core::Color;
-use novadraw_render::RenderContext;
+use novadraw_render::NdCanvas;
 
-use super::{Figure, Point, Rect};
+use super::{Figure, Rect};
 
 /// 矩形图形
 ///
@@ -68,23 +68,26 @@ impl Figure for Rectangle {
         Rect::new(self.x, self.y, self.width, self.height)
     }
 
-    fn paint(&self, gc: &mut RenderContext) {
-        let origin = gc.transform_point(Point::new(self.x, self.y));
-        gc.set_fill_style(self.fill_color);
-        gc.draw_rect(origin.x, origin.y, self.width, self.height);
+    fn use_local_coordinates(&self) -> bool {
+        true
+    }
+
+    fn paint(&self, gc: &mut NdCanvas) {
+        gc.set_fill_color(self.fill_color);
+        gc.fill_rect(self.x, self.y, self.width, self.height);
 
         if let Some(color) = self.stroke_color {
-            gc.set_stroke_style(color, self.stroke_width);
-            gc.draw_stroke_rect(origin.x, origin.y, self.width, self.height);
+            gc.set_stroke_color(color);
+            gc.set_line_width(self.stroke_width);
+            gc.stroke_rect(self.x, self.y, self.width, self.height);
         }
     }
 
-    fn paint_highlight(&self, gc: &mut RenderContext) {
-        let bounds = self.bounds();
-        let origin = gc.transform_point(Point::new(bounds.x, bounds.y));
-        gc.set_fill_style(Color::rgba(0.0, 0.0, 0.0, 0.0));
-        gc.set_stroke_style(Color::hex("#f39c12"), 2.0);
-        gc.draw_stroke_rect(origin.x - 2.0, origin.y - 2.0, bounds.width + 4.0, bounds.height + 4.0);
+    fn paint_highlight(&self, gc: &mut NdCanvas) {
+        gc.set_fill_color(Color::rgba(0.0, 0.0, 0.0, 0.0));
+        gc.set_stroke_color(Color::hex("#f39c12"));
+        gc.set_line_width(2.0);
+        gc.stroke_rect(self.x - 2.0, self.y - 2.0, self.width + 4.0, self.height + 4.0);
     }
 
     fn as_rectangle(&self) -> Option<&Rectangle> {
