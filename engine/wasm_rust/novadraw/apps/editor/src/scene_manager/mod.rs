@@ -1,82 +1,66 @@
-use std::sync::Arc;
-
-use novadraw::{BlockId, Color, FillLayout, RectangleFigure, SceneGraph, Viewport};
+use novadraw::{Color, RectangleFigure, SceneGraph};
 
 pub struct SceneManager {
     pub scene: SceneGraph,
-    pub viewport: Viewport,
-    pub background_id: Option<BlockId>,
 }
 
 impl SceneManager {
     pub fn new() -> Self {
         let mut scene = SceneGraph::new();
 
-        // 设置布局管理器
-        scene.set_layout_manager(Arc::new(FillLayout::new()));
+        // ============================================
+        // 验证 Trampoline 任务调度：四个角矩形
+        // ============================================
+        //
+        // ┌────────────────────────────────────────┐
+        // │  □ 左上           □ 右上              │
+        // │  (0,0)           (700,0)              │
+        // │                                        │
+        // │  □ 左下           □ 右下              │
+        // │  (0,550)         (700,550)            │
+        // └────────────────────────────────────────┘
+        //
+        // 验证点：
+        // 1. 渲染任务正确生成
+        // 2. 四个角位置准确
 
-        // 创建背景块
-        let bg = RectangleFigure::new_with_color(
-            0.0, 0.0, 800.0, 600.0,
-            Color::rgba(1.0, 1.0, 1.0, 1.0),
+        // 左上角 - 红色
+        let rect_tl = RectangleFigure::new_with_color(
+            0.0, 0.0, 100.0, 50.0,
+            Color::rgba(0.9, 0.2, 0.2, 1.0),
         );
-        let bg_id = scene.new_ui_block(Box::new(bg));
+        let root_id = scene.set_contents(Box::new(rect_tl));
+        println!("[SceneManager] 左上角 (0,0) 100×50 红色");
 
-        // 创建内容块（类似 Draw2d 的 setContents）
-        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
-        scene.set_contents(Box::new(contents));
+        // 右上角 - 绿色
+        let rect_tr = RectangleFigure::new_with_color(
+            700.0, 0.0, 100.0, 50.0,
+            Color::rgba(0.2, 0.8, 0.3, 1.0),
+        );
+        let _id_tr = scene.add_child_to(root_id, Box::new(rect_tr));
+        println!("[SceneManager] 右上角 (700,0) 100×50 绿色");
 
-        Self {
-            scene,
-            viewport: Viewport::new(),
-            background_id: Some(bg_id),
-        }
-    }
+        // 左下角 - 蓝色
+        let rect_bl = RectangleFigure::new_with_color(
+            0.0, 550.0, 100.0, 50.0,
+            Color::rgba(0.2, 0.4, 0.9, 1.0),
+        );
+        let _id_bl = scene.add_child_to(root_id, Box::new(rect_bl));
+        println!("[SceneManager] 左下角 (0,550) 100×50 蓝色");
 
-    pub fn viewport(&self) -> &Viewport {
-        &self.viewport
-    }
+        // 右下角 - 黄色
+        let rect_br = RectangleFigure::new_with_color(
+            700.0, 550.0, 100.0, 50.0,
+            Color::rgba(0.9, 0.8, 0.2, 1.0),
+        );
+        let _id_br = scene.add_child_to(root_id, Box::new(rect_br));
+        println!("[SceneManager] 右下角 (700,550) 100×50 黄色");
 
-    pub fn viewport_mut(&mut self) -> &mut Viewport {
-        &mut self.viewport
-    }
-
-    pub fn set_window_size(&mut self, width: f64, height: f64) {
-        let container_bounds = novadraw::Rect::new(0.0, 0.0, width, height);
-        self.scene.apply_layout(container_bounds);
+        Self { scene }
     }
 
     pub fn scene(&self) -> &SceneGraph {
         &self.scene
-    }
-
-    pub fn scene_mut(&mut self) -> &mut SceneGraph {
-        &mut self.scene
-    }
-
-    pub fn add_rectangle(&mut self, x: f64, y: f64, width: f64, height: f64, color: Color) -> BlockId {
-        println!("[SceneManager::add_rectangle] x={}, y={}, w={}, h={}", x, y, width, height);
-        let rect = RectangleFigure::new_with_color(x, y, width, height, color);
-        let contents_id = self.scene.get_contents().expect("contents not set");
-        self.scene.add_child_to(contents_id, Box::new(rect))
-    }
-
-    #[allow(dead_code)]
-    pub fn debug_background_size(&self) -> (f64, f64) {
-        if let Some(bg_id) = self.background_id {
-            if let Some(block) = self.scene.blocks.get(bg_id) {
-                if let Some(rect) = block.figure.as_rectangle() {
-                    return (rect.width, rect.height);
-                }
-            }
-        }
-        (0.0, 0.0)
-    }
-
-    pub fn add_rectangle_at_center(&mut self, center_x: f64, center_y: f64, width: f64, height: f64, color: Color) -> BlockId {
-        let x = center_x - width / 2.0;
-        let y = center_y - height / 2.0;
-        self.add_rectangle(x, y, width, height, color)
     }
 }
 

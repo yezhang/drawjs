@@ -876,3 +876,123 @@ A: 确保逆变换正确：
 3. 变换累积在 SceneGraph 遍历时完成
 4. 坐标转换使用 f64 双精度
 5. 变换矩阵使用 DMat4，为 3D 预留
+
+## 11. Trampoline 渲染流水线坐标系
+
+### 11.1 渲染流程中的坐标系
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Trampoline 渲染流水线                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   Figure.bounds              逻辑坐标                            │
+│   (Rectangle.x, y)           (相对于父 Figure)                   │
+│         │                                                     │
+│         ▼                                                     │
+│   RuntimeBlock.transform     逻辑坐标                            │
+│   (运行时移动/缩放)            累加到 bounds                      │
+│         │                                                     │
+│         ▼                                                     │
+│   PaintTask::Translate       逻辑坐标                            │
+│   (生成任务队列)               描述位置变换                       │
+│         │                                                     │
+│         ▼                                                     │
+│   RenderCommand              逻辑坐标                            │
+│   (NdCanvas commands)        rect 和 transform 都是逻辑坐标      │
+│         │                                                     │
+│         ▼                                                     │
+│   Vello Backend              像素坐标                            │
+│   (最终渲染)                  乘以 scale_factor                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 11.2 各层坐标系说明
+
+| 层级 | 类型 | 坐标系 | 说明 |
+|------|------|--------|------|
+| **Figure.bounds** | 世界坐标 | 逻辑坐标 | Rectangle 的 x, y 是相对于父 Figure 的位置 |
+| **RuntimeBlock.transform** | 运行时变换 | 逻辑坐标 | 移动、缩放等运行时效果，累加到 bounds |
+| **PaintTask::Translate** | 任务队列 | 逻辑坐标 | 描述位置变换，`trans.x() + bounds.x` |
+| **RenderCommand** | 命令 | 逻辑坐标 | rect 和 transform 都是逻辑坐标 |
+| **Vello backend** | 渲染 | 像素坐标 | 最终需要乘以 scale_factor |
+
+### 11.3 NdCanvas 与 RenderCommand
+
+NdCanvas 维护变换状态栈，每个命令创建时携带当前变换：
+
+```rust
+fn create_command(&mut self, kind: RenderCommandKind) {
+    let command = RenderCommand {
+        kind,
+        transform: self.current_state().transform,  // 当前累积变换
+    };
+    self.commands.push(command);
+}
+```
+
+变换累积通过 `translate()` 方法：
+
+```rust
+pub fn translate(&mut self, x: f64, y: f64) {
+    let t = Transform::from_translation(x, y);
+    self.current_state_mut().transform = self.current_state().transform * t;
+}
+```
+
+### 11.4 Vello 后端坐标转换
+
+逻辑坐标到像素坐标的转换在 Vello 后端统一完成：
+
+```rust
+fn render_command(scene: &mut Scene, cmd: &RenderCommand, scale_factor: f64) {
+    // Transform 平移乘以 scale_factor
+    let affine = vello::kurbo::Affine::new([
+        a, b,
+        c, d,
+        e * scale_factor, f * scale_factor,  // 平移转换为像素坐标
+    ]);
+
+    match &cmd.kind {
+        RenderCommandKind::FillRect { rect, .. } => {
+            // 矩形坐标也乘以 scale_factor
+            let x0 = rect[0].x * scale_factor;
+            let y0 = rect[0].y * scale_factor;
+            let x1 = rect[1].x * scale_factor;
+            let y1 = rect[1].y * scale_factor;
+            let kurbo_rect = vello::kurbo::Rect::new(x0, y0, x1, y1);
+            scene.fill(Fill::NonZero, affine, color, None, &kurbo_rect);
+        }
+    }
+}
+```
+
+### 11.5 典型场景示例
+
+```
+场景: 800×600 窗口，2x DPI，矩形 (700, 550) 100×50
+
+Figure.bounds           →  (700, 550, 100, 50) 逻辑坐标
+                         →  Rectangle.x=700, Rectangle.y=550
+                         →  Rectangle.width=100, Rectangle.height=50
+
+RuntimeBlock.transform  →  Transform::IDENTITY (无运行时变换)
+
+PaintTask::Translate    →  trans.x() + bounds.x = 0 + 700 = 700
+                         →  trans.y() + bounds.y = 0 + 550 = 550
+
+RenderCommand.rect      →  [700, 550], [800, 600] 逻辑坐标
+RenderCommand.transform →  平移 (700, 550) 逻辑坐标
+
+Vello backend           →  rect: [1400, 1100], [1600, 1200] 像素坐标
+                         →  transform: 平移 (1400, 1100) 像素坐标
+                         →  × 2 (scale_factor)
+```
+
+### 11.6 坐标系设计原则
+
+1. **逻辑坐标统一**：从 Figure 到 RenderCommand 全程使用逻辑坐标
+2. **DPI 隔离**：Vello 后端负责逻辑坐标到像素坐标的转换
+3. **变换累积**：`PaintTask::Translate` 组合了 bounds 位置和运行时 transform
+4. **任务队列**：变换以任务形式存储，而非直接应用
