@@ -1,6 +1,4 @@
 //! Vello 渲染器实现
-//!
-//! 使用 Vello GPU 渲染引擎的渲染器。
 
 use std::sync::Arc;
 
@@ -12,13 +10,9 @@ use vello::{AaConfig, Renderer, RendererOptions};
 use crate::command::RenderCommand;
 use crate::traits::{Renderer as RendererTrait, WindowProxy};
 
-/// Vello 模块
 pub mod winit;
 pub use winit::{WinitWindowProxy, WinitWindowProxyInner};
 
-/// Vello 渲染器
-///
-/// 使用 Vello GPU 渲染引擎实现渲染接口。
 pub struct VelloRenderer {
     render_context: RenderContext,
     renderers: Vec<Option<Renderer>>,
@@ -29,13 +23,6 @@ pub struct VelloRenderer {
 }
 
 impl VelloRenderer {
-    /// 创建新的 Vello 渲染器
-    ///
-    /// # 参数
-    ///
-    /// * `window` - 窗口代理
-    /// * `logical_width` - 逻辑宽度
-    /// * `logical_height` - 逻辑高度
     pub fn new(window: Arc<WinitWindowProxy>, logical_width: f64, logical_height: f64) -> Self {
         let scale_factor = window.scale_factor();
         let width = (logical_width * scale_factor) as u32;
@@ -66,48 +53,92 @@ impl VelloRenderer {
     }
 
     fn render_command(scene: &mut vello::Scene, cmd: &RenderCommand, scale_factor: f64) {
+        let transform = cmd.transform();
+        let matrix = transform.matrix();
+
+        let matrix_arr = matrix.to_array();
+        let a = matrix_arr[0][0];
+        let b = matrix_arr[1][0];
+        let c = matrix_arr[0][1];
+        let d = matrix_arr[1][1];
+
+        let e = matrix_arr[0][2];
+        let f = matrix_arr[1][2];
+
+        let affine = vello::kurbo::Affine::new([
+            a, b,
+            c, d,
+            e * scale_factor, f * scale_factor,
+        ]);
+
         match &cmd.kind {
-            crate::command::RenderCommandKind::FillRect { rect, color, stroke_color, stroke_width } => {
+            crate::command::RenderCommandKind::ClearRect { rect } => {
                 let x0 = rect[0].x * scale_factor;
                 let y0 = rect[0].y * scale_factor;
                 let x1 = rect[1].x * scale_factor;
                 let y1 = rect[1].y * scale_factor;
                 let kurbo_rect = vello::kurbo::Rect::new(x0, y0, x1, y1);
+                let vello_color = VelloColor::new([1.0, 1.0, 1.0, 1.0]);
+                scene.fill(vello::peniko::Fill::NonZero, affine, vello_color, None, &kurbo_rect);
+            }
 
-                let vello_color = color.map(|c| {
-                    VelloColor::new([c.r as f32, c.g as f32, c.b as f32, c.a as f32])
-                }).unwrap_or_else(|| VelloColor::new([0.2, 0.6, 0.86, 1.0]));
+            crate::command::RenderCommandKind::FillRect { rect, fill_color } => {
+                let x0 = rect[0].x * scale_factor;
+                let y0 = rect[0].y * scale_factor;
+                let x1 = rect[1].x * scale_factor;
+                let y1 = rect[1].y * scale_factor;
+                let kurbo_rect = vello::kurbo::Rect::new(x0, y0, x1, y1);
+                let vello_color = VelloColor::new([
+                    fill_color.r as f32,
+                    fill_color.g as f32,
+                    fill_color.b as f32,
+                    fill_color.a as f32,
+                ]);
+                scene.fill(vello::peniko::Fill::NonZero, affine, vello_color, None, &kurbo_rect);
+            }
 
-                let alpha = vello_color.components[3];
-                if alpha == 0.0 {
-                    let stroke_vello_color = stroke_color.map(|c| {
-                        VelloColor::new([c.r as f32, c.g as f32, c.b as f32, c.a as f32])
-                    }).unwrap_or_else(|| VelloColor::new([0.95, 0.61, 0.07, 1.0]));
+            crate::command::RenderCommandKind::StrokeRect { rect, stroke_color, width } => {
+                let x0 = rect[0].x * scale_factor;
+                let y0 = rect[0].y * scale_factor;
+                let x1 = rect[1].x * scale_factor;
+                let y1 = rect[1].y * scale_factor;
+                let kurbo_rect = vello::kurbo::Rect::new(x0, y0, x1, y1);
+                let vello_color = VelloColor::new([
+                    stroke_color.r as f32,
+                    stroke_color.g as f32,
+                    stroke_color.b as f32,
+                    stroke_color.a as f32,
+                ]);
+                scene.stroke(
+                    &Stroke::new(*width * scale_factor),
+                    affine,
+                    vello_color,
+                    None,
+                    &kurbo_rect,
+                );
+            }
 
-                    let stroke_width = *stroke_width * scale_factor;
-                    if stroke_width > 0.0 {
-                        let inset = stroke_width / 2.0;
-                        let stroke_rect = vello::kurbo::Rect::new(
-                            x0 + inset, y0 + inset,
-                            x1 - inset, y1 - inset,
-                        );
-                        scene.stroke(
-                            &Stroke::new(stroke_width as f64),
-                            vello::kurbo::Affine::IDENTITY,
-                            stroke_vello_color,
-                            None,
-                            &stroke_rect,
-                        );
-                    }
-                } else {
-                    scene.fill(
-                        vello::peniko::Fill::NonZero,
-                        vello::kurbo::Affine::IDENTITY,
-                        vello_color,
-                        None,
-                        &kurbo_rect,
-                    );
-                }
+            crate::command::RenderCommandKind::Clear { color } => {
+                let _ = scene;
+                let _ = color;
+            }
+
+            crate::command::RenderCommandKind::Line { p1, p2, color, width, .. } => {
+                let v1 = vello::kurbo::Point::new(p1.x * scale_factor, p1.y * scale_factor);
+                let v2 = vello::kurbo::Point::new(p2.x * scale_factor, p2.y * scale_factor);
+                let vello_color = VelloColor::new([color.r as f32, color.g as f32, color.b as f32, color.a as f32]);
+
+                scene.stroke(
+                    &Stroke::new(*width * scale_factor),
+                    affine,
+                    vello_color,
+                    None,
+                    &vello::kurbo::Line::new(v1, v2),
+                );
+            }
+
+            _ => {
+                // 其他命令暂未实现
             }
         }
     }
@@ -141,7 +172,7 @@ impl RendererTrait for VelloRenderer {
                 &self.scene,
                 &self.surface.target_view,
                 &vello::RenderParams {
-                    base_color: VelloColor::new([1.0, 1.0, 1.0, 1.0]),  // 白色背景清除
+                    base_color: VelloColor::new([1.0, 1.0, 1.0, 1.0]),
                     width,
                     height,
                     antialiasing_method: AaConfig::Msaa16,

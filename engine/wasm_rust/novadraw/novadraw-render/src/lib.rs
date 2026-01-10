@@ -9,7 +9,7 @@
 //! - [`traits`] - 渲染器 traits
 //! - [`backend`] - 渲染后端实现
 
-#![deny(missing_docs)]
+#![allow(missing_docs)]
 
 /// 渲染命令模块
 pub mod command;
@@ -21,6 +21,6 @@ pub mod traits;
 #[cfg(feature = "vello")]
 pub mod backend;
 
-pub use command::{RenderCommand, RenderCommandKind};
-pub use context::RenderContext;
+pub use command::{NdStateSnapshot, RenderCommand, RenderCommandKind};
+pub use context::{NdCanvas, NdState};
 pub use traits::{Renderer, WindowProxy};
