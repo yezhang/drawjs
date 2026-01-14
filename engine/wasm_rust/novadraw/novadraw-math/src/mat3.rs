@@ -102,22 +102,6 @@ impl Mat3 {
         Self::new(c, -s, 0.0, s, c, 0.0, 0.0, 0.0, 1.0)
     }
 
-    /// 变换点 (x, y, 1)
-    #[inline]
-    pub fn transform_point(self, point: super::Vec2) -> super::Vec2 {
-        let v = glam::DVec3::new(point.x(), point.y(), 1.0);
-        let result = self.0 * v;
-        super::Vec2::new(result.x, result.y)
-    }
-
-    /// 变换向量 (x, y, 0)，不包含平移
-    #[inline]
-    pub fn transform_vector(self, vector: super::Vec2) -> super::Vec2 {
-        let v = glam::DVec3::new(vector.x(), vector.y(), 0.0);
-        let result = self.0 * v;
-        super::Vec2::new(result.x, result.y)
-    }
-
     /// 行列式
     #[inline]
     pub fn determinant(self) -> f64 {
@@ -247,19 +231,13 @@ mod tests {
 
     #[test]
     fn test_multiplication_order() {
-        // 验证 A * B = A × B
         let scale = Mat3::from_scale(2.0, 2.0);
         let translate = Mat3::from_translation(10.0, 0.0);
 
-        // parent * child = translate × scale
-        // 语义：先 scale，后 translate
         let combined = translate * scale;
-        let point = super::super::Vec2::new(5.0, 5.0);
-        let result = combined.transform_point(point);
-
-        // scale 后：(10, 10)，translate 后：(20, 10)
-        assert!((result.x() - 20.0).abs() < 1e-10);
-        assert!((result.y() - 10.0).abs() < 1e-10);
+        let arr = combined.to_array();
+        assert!((arr[0][0] - 2.0).abs() < 1e-10);
+        assert!((arr[0][2] - 10.0).abs() < 1e-10);
     }
 
     #[test]
@@ -267,31 +245,19 @@ mod tests {
         let scale = Mat3::from_scale(2.0, 2.0);
         let translate = Mat3::from_translation(10.0, 0.0);
 
-        // child * parent = scale × translate
-        // 语义：先 translate，后 scale
         let combined = scale * translate;
-        let point = super::super::Vec2::new(5.0, 5.0);
-        let result = combined.transform_point(point);
-
-        // translate 后：(15, 5)，scale 后：(30, 10)
-        assert!((result.x() - 30.0).abs() < 1e-10);
-        assert!((result.y() - 10.0).abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_transform_point() {
-        let identity = Mat3::IDENTITY;
-        let p = super::super::Vec2::new(5.0, 10.0);
-        assert_eq!(identity.transform_point(p), p);
+        let arr = combined.to_array();
+        assert!((arr[0][0] - 2.0).abs() < 1e-10);
+        assert!((arr[0][2] - 20.0).abs() < 1e-10);
     }
 
     #[test]
     fn test_rotation() {
         let rotate = Mat3::from_rotation(std::f64::consts::FRAC_PI_2);
-        let p = super::super::Vec2::new(1.0, 0.0);
-        let rotated = rotate.transform_point(p);
-        // (1, 0) 逆时针旋转 90 度 = (0, 1)
-        assert!((rotated.x() - 0.0).abs() < 1e-10);
-        assert!((rotated.y() - 1.0).abs() < 1e-10);
+        let arr = rotate.to_array();
+        assert!((arr[0][0] - 0.0).abs() < 1e-10);
+        assert!((arr[0][1] - (-1.0)).abs() < 1e-10);
+        assert!((arr[1][0] - 1.0).abs() < 1e-10);
+        assert!((arr[1][1] - 0.0).abs() < 1e-10);
     }
 }
