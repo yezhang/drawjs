@@ -85,17 +85,7 @@ impl Figure for Rectangle {
         }
     }
 
-    fn paint_highlight(&self, gc: &mut NdCanvas) {
-        gc.set_fill_color(Color::rgba(0.0, 0.0, 0.0, 0.0));
-        gc.set_stroke_color(Color::hex("#f39c12"));
-        gc.set_line_width(2.0);
-        gc.stroke_rect(
-            self.bounds.x - 2.0,
-            self.bounds.y - 2.0,
-            self.bounds.width + 4.0,
-            self.bounds.height + 4.0,
-        );
-    }
+    // paint_highlight 使用 Figure trait 默认实现
 
     fn as_rectangle(&self) -> Option<&Rectangle> {
         Some(self)

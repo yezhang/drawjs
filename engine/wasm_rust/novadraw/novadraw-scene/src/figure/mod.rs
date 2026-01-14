@@ -21,7 +21,7 @@ use crate::scene::{BlockId, figure_paint::PaintTask};
 /// # 渲染流程（参考 Draw2D）
 ///
 /// ```text
-/// paint(Graphics) [final]
+/// paint(Graphics) [模板方法]
 ///   ├─> setLocalBackgroundColor()  [InitProperties]
 ///   ├─> setLocalForegroundColor()  [InitProperties]
 ///   ├─> setLocalFont()             [InitProperties]
@@ -46,11 +46,12 @@ use crate::scene::{BlockId, figure_paint::PaintTask};
 /// - **PaintBorder**: 绘制边框（paintBorder）
 /// - **ExitState**: popState（恢复 EnterState 前的状态）
 pub trait Figure: Send + Sync {
-    /// ===== 模板方法（final，不能覆盖）=====
+    /// ===== 模板方法 =====
 
     /// 生成绘制任务序列
     ///
-    /// 模板方法，final。对应 d2: paint(Graphics) final
+    /// 模板方法。对应 d2: paint(Graphics)
+    /// 子类不应覆盖此方法，渲染流程由 FigureRenderer 控制。
     fn paint(&self, block_id: BlockId) -> Vec<PaintTask> {
         vec![
             PaintTask::InitProperties { block_id },
@@ -71,21 +72,6 @@ pub trait Figure: Send + Sync {
     /// 设置图形的本地渲染属性（颜色、字体等）
     fn init_properties(&self, _gc: &mut NdCanvas) {
         // 默认空实现，子类可覆盖
-    }
-
-    /// 获取本地背景色
-    fn local_background_color(&self) -> Option<Color> {
-        None
-    }
-
-    /// 获取本地前景色
-    fn local_foreground_color(&self) -> Option<Color> {
-        None
-    }
-
-    /// 获取本地字体
-    fn local_font(&self) -> Option<String> {
-        None
     }
 
     /// ===== EnterState 阶段方法 =====
@@ -125,7 +111,7 @@ pub trait Figure: Send + Sync {
         gc.restore_state();
     }
 
-    /// ===== PaintChildren 阶段方法 =====
+    /// ===== PaintChildren 相关方法 =====
 
     /// 绘制子元素
     ///
@@ -152,14 +138,6 @@ pub trait Figure: Send + Sync {
         false
     }
 
-    /// 获取裁剪策略
-    ///
-    /// 对应 d2: getClippingStrategy()
-    /// 返回 None 使用默认裁剪策略
-    fn clipping_strategy(&self) -> Option<&dyn ClippingStrategy> {
-        None
-    }
-
     /// ===== PaintBorder 阶段方法 =====
 
     /// 绘制边框
@@ -168,8 +146,11 @@ pub trait Figure: Send + Sync {
     fn paint_border(&self, _gc: &mut NdCanvas) {}
 
     /// 绘制选中高亮
+    ///
+    /// 默认实现：绘制橙色边框
     fn paint_highlight(&self, gc: &mut NdCanvas) {
         let bounds = self.bounds();
+        gc.set_fill_color(Color::rgba(0.0, 0.0, 0.0, 0.0));
         gc.set_stroke_color(Color::hex("#f39c12"));
         gc.set_line_width(2.0);
         gc.stroke_rect(
@@ -185,7 +166,7 @@ pub trait Figure: Send + Sync {
     /// 退出状态
     ///
     /// 对应 d2: popState()
-    /// 恢复 pushState() 之前的渲染状态
+    /// 恢复 push_state() 之前的渲染状态
     fn pop_state(&self, gc: &mut NdCanvas) {
         gc.pop_state();
     }
