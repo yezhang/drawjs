@@ -3,7 +3,8 @@
 //! 简单的 XY 布局，按顺序排列子元素，每行一个子元素。
 
 use super::LayoutManager;
-use crate::{BlockId, Rect};
+use crate::BlockId;
+use novadraw_geometry::Rect;
 
 /// XY 布局器
 ///

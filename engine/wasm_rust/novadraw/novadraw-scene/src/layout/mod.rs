@@ -7,7 +7,8 @@ mod xy_layout;
 pub use fill_layout::FillLayout;
 pub use xy_layout::XYLayout;
 
-use crate::{BlockId, Rect};
+use crate::BlockId;
+use novadraw_geometry::Rect;
 
 /// 布局管理器 trait
 ///

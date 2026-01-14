@@ -3,7 +3,8 @@
 //! 填充布局，第一个子元素填充容器，其他子元素保持原位。
 
 use super::LayoutManager;
-use crate::{BlockId, Rect};
+use crate::BlockId;
+use novadraw_geometry::Rect;
 
 #[derive(Debug, Clone)]
 pub struct FillLayout;
