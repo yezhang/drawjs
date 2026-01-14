@@ -3,7 +3,7 @@
 //! 提供视口变换和坐标转换功能。
 
 use glam::DVec2;
-use novadraw_math::Transform;
+use novadraw_geometry::Transform;
 
 /// 视口
 ///
@@ -61,7 +61,7 @@ impl Viewport {
     }
 
     /// 缩放以适应矩形
-    pub fn zoom_to_fit(&mut self, rect: &super::scene::Rect, viewport_width: f64, viewport_height: f64, padding: f64) {
+    pub fn zoom_to_fit(&mut self, rect: &crate::Rect, viewport_width: f64, viewport_height: f64, padding: f64) {
         if rect.width <= 0.0 || rect.height <= 0.0 {
             return;
         }
@@ -131,14 +131,15 @@ impl Default for Viewport {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use novadraw_geometry::Vec2;
 
     #[inline]
-    fn dvec2_to_vec2(v: DVec2) -> novadraw_math::Vec2 {
-        novadraw_math::Vec2::new(v.x, v.y)
+    fn dvec2_to_vec2(v: DVec2) -> Vec2 {
+        Vec2::new(v.x, v.y)
     }
 
     #[inline]
-    fn vec2_to_dvec2(v: novadraw_math::Vec2) -> DVec2 {
+    fn vec2_to_dvec2(v: Vec2) -> DVec2 {
         DVec2::new(v.x(), v.y())
     }
 
