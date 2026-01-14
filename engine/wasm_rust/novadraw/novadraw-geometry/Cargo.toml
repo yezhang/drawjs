@@ -1,0 +1,9 @@
+[package]
+name = "novadraw-geometry"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+glam.workspace = true
+serde = { workspace = true }
+novadraw-math = { path = "../novadraw-math" }
