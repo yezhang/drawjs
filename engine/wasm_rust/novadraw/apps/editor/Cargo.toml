@@ -7,6 +7,6 @@ edition.workspace = true
 winit = "0.30.12"
 log = { workspace = true }
 env_logger = { workspace = true }
-novadraw = { path = "../../novadraw", features = ["vello", "debug_render"] }
+novadraw = { path = "../../novadraw", features = ["vello", "debug_render", "gef"] }
 pollster = "0.4.0"
 glam = { workspace = true }

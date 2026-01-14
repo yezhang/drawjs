@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+novadraw-geometry = { path = "../novadraw-geometry" }
 novadraw-scene = { path = "../novadraw-scene" }
 novadraw-math = { path = "../novadraw-math" }
 novadraw-core = { path = "../novadraw-core" }

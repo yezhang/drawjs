@@ -3,6 +3,7 @@ resolver = "3"
 members = [
   "novadraw",
   "novadraw-math",
+  "novadraw-geometry",
   "novadraw-core",
   "novadraw-render",
   "novadraw-scene",
