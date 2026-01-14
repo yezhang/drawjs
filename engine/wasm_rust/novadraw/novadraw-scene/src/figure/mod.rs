@@ -11,7 +11,7 @@ use novadraw_core::Color;
 use novadraw_geometry::{Point, Rect};
 use novadraw_render::NdCanvas;
 
-use crate::scene::{BlockId, trampoline::PaintTask};
+use crate::scene::{BlockId, figure_paint::PaintTask};
 
 /// Figure 渲染 trait
 ///

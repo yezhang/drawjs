@@ -112,7 +112,9 @@ impl Command for CreateRectangleCommand {
         let rect = novadraw_scene::Rectangle::new_with_color(
             self.x, self.y, self.width, self.height, self.color,
         );
-        let id = scene.new_content_block(Box::new(rect));
+        // 获取 contents 作为父节点
+        let parent_id = scene.get_contents().expect("SceneGraph must have contents set");
+        let id = scene.add_child_to(parent_id, Box::new(rect));
         self.block_id = Some(id);
         CommandResult::Success
     }

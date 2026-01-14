@@ -39,7 +39,7 @@ impl GraphicsApp {
             return;
         };
 
-        let render_ctx = scene_manager.scene().render_trampoline();
+        let render_ctx = scene_manager.scene().render();
         renderer.render(render_ctx.commands());
     }
 }

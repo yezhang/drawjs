@@ -166,13 +166,11 @@ impl Tool for SelectionTool {
 
                 // 命中测试
                 let hit_point = Vec2::new(position.x, position.y);
-                if let Some(hit_id) = scene.hit_test(hit_point) {
+                if let Some(hit_id) = scene.hit_test_and_select(hit_point) {
                     self.active_block_id = Some(hit_id);
                     self.state = ToolState::Dragging;
-                    scene.select_single(Some(hit_id));
                     return ToolResult::handled_with_redraw();
                 } else {
-                    scene.select_single(None);
                     return ToolResult::handled_with_redraw();
                 }
             }
@@ -195,7 +193,7 @@ impl Tool for SelectionTool {
 
                 // 悬停效果
                 let hit_point = Vec2::new(position.x, position.y);
-                if scene.hit_test(hit_point).is_some() {
+                if scene.hit_test_content(hit_point).is_some() {
                     ToolResult::with_cursor("pointer")
                 } else {
                     ToolResult::with_cursor("default")

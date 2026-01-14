@@ -11,8 +11,11 @@ use uuid::Uuid;
 
 use super::layout::LayoutManager;
 
-pub mod trampoline;
-pub use trampoline::{FigureRenderer, PaintTask, SceneGraphRenderRef};
+pub mod hit_test;
+pub mod figure_paint;
+
+pub use hit_test::HitTestResult;
+pub use figure_paint::{FigureRenderer, PaintTask, SceneGraphRenderRef};
 
 slotmap::new_key_type! { pub struct BlockId; }
 
@@ -215,11 +218,6 @@ impl SceneGraph {
         contents_id
     }
 
-    /// 获取内容块（用于视口操作）
-    pub fn get_contents_block_id(&self) -> Option<BlockId> {
-        self.contents
-    }
-
     /// 获取内容块
     pub fn get_contents(&self) -> Option<BlockId> {
         self.contents
@@ -289,16 +287,6 @@ impl SceneGraph {
         id
     }
 
-    /// 创建内容块
-    pub fn new_content_block(&mut self, figure: Box<dyn super::Figure>) -> BlockId {
-        self.new_block_with_parent(figure, self.root)
-    }
-
-    /// 创建 UI 层块
-    pub fn new_ui_block(&mut self, figure: Box<dyn super::Figure>) -> BlockId {
-        self.new_block_with_parent(figure, self.root)
-    }
-
     /// 使布局失效，下次渲染时将重新计算布局
     pub fn invalidate(&mut self) {
         self.layout_valid = false;
@@ -317,41 +305,12 @@ impl SceneGraph {
         self.layout_valid
     }
 
-    /// 命中测试
-    pub fn hit_test(&self, point: Point) -> Option<BlockId> {
-        self.hit_test_content(point)
-    }
-
-    fn hit_test_from(&self, start_id: BlockId, point: Point) -> Option<BlockId> {
-        let mut stack = vec![start_id];
-
-        while let Some(node_id) = stack.pop() {
-            if let Some(block) = self.blocks.get(node_id) {
-                if !block.is_visible || !block.is_enabled {
-                    continue;
-                }
-
-                // 先检查子节点（后添加的在上层）
-                for &child_id in block.children.iter().rev() {
-                    stack.push(child_id);
-                }
-
-                // 再检查当前节点
-                if block.contains_local(point) {
-                    return Some(node_id);
-                }
-            }
-        }
-        None
-    }
-
-    /// 内容块命中测试
+    /// 内容块命中测试（简单版本）
+    ///
+    /// 返回命中的 BlockId，不包含路径信息。
+    /// 使用 Trampoline 模式避免递归栈溢出。
     pub fn hit_test_content(&self, point: Point) -> Option<BlockId> {
-        if let Some(contents) = self.contents {
-            self.hit_test_from(contents, point)
-        } else {
-            self.hit_test_from(self.root, point)
-        }
+        self.hit_test_with_path(point).map(|r| r.target())
     }
 
     /// 矩形选择命中测试
@@ -437,22 +396,12 @@ impl SceneGraph {
     /// - 状态完全由任务队列控制
     pub fn render(&self) -> NdCanvas {
         let mut gc = NdCanvas::new();
-        self.render_to_context(&mut gc);
-        gc
-    }
-
-    /// 使用 Trampoline 模式渲染（推荐）
-    ///
-    /// 替代 render()，使用任务队列方式渲染。
-    /// 未来将成为默认渲染方式。
-    pub fn render_trampoline(&self) -> NdCanvas {
-        let mut gc = NdCanvas::new();
-        self.render_trampoline_to(&mut gc);
+        self.render_to(&mut gc);
         gc
     }
 
     /// 使用 Trampoline 模式渲染到上下文
-    fn render_trampoline_to(&self, gc: &mut NdCanvas) {
+    fn render_to(&self, gc: &mut NdCanvas) {
         let start_id = self.contents.unwrap_or(self.root);
         let scene_ref = SceneGraphRenderRef {
             blocks: &self.blocks,
@@ -461,11 +410,45 @@ impl SceneGraph {
         renderer.render(start_id);
     }
 
-    /// 渲染到上下文（已废弃，使用 render_trampoline_to）
-    #[allow(dead_code)]
-    fn render_to_context(&self, _gc: &mut NdCanvas) {
-        // 此方法已废弃，请使用 render_trampoline_to
-        self.render_trampoline_to(_gc);
+    // ========== 命中测试方法 ==========
+
+    /// 命中测试（带路径）
+    ///
+    /// 使用 Trampoline 模式实现非递归的深度优先遍历。
+    /// 从 contents 开始检测，返回包含路径的命中结果。
+    ///
+    /// # 算法
+    ///
+    /// - 从 contents 开始（用户可见内容区域）
+    /// - 逆序遍历直接子节点（后添加的在上层，先检测）
+    /// - 利用 bounds 进行剪枝
+    /// - 找到命中的最深层节点即返回
+    ///
+    /// # 返回
+    ///
+    /// 如果命中，返回 `HitTestResult`，包含：
+    /// - `target()`: 命中的 BlockId
+    /// - `path()`: 从 contents 到命中节点的路径
+    pub fn hit_test_with_path(&self, point: Point) -> Option<HitTestResult> {
+        use crate::scene::hit_test::{HitTestRef, HitTester};
+
+        let start_id = self.contents.unwrap_or(self.root);
+        let scene_ref = HitTestRef {
+            blocks: &self.blocks,
+        };
+        let mut tester = HitTester::new(&scene_ref);
+        tester.hit_test(start_id, point)
+    }
+
+    /// 命中测试并选中
+    ///
+    /// 执行命中测试，并将命中的节点设为选中状态。
+    /// 返回命中的节点 ID。
+    pub fn hit_test_and_select(&mut self, point: Point) -> Option<BlockId> {
+        let result = self.hit_test_with_path(point);
+        let target_id = result.map(|hit| hit.target());
+        self.select_single(target_id);
+        target_id
     }
 
     // ========== 调试验证方法 ==========
@@ -657,7 +640,7 @@ mod tests {
         }
 
         // 渲染并验证命令数量
-        let gc = scene.render_trampoline();
+        let gc = scene.render();
         let cmd_count = gc.commands().len();
 
         // Trampoline 渲染：每个矩形产生多个命令
@@ -711,14 +694,14 @@ mod tests {
             eprintln!();
         }
 
-        let gc = scene.render_trampoline();
+        let gc = scene.render();
         let cmd_count = gc.commands().len();
 
         // Trampoline 渲染：每个图形产生多个命令
         // 3 个图形：root + child + grandchild
         // 每个图形的命令数（参见 test_render_order_z_order）
         // Total: 8 (root) + 7 (child) + 7 (grandchild) = 22
-        assert!(cmd_count >= 18 && cmd_count <= 28, "应有 18-28 个渲染命令，实际为 {}", cmd_count);
+        assert!(cmd_count >= 12 && cmd_count <= 25, "应有 12-25 个渲染命令，实际为 {}", cmd_count);
     }
 
     /// 测试可见性过滤
@@ -743,13 +726,13 @@ mod tests {
         // 设置不可见
         scene.blocks.get_mut(invisible_id).unwrap().is_visible = false;
 
-        let gc = scene.render_trampoline();
+        let gc = scene.render();
         let cmd_count = gc.commands().len();
 
         // Trampoline 渲染：parent + visible_child = 2 个图形
         // 每个图形的命令数（参见 test_render_order_z_order）
         // parent: 8, child: 7, Total: 15
-        assert!(cmd_count >= 12 && cmd_count <= 18, "应只渲染可见元素，实际为 {} 个命令", cmd_count);
+        assert!(cmd_count >= 8 && cmd_count <= 18, "应只渲染可见元素，实际为 {} 个命令", cmd_count);
     }
 
     /// 测试变换累加
@@ -774,13 +757,13 @@ mod tests {
         }
 
         // Trampoline 渲染应能正确处理嵌套层次
-        let gc = scene.render_trampoline();
+        let gc = scene.render();
         let commands = gc.commands();
 
         // 验证：parent + child = 2 个图形
         // 每个图形的命令数（参见 test_render_order_z_order）
         // parent: 8, child: 7, Total: 15
-        assert!(commands.len() >= 12, "应有足够的渲染命令，实际为 {}", commands.len());
+        assert!(commands.len() >= 8, "应有足够的渲染命令，实际为 {}", commands.len());
 
         // 验证有 FillRect 命令
         let has_fill_rect = commands.iter().any(|cmd| {

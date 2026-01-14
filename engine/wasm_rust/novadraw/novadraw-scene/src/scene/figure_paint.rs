@@ -67,6 +67,12 @@ impl<'a> SceneGraphRenderRef<'a> {
     }
 }
 
+impl<'a> Clone for SceneGraphRenderRef<'a> {
+    fn clone(&self) -> Self {
+        Self { blocks: self.blocks }
+    }
+}
+
 /// Figure 渲染器
 ///
 /// 任务调度器，只负责：
@@ -144,8 +150,8 @@ impl<'a> FigureRenderer<'a> {
 
                     if let Some(block) = self.scene.get(block_id) {
                         let figure = &block.figure;
-                        figure.push_state(self.gc);          // pushState
-                        figure.prepare_context(self.gc, bounds);  // translate + clip
+                        figure.push_state(self.gc); // pushState
+                        figure.prepare_context(self.gc, bounds); // translate + clip
                     }
                 }
                 PaintTask::PaintSelf { block_id } => {
