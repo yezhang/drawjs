@@ -3,7 +3,7 @@
 //! 定义了所有可用的渲染操作命令。
 
 use novadraw_core::Color;
-use novadraw_math::Transform;
+use novadraw_geometry::Transform;
 
 /// 渲染命令
 ///
@@ -29,18 +29,19 @@ impl RenderCommand {
 #[derive(Clone, Debug)]
 pub enum RenderCommandKind {
     /// 保存当前状态快照
-    Save {
+    PushState {
         /// 状态快照
         state: NdStateSnapshot,
     },
 
-    /// 恢复之前保存的状态
+    /// 恢复之前保存的状态，不执行弹出
     Restore,
 
+    /// 回复之前保存的状态，执行弹出
+    PopState,
+
     /// 清除矩形区域
-    ClearRect {
-        rect: [glam::DVec2; 2],
-    },
+    ClearRect { rect: [glam::DVec2; 2] },
 
     /// 填充矩形
     FillRect {
@@ -252,7 +253,16 @@ impl Path {
     }
 
     /// 绘制弧线到指定点
-    pub fn arc_to(&mut self, rx: f64, ry: f64, rotation: f64, large_arc: bool, sweep: bool, x: f64, y: f64) {
+    pub fn arc_to(
+        &mut self,
+        rx: f64,
+        ry: f64,
+        rotation: f64,
+        large_arc: bool,
+        sweep: bool,
+        x: f64,
+        y: f64,
+    ) {
         self.operations.push(PathOp::Arc {
             radii: glam::DVec2::new(rx, ry),
             rotation,

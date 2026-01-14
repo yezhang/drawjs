@@ -4,9 +4,10 @@
 
 use glam::DVec2;
 use novadraw_core::Color;
-use novadraw_math::{Mat3, Transform, Vec2};
+use novadraw_geometry::{Transform, Vec2};
+use novadraw_math::Mat3;
 
-use crate::command::{LineCap, LineJoin, Path, RenderCommand, RenderCommandKind, NdStateSnapshot};
+use crate::command::{LineCap, LineJoin, NdStateSnapshot, Path, RenderCommand, RenderCommandKind};
 
 pub struct NdCanvas {
     commands: Vec<RenderCommand>,
@@ -37,7 +38,11 @@ impl NdCanvas {
         self.commands.push(command);
     }
 
-    pub fn save(&mut self) {
+    /// 保存当前状态（压栈）
+    ///
+    /// 对应 Draw2D: Graphics.pushState()
+    /// 将当前状态复制并压入状态栈
+    pub fn push_state(&mut self) {
         let state = NdStateSnapshot {
             transform: self.current_state().transform,
             clip: self.current_state().clip,
@@ -47,15 +52,33 @@ impl NdCanvas {
             line_cap: self.current_state().line_cap,
             line_join: self.current_state().line_join,
         };
-        self.create_command(RenderCommandKind::Save { state });
+        self.create_command(RenderCommandKind::PushState { state });
         self.state_stack.push(self.current_state().clone());
     }
 
-    pub fn restore(&mut self) {
+    /// 恢复到最近一次 pushState 的状态（不弹出栈）
+    ///
+    /// 对应 Draw2D: Graphics.restoreState()
+    /// 用于在 paintFigure 之后、paintChildren 之前恢复裁剪区
+    pub fn restore_state(&mut self) {
+        // 恢复到最近一次保存的状态，但不改变栈深度
+        if self.state_stack.len() > 1 {
+            let saved = self.state_stack.len() - 2;
+            let state = self.state_stack[saved].clone();
+            *self.state_stack.last_mut().unwrap() = state;
+        }
+        self.create_command(RenderCommandKind::Restore);
+    }
+
+    /// 弹出并恢复状态
+    ///
+    /// 对应 Draw2D: Graphics.popState()
+    /// 用于在所有绘制完成后恢复 pushState 前的状态
+    pub fn pop_state(&mut self) {
         if self.state_stack.len() > 1 {
             self.state_stack.pop();
         }
-        self.create_command(RenderCommandKind::Restore);
+        self.create_command(RenderCommandKind::PopState);
     }
 
     pub fn push_transform(&mut self, transform: Transform) {
@@ -129,7 +152,11 @@ impl NdCanvas {
         let rect = [DVec2::new(x, y), DVec2::new(x + width, y + height)];
         let stroke_color = self.current_state().stroke_color.unwrap_or(Color::BLACK);
         let width = self.current_state().line_width;
-        self.create_command(RenderCommandKind::StrokeRect { rect, stroke_color, width });
+        self.create_command(RenderCommandKind::StrokeRect {
+            rect,
+            stroke_color,
+            width,
+        });
     }
 
     pub fn begin_path(&mut self) {
@@ -160,11 +187,29 @@ impl NdCanvas {
         }
     }
 
-    pub fn arc(&mut self, _x: f64, _y: f64, _radius: f64, _start_angle: f64, _end_angle: f64, _anticlockwise: bool) {}
+    pub fn arc(
+        &mut self,
+        _x: f64,
+        _y: f64,
+        _radius: f64,
+        _start_angle: f64,
+        _end_angle: f64,
+        _anticlockwise: bool,
+    ) {
+    }
 
     pub fn quadratic_curve_to(&mut self, _cpx: f64, _cpy: f64, _x: f64, _y: f64) {}
 
-    pub fn bezier_curve_to(&mut self, _cp1x: f64, _cp1y: f64, _cp2x: f64, _cp2y: f64, _x: f64, _y: f64) {}
+    pub fn bezier_curve_to(
+        &mut self,
+        _cp1x: f64,
+        _cp1y: f64,
+        _cp2x: f64,
+        _cp2y: f64,
+        _x: f64,
+        _y: f64,
+    ) {
+    }
 
     pub fn fill(&mut self) {
         if let Some(path) = self.current_state_mut().current_path.take() {
@@ -238,7 +283,15 @@ impl NdCanvas {
 
     pub fn draw_image(&mut self, _image: &crate::command::ImageData, _x: f64, _y: f64) {}
 
-    pub fn draw_image_with_size(&mut self, _image: &crate::command::ImageData, _x: f64, _y: f64, _width: f64, _height: f64) {}
+    pub fn draw_image_with_size(
+        &mut self,
+        _image: &crate::command::ImageData,
+        _x: f64,
+        _y: f64,
+        _width: f64,
+        _height: f64,
+    ) {
+    }
 
     pub fn global_alpha(&mut self, _alpha: f64) {}
 
