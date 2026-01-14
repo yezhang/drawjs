@@ -1,5 +1,11 @@
 {
   "permissions": {
-    "allow": ["Bash(ls:*)", "Read(~/Documents/code/GitHub/**)", "Bash(cat:*)"]
+    "allow": [
+      "Bash(ls:*)",
+      "Read(~/Documents/code/GitHub/**)",
+      "Bash(cat:*)",
+      "Bash(cargo:*)",
+      "WebFetch"
+    ]
   }
 }
