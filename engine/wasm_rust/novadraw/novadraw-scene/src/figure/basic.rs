@@ -3,23 +3,19 @@
 //! 提供矩形、椭圆等基础图形实现。
 
 use novadraw_core::Color;
+use novadraw_geometry::Rect;
 use novadraw_render::NdCanvas;
 
-use super::{Figure, Rect};
+use super::Figure;
 
 /// 矩形图形
 ///
 /// 用于渲染矩形形状。
+/// 遵循 d2 设计：使用 `bounds: Rect` 统一管理边界，而非独立 x/y/width/height 字段。
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Rectangle {
-    /// X 坐标
-    pub x: f64,
-    /// Y 坐标
-    pub y: f64,
-    /// 宽度
-    pub width: f64,
-    /// 高度
-    pub height: f64,
+    /// 边界矩形（包含 x, y, width, height）
+    pub bounds: Rect,
     /// 填充颜色
     pub fill_color: Color,
     /// 边框颜色
@@ -32,7 +28,17 @@ impl Rectangle {
     /// 创建矩形
     pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
         Self {
-            x, y, width, height,
+            bounds: Rect::new(x, y, width, height),
+            fill_color: Color::hex("#3498db"),
+            stroke_color: None,
+            stroke_width: 0.0,
+        }
+    }
+
+    /// 从 Rect 创建矩形
+    pub fn from_bounds(bounds: Rect) -> Self {
+        Self {
+            bounds,
             fill_color: Color::hex("#3498db"),
             stroke_color: None,
             stroke_width: 0.0,
@@ -42,7 +48,7 @@ impl Rectangle {
     /// 创建指定颜色的矩形
     pub fn new_with_color(x: f64, y: f64, width: f64, height: f64, color: Color) -> Self {
         Self {
-            x, y, width, height,
+            bounds: Rect::new(x, y, width, height),
             fill_color: color,
             stroke_color: None,
             stroke_width: 0.0,
@@ -58,28 +64,24 @@ impl Rectangle {
 
     /// 平移
     pub fn translate(&mut self, dx: f64, dy: f64) {
-        self.x += dx;
-        self.y += dy;
+        self.bounds.x += dx;
+        self.bounds.y += dy;
     }
 }
 
 impl Figure for Rectangle {
     fn bounds(&self) -> Rect {
-        Rect::new(self.x, self.y, self.width, self.height)
+        self.bounds
     }
 
-    fn use_local_coordinates(&self) -> bool {
-        true
-    }
-
-    fn paint(&self, gc: &mut NdCanvas) {
+    fn paint_figure(&self, gc: &mut NdCanvas) {
         gc.set_fill_color(self.fill_color);
-        gc.fill_rect(self.x, self.y, self.width, self.height);
+        gc.fill_rect(self.bounds.x, self.bounds.y, self.bounds.width, self.bounds.height);
 
         if let Some(color) = self.stroke_color {
             gc.set_stroke_color(color);
             gc.set_line_width(self.stroke_width);
-            gc.stroke_rect(self.x, self.y, self.width, self.height);
+            gc.stroke_rect(self.bounds.x, self.bounds.y, self.bounds.width, self.bounds.height);
         }
     }
 
@@ -87,7 +89,12 @@ impl Figure for Rectangle {
         gc.set_fill_color(Color::rgba(0.0, 0.0, 0.0, 0.0));
         gc.set_stroke_color(Color::hex("#f39c12"));
         gc.set_line_width(2.0);
-        gc.stroke_rect(self.x - 2.0, self.y - 2.0, self.width + 4.0, self.height + 4.0);
+        gc.stroke_rect(
+            self.bounds.x - 2.0,
+            self.bounds.y - 2.0,
+            self.bounds.width + 4.0,
+            self.bounds.height + 4.0,
+        );
     }
 
     fn as_rectangle(&self) -> Option<&Rectangle> {

@@ -4,10 +4,10 @@
 
 use crate::editpart::EditPartId;
 use crate::command::{CommandStack, CreateRectangleCommand};
-use novadraw_scene::{SceneGraph, BlockId};
-use novadraw_math::Transform;
-use novadraw_core::Color;
 use glam::DVec2;
+use novadraw_geometry::Vec2;
+use novadraw_scene::{SceneGraph, BlockId};
+use novadraw_core::Color;
 
 /// 工具状态
 #[derive(Debug, Clone, PartialEq)]
@@ -113,6 +113,8 @@ impl ToolResult {
 /// 选择工具
 ///
 /// 用于选择和移动图形。
+///
+/// TODO: 待实现完整拖拽功能 - 需要 RuntimeBlock 支持 transform 字段
 #[derive(Debug)]
 pub struct SelectionTool {
     name: &'static str,
@@ -120,7 +122,7 @@ pub struct SelectionTool {
     start_position: DVec2,
     current_position: DVec2,
     active_block_id: Option<BlockId>,
-    original_transform: Option<Transform>,
+    // original_transform: Option<Transform>, // TODO: 启用此字段需要 RuntimeBlock 支持 transform
 }
 
 impl SelectionTool {
@@ -131,7 +133,7 @@ impl SelectionTool {
             start_position: DVec2::ZERO,
             current_position: DVec2::ZERO,
             active_block_id: None,
-            original_transform: None,
+            // original_transform: None, // TODO: 启用
         }
     }
 }
@@ -155,7 +157,7 @@ impl Tool for SelectionTool {
         &mut self,
         event: &ToolEvent,
         scene: &mut SceneGraph,
-        command_stack: &mut CommandStack,
+        _command_stack: &mut CommandStack,
     ) -> ToolResult {
         match event {
             ToolEvent::MouseDown { position, button: 0 } => {
@@ -163,40 +165,37 @@ impl Tool for SelectionTool {
                 self.current_position = *position;
 
                 // 命中测试
-                if let Some(hit_id) = scene.hit_test(*position) {
-                    if let Some(block) = scene.get_block(hit_id) {
-                        self.active_block_id = Some(hit_id);
-                        self.original_transform = Some(block.transform);
-                        self.state = ToolState::Dragging;
-                        scene.select_single(Some(hit_id));
-                        return ToolResult::handled_with_redraw();
-                    }
+                let hit_point = Vec2::new(position.x, position.y);
+                if let Some(hit_id) = scene.hit_test(hit_point) {
+                    self.active_block_id = Some(hit_id);
+                    self.state = ToolState::Dragging;
+                    scene.select_single(Some(hit_id));
+                    return ToolResult::handled_with_redraw();
                 } else {
                     scene.select_single(None);
                     return ToolResult::handled_with_redraw();
                 }
-                ToolResult::none()
             }
 
             ToolEvent::MouseMove { position, .. } => {
                 self.current_position = *position;
 
                 if self.state == ToolState::Dragging {
-                    if let Some(part_id) = self.active_block_id {
-                        let dx = position.x - self.start_position.x;
-                        let dy = position.y - self.start_position.y;
-
-                        if let Some(block) = scene.get_block(part_id) {
-                            let translate = Transform::from_translation(dx, dy);
-                            let new_transform = block.transform * translate;
-                            scene.set_block_transform(part_id, new_transform);
-                        }
-                    }
+                    // TODO: 实现拖拽移动逻辑
+                    // 需要 RuntimeBlock 支持 transform 字段
+                    // if let Some(part_id) = self.active_block_id {
+                    //     let dx = position.x - self.start_position.x;
+                    //     let dy = position.y - self.start_position.y;
+                    //     let translate = Transform::from_translation(dx, dy);
+                    //     let new_transform = block.transform * translate;
+                    //     scene.set_block_transform(part_id, new_transform);
+                    // }
                     return ToolResult::handled_with_redraw();
                 }
 
                 // 悬停效果
-                if scene.hit_test(*position).is_some() {
+                let hit_point = Vec2::new(position.x, position.y);
+                if scene.hit_test(hit_point).is_some() {
                     ToolResult::with_cursor("pointer")
                 } else {
                     ToolResult::with_cursor("default")
@@ -208,21 +207,20 @@ impl Tool for SelectionTool {
                     let dx = position.x - self.start_position.x;
                     let dy = position.y - self.start_position.y;
 
-                    if let Some(part_id) = self.active_block_id {
-                        if dx.abs() > 1.0 || dy.abs() > 1.0 {
-                            if let Some(original) = self.original_transform.clone() {
-                                let cmd = super::command::MoveCommand::new(
-                                    part_id, dx, dy, original
-                                );
-                                command_stack.execute(Box::new(cmd), scene);
-                            }
-                        }
-                    }
+                    // TODO: 启用命令记录需要 RuntimeBlock 支持 transform
+                    // if let Some(part_id) = self.active_block_id {
+                    //     if dx.abs() > 1.0 || dy.abs() > 1.0 {
+                    //         let cmd = super::command::MoveCommand::new(
+                    //             part_id, dx, dy, original_transform
+                    //         );
+                    //         command_stack.execute(Box::new(cmd), scene);
+                    //     }
+                    // }
+                    let _ = (dx, dy); // 抑制未使用变量警告
                 }
 
                 self.state = ToolState::Ready;
                 self.active_block_id = None;
-                self.original_transform = None;
                 ToolResult::handled()
             }
 

@@ -4,9 +4,8 @@
 
 use crate::editpart::{EditPart, EditPartId};
 use crate::command::Command;
-use novadraw_scene::SceneGraph;
-use novadraw_math::Transform;
 use glam::DVec2;
+use novadraw_scene::SceneGraph;
 
 /// 编辑策略 trait
 ///
@@ -52,17 +51,19 @@ impl EditPolicy for SelectionEditPolicy {
 /// 移动策略
 ///
 /// 允许部件被拖动。
+///
+/// TODO: 待实现 - 需要 RuntimeBlock 支持 transform 字段
 #[derive(Debug, Clone)]
 pub struct DragEditPolicy {
     key: &'static str,
-    original_position: Option<Transform>,
+    // original_position: Option<Transform>, // TODO: 启用此字段需要 RuntimeBlock 支持 transform
 }
 
 impl DragEditPolicy {
     pub fn new() -> Self {
         Self {
             key: "DragEditPolicy",
-            original_position: None,
+            // original_position: None, // TODO: 启用
         }
     }
 }
@@ -72,36 +73,42 @@ impl EditPolicy for DragEditPolicy {
         self.key
     }
 
-    fn activate(&mut self, part: &mut dyn EditPart, scene: &mut SceneGraph) {
-        if let Some(block) = scene.get_block(part.block_id()) {
-            self.original_position = Some(block.transform);
-        }
+    fn activate(&mut self, _part: &mut dyn EditPart, _scene: &mut SceneGraph) {
+        // TODO: 实现拖拽开始逻辑
+        // if let Some(block) = scene.get_block(part.block_id()) {
+        //     self.original_position = Some(block.transform);
+        // }
     }
 
     fn deactivate(&mut self, _part: &mut dyn EditPart, _scene: &mut SceneGraph) {
-        self.original_position = None;
+        // TODO: 实现拖拽结束逻辑
+        // self.original_position = None;
     }
 }
 
 /// 创建移动命令
+///
+/// TODO: 待实现 - 需要 RuntimeBlock 支持 transform 字段
 pub fn create_move_command(
-    scene: &SceneGraph,
+    _scene: &SceneGraph,
     part: &dyn EditPart,
     dx: f64,
     dy: f64,
 ) -> Option<Box<dyn Command>> {
-    if let Some(block) = scene.get_block(part.block_id()) {
-        Some(Box::new(
-            super::command::MoveCommand::new(
-                part.block_id(),
-                dx,
-                dy,
-                block.transform,
-            )
-        ))
-    } else {
-        None
-    }
+    // TODO: 启用此逻辑需要 RuntimeBlock 支持 transform
+    // if let Some(block) = scene.get_block(part.block_id()) {
+    //     Some(Box::new(
+    //         super::command::MoveCommand::new(
+    //             part.block_id(),
+    //             dx,
+    //             dy,
+    //             block.transform,
+    //         )
+    //     ))
+    // } else {
+    //     None
+    // }
+    Some(Box::new(super::command::MoveCommand::new(part.block_id(), dx, dy, Default::default())))
 }
 
 /// 响应策略

@@ -4,6 +4,7 @@
 
 use std::fmt;
 use std::sync::Arc;
+use novadraw_geometry::Transform;
 use novadraw_scene::{SceneGraph, BlockId};
 
 /// 命令执行结果
@@ -128,37 +129,39 @@ impl Command for CreateRectangleCommand {
 }
 
 /// 移动图形的命令
+///
+/// TODO: 待实现 - 需要 SceneGraph 支持 transform 字段
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct MoveCommand {
     block_id: BlockId,
     dx: f64,
     dy: f64,
-    start_transform: novadraw_math::Transform,
+    // start_transform: Transform, // TODO: 启用此字段需要 RuntimeBlock 支持 transform
 }
 
 impl MoveCommand {
-    pub fn new(block_id: BlockId, dx: f64, dy: f64, start_transform: novadraw_math::Transform) -> Self {
+    pub fn new(block_id: BlockId, dx: f64, dy: f64, _start_transform: Transform) -> Self {
         Self {
             block_id,
             dx,
             dy,
-            start_transform,
         }
     }
 }
 
 impl Command for MoveCommand {
-    fn execute(&mut self, scene: &mut SceneGraph) -> CommandResult {
-        if let Some(block) = scene.blocks.get(self.block_id) {
-            let translate = novadraw_math::Transform::from_translation(self.dx, self.dy);
-            let new_transform = block.transform * translate;
-            scene.set_block_transform(self.block_id, new_transform);
-        }
+    fn execute(&mut self, _scene: &mut SceneGraph) -> CommandResult {
+        // TODO: 实现移动逻辑
+        // let translate = Transform::from_translation(self.dx, self.dy);
+        // let new_transform = block.transform * translate;
+        // scene.set_block_transform(self.block_id, new_transform);
         CommandResult::Success
     }
 
-    fn undo(&mut self, scene: &mut SceneGraph) -> CommandResult {
-        scene.set_block_transform(self.block_id, self.start_transform);
+    fn undo(&mut self, _scene: &mut SceneGraph) -> CommandResult {
+        // TODO: 实现撤销逻辑
+        // scene.set_block_transform(self.block_id, self.start_transform);
         CommandResult::Success
     }
 
