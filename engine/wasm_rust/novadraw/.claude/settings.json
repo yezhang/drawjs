@@ -5,6 +5,8 @@
       "Read(~/Documents/code/GitHub/**)",
       "Bash(cat:*)",
       "Bash(cargo:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
       "WebFetch"
     ]
   }
