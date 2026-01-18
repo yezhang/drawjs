@@ -1,0 +1,7 @@
+# Markdown Lint Configuration
+
+# 行长度限制 (默认 80，改为 100)
+MD013:
+  line_length: 120
+  heading_line_length: 120
+  code_block_line_length: 120
