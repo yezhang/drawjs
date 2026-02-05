@@ -1,0 +1,10 @@
+[package]
+name = "vello-demo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+vello = "0.5.1"
+wgpu = { version = "26.0.1", default-features = false, features = ["std", "wgsl"] }
+winit = "0.30.12"
+pollster = "0.3"
