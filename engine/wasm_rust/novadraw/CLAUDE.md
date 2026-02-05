@@ -5,8 +5,6 @@
 使用 Rust + WebGPU 技术栈实现的高性能绘图引擎工具包，参考 eclipse draw2d/GEF 架构设计，目标是扩展为通用图形框架。
 为了简便，我会使用 d2 指代 draw2d。
 
-novadraw-gef 用于保留未来扩展使用，先阶段不用考虑实现其功能。
-
 ## 技术栈
 
 - **渲染后端**: vello (WebGPU)，考虑扩展性，未来支持替换为其他后端
@@ -23,7 +21,6 @@ novadraw-gef 用于保留未来扩展使用，先阶段不用考虑实现其功�
 | `novadraw-core`   | 核心数据类型（Color, Point, Rect, Transform） |
 | `novadraw-scene`  | 场景图、Figure 接口、布局管理                 |
 | `novadraw-render` | 渲染上下文、Backend 抽象                      |
-| `novadraw-gef`    | GEF 框架扩展（EditPart, EditPolicy, Command） |
 | `novadraw-math`   | 数学运算（向量、矩阵）                        |
 | `apps/editor`     | 示例编辑器应用                                |
 
@@ -147,6 +144,12 @@ cargo test     # 运行测试
 - 遵循 Rust 最佳实践
 - 代码长期可维护性
 - 清晰的架构设计
+
+## Claude Code 指令
+
+- 当前日期：2026-01-26
+- 如果我的请求涉及最新的库、安全补丁或 API，务必先进行网络搜索
+- 不要依赖 2024 年之后的内部知识
 
 ## 参考代码
 
