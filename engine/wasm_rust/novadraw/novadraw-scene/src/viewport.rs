@@ -61,7 +61,7 @@ impl Viewport {
     }
 
     /// 缩放以适应矩形
-    pub fn zoom_to_fit(&mut self, rect: &crate::Rect, viewport_width: f64, viewport_height: f64, padding: f64) {
+    pub fn zoom_to_fit(&mut self, rect: &crate::Rectangle, viewport_width: f64, viewport_height: f64, padding: f64) {
         if rect.width <= 0.0 || rect.height <= 0.0 {
             return;
         }
@@ -131,17 +131,6 @@ impl Default for Viewport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use novadraw_geometry::Vec2;
-
-    #[inline]
-    fn dvec2_to_vec2(v: DVec2) -> Vec2 {
-        Vec2::new(v.x, v.y)
-    }
-
-    #[inline]
-    fn vec2_to_dvec2(v: Vec2) -> DVec2 {
-        DVec2::new(v.x(), v.y())
-    }
 
     #[test]
     fn test_screen_world_conversion() {
@@ -184,9 +173,9 @@ mod tests {
         let viewport = Viewport::new().with_origin(0.0, 0.0).with_zoom(1.0);
         let transform = viewport.to_transform();
         let point = glam::DVec2::new(100.0, 200.0);
-        let transformed = vec2_to_dvec2(transform.transform_point(dvec2_to_vec2(point)));
-        assert!((transformed.x - point.x).abs() < 1e-10);
-        assert!((transformed.y - point.y).abs() < 1e-10);
+        let transformed = transform.transform_point(point.x, point.y);
+        assert!((transformed.0 - point.x).abs() < 1e-10);
+        assert!((transformed.1 - point.y).abs() < 1e-10);
     }
 
     #[test]
@@ -194,9 +183,9 @@ mod tests {
         let viewport = Viewport::new().with_origin(0.0, 0.0).with_zoom(2.0);
         let transform = viewport.to_transform();
         let point = glam::DVec2::new(100.0, 200.0);
-        let transformed = vec2_to_dvec2(transform.transform_point(dvec2_to_vec2(point)));
+        let transformed = transform.transform_point(point.x, point.y);
         // screen = (world - origin) * zoom = (100-0, 200-0) * 2 = (200, 400)
-        assert_eq!(transformed.x, 200.0);
-        assert_eq!(transformed.y, 400.0);
+        assert_eq!(transformed.0, 200.0);
+        assert_eq!(transformed.1, 400.0);
     }
 }

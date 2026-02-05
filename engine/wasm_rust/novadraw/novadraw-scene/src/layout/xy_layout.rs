@@ -4,7 +4,7 @@
 
 use super::LayoutManager;
 use crate::BlockId;
-use novadraw_geometry::Rect;
+use novadraw_geometry::Rectangle;
 
 /// XY 布局器
 ///
@@ -48,8 +48,8 @@ impl Default for XYLayout {
 impl LayoutManager for XYLayout {
     fn compute_size(
         &self,
-        container_bounds: Rect,
-        children_bounds: &[Rect],
+        container_bounds: Rectangle,
+        children_bounds: &[Rectangle],
     ) -> (f64, f64) {
         let mut height = self.margin * 2.0;
         let mut max_width: f64 = 0.0;
@@ -69,8 +69,8 @@ impl LayoutManager for XYLayout {
 
     fn layout(
         &self,
-        container_bounds: Rect,
-        children_bounds: &mut [(BlockId, Rect)],
+        container_bounds: Rectangle,
+        children_bounds: &mut [(BlockId, Rectangle)],
     ) {
         let mut y = self.margin;
 
@@ -78,7 +78,7 @@ impl LayoutManager for XYLayout {
             rect.x = self.margin;
             rect.y = y;
             rect.width = container_bounds.width - self.margin * 2.0;
-            rect.height = rect.height; // 保持原始高度
+            // height 保持不变
 
             y += rect.height + self.spacing;
         }

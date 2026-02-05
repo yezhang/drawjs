@@ -4,7 +4,7 @@
 
 use super::LayoutManager;
 use crate::BlockId;
-use novadraw_geometry::Rect;
+use novadraw_geometry::Rectangle;
 
 #[derive(Debug, Clone)]
 pub struct FillLayout;
@@ -19,16 +19,16 @@ impl FillLayout {
 impl LayoutManager for FillLayout {
     fn compute_size(
         &self,
-        container_bounds: Rect,
-        _children_bounds: &[Rect],
+        container_bounds: Rectangle,
+        _children_bounds: &[Rectangle],
     ) -> (f64, f64) {
         (container_bounds.width, container_bounds.height)
     }
 
     fn layout(
         &self,
-        container_bounds: Rect,
-        children_bounds: &mut [(BlockId, Rect)],
+        container_bounds: Rectangle,
+        children_bounds: &mut [(BlockId, Rectangle)],
     ) {
         if children_bounds.is_empty() {
             return;
@@ -40,11 +40,8 @@ impl LayoutManager for FillLayout {
         first_rect.width = container_bounds.width;
         first_rect.height = container_bounds.height;
 
-        for (_, rect) in children_bounds.iter_mut().skip(1) {
-            rect.x = rect.x;
-            rect.y = rect.y;
-            rect.width = rect.width;
-            rect.height = rect.height;
+        for (_, _rect) in children_bounds.iter_mut().skip(1) {
+            // 保持其他子节点的原始 bounds（不做修改）
         }
     }
 }

@@ -4,11 +4,9 @@
 //! Figure 只负责渲染，不包含状态（状态在 RuntimeBlock 中）。
 
 mod basic;
-pub use basic::Rectangle;
 pub use basic::RectangleFigure;
 
-use novadraw_core::Color;
-use novadraw_geometry::{Point, Rect};
+use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
 use crate::scene::{BlockId, figure_paint::PaintTask};
@@ -84,14 +82,29 @@ pub trait Figure: Send + Sync {
         gc.push_state();
     }
 
-    /// 准备绘图上下文
+    /// 准备绘图上下文（使用本地坐标模式）
     ///
-    /// 对应 d2: prepare_context()
-    /// 在已保存的状态基础上设置裁剪区和变换
-    /// 注意：此方法不保存状态，状态保存由 push_state() 处理
-    fn prepare_context(&self, gc: &mut NdCanvas, bounds: Rect) {
-        gc.translate(bounds.x, bounds.y);
-        gc.clip_rect(0.0, 0.0, bounds.width, bounds.height);
+    /// 对应 d2: prepare_context() + paintClientArea 中的 translate
+    /// 在已保存的状态基础上：
+    /// 1. translate 到 (bounds.x + left, bounds.y + top)
+    /// 2. 设置裁剪区为 (0, 0, width - left - right, height - top - bottom)
+    ///
+    /// 用于 `useLocalCoordinates() = true` 的 Figure
+    fn prepare_context(&self, gc: &mut NdCanvas, bounds: Rectangle, left: f64, top: f64) {
+        gc.translate(bounds.x + left, bounds.y + top);
+        gc.clip_rect(0.0, 0.0, bounds.width - left, bounds.height - top);
+    }
+
+    /// 准备绘图上下文（不使用本地坐标模式）
+    ///
+    /// 对应 d2: paintClientArea 中 `!useLocalCoordinates()` 的路径
+    /// 只设置裁剪区，不 translate（子节点使用绝对坐标）
+    ///
+    /// 用于 `useLocalCoordinates() = false` 的 Figure
+    fn prepare_context_no_translate(&self, gc: &mut NdCanvas, bounds: Rectangle) {
+        // 使用 bounds 作为裁剪区（绝对坐标）
+        // 子节点也使用绝对坐标，所以裁剪区需要匹配子节点的绘制位置
+        gc.clip_rect(bounds.x, bounds.y, bounds.width, bounds.height);
     }
 
     /// ===== PaintSelf 阶段方法 =====
@@ -107,6 +120,7 @@ pub trait Figure: Send + Sync {
     ///
     /// 对应 d2: restoreState()
     /// 恢复 prepare_context() 之前的渲染状态
+    ///
     fn restore_state(&self, gc: &mut NdCanvas) {
         gc.restore_state();
     }
@@ -145,22 +159,6 @@ pub trait Figure: Send + Sync {
     /// 对应 d2: paintBorder(Graphics)
     fn paint_border(&self, _gc: &mut NdCanvas) {}
 
-    /// 绘制选中高亮
-    ///
-    /// 默认实现：绘制橙色边框
-    fn paint_highlight(&self, gc: &mut NdCanvas) {
-        let bounds = self.bounds();
-        gc.set_fill_color(Color::rgba(0.0, 0.0, 0.0, 0.0));
-        gc.set_stroke_color(Color::hex("#f39c12"));
-        gc.set_line_width(2.0);
-        gc.stroke_rect(
-            bounds.x - 2.0,
-            bounds.y - 2.0,
-            bounds.width + 4.0,
-            bounds.height + 4.0,
-        );
-    }
-
     /// ===== ExitState 阶段方法 =====
 
     /// 退出状态
@@ -174,11 +172,36 @@ pub trait Figure: Send + Sync {
     /// ===== 基础方法 =====
 
     /// 获取图形边界
-    fn bounds(&self) -> Rect;
+    fn bounds(&self) -> Rectangle;
 
-    /// 命中测试（默认使用 bounds）
-    fn hit_test(&self, point: Point) -> bool {
-        self.bounds().contains(point)
+    /// 检查点是否在图形边界内
+    ///
+    /// 对应 d2: containsPoint(int, int)
+    fn contains_point(&self, x: f64, y: f64) -> bool {
+        let b = self.bounds();
+        x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height
+    }
+
+    /// 检查矩形是否与图形边界相交
+    ///
+    /// 对应 d2: intersects(Rectangle)
+    fn intersects(&self, rect: Rectangle) -> bool {
+        let b = self.bounds();
+        b.x < rect.x + rect.width
+            && b.x + b.width > rect.x
+            && b.y < rect.y + rect.height
+            && b.y + b.height > rect.y
+    }
+
+    /// 设置图形边界
+    ///
+    /// 对应 d2: setBounds(Rectangle)
+    /// 注意：本实现只更新 bounds 本身，不触发事件通知
+    /// 事件通知（fireFigureMoved, repaint）由 RuntimeBlock 或 SceneGraph 处理
+    fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        if let Some(rect) = self.as_rectangle_mut() {
+            rect.bounds = Rectangle::new(x, y, width, height);
+        }
     }
 
     /// 是否不透明（用于裁剪优化）
@@ -189,12 +212,12 @@ pub trait Figure: Send + Sync {
     }
 
     /// 作为不可变矩形图形获取
-    fn as_rectangle(&self) -> Option<&Rectangle> {
+    fn as_rectangle(&self) -> Option<&RectangleFigure> {
         None
     }
 
     /// 作为可变矩形图形获取
-    fn as_rectangle_mut(&mut self) -> Option<&mut Rectangle> {
+    fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
         None
     }
 
@@ -206,7 +229,7 @@ pub trait Figure: Send + Sync {
     /// ===== 辅助方法（可 override）=====
 
     /// 获取客户区域
-    fn client_area(&self) -> Rect {
+    fn client_area(&self) -> Rectangle {
         self.bounds()
     }
 
@@ -224,7 +247,7 @@ pub trait ClippingStrategy {
     /// 获取子元素的裁剪区域
     ///
     /// 返回子元素可以绘制的裁剪区域数组
-    fn get_clip(&self, child: &dyn Figure) -> Vec<Rect>;
+    fn get_clip(&self, child: &dyn Figure) -> Vec<Rectangle>;
 }
 
 /// 默认裁剪策略
@@ -233,7 +256,7 @@ pub trait ClippingStrategy {
 pub struct DefaultClippingStrategy;
 
 impl ClippingStrategy for DefaultClippingStrategy {
-    fn get_clip(&self, child: &dyn Figure) -> Vec<Rect> {
+    fn get_clip(&self, child: &dyn Figure) -> Vec<Rectangle> {
         vec![child.bounds()]
     }
 }
@@ -245,29 +268,44 @@ impl ClippingStrategy for DefaultClippingStrategy {
 #[derive(Clone, Copy, Debug)]
 pub struct BaseFigure {
     /// 边界矩形
-    pub bounds: Rect,
+    pub bounds: Rectangle,
 }
 
 impl BaseFigure {
     /// 创建新的基础图形
     pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
         Self {
-            bounds: Rect::new(x, y, width, height),
+            bounds: Rectangle::new(x, y, width, height),
         }
     }
 
     /// 设置边界
     pub fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
-        self.bounds = Rect::new(x, y, width, height);
+        self.bounds = Rectangle::new(x, y, width, height);
     }
 }
 
 impl Figure for BaseFigure {
-    fn bounds(&self) -> Rect {
+    fn bounds(&self) -> Rectangle {
         self.bounds
     }
 
-    fn paint_highlight(&self, _gc: &mut NdCanvas) {}
+    fn contains_point(&self, x: f64, y: f64) -> bool {
+        let b = self.bounds;
+        x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height
+    }
+
+    fn intersects(&self, rect: Rectangle) -> bool {
+        let b = self.bounds;
+        b.x < rect.x + rect.width
+            && b.x + b.width > rect.x
+            && b.y < rect.y + rect.height
+            && b.y + b.height > rect.y
+    }
+
+    fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        self.bounds = Rectangle::new(x, y, width, height);
+    }
 
     fn name(&self) -> &'static str {
         "BaseFigure"
