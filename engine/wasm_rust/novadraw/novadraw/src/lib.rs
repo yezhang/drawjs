@@ -6,7 +6,7 @@ pub use novadraw_core::Color;
 pub use novadraw_geometry::Transform;
 
 #[cfg(feature = "vello")]
-pub use novadraw_render::{NdCanvas, NdState, NdStateSnapshot, RenderCommand, RenderCommandKind, Renderer, WindowProxy};
+pub use novadraw_render::{NdCanvas, RenderCommand, RenderCommandKind, Renderer, WindowProxy};
 
 #[cfg(feature = "vello")]
 pub use novadraw_render as render;
@@ -18,4 +18,4 @@ pub use novadraw_render::backend;
 pub use novadraw_render::traits;
 
 #[cfg(feature = "vello")]
-pub use novadraw_scene::{BaseFigure, BlockId, Figure, FigureRenderer, FillLayout, LayoutManager, PaintTask, Point, Rectangle, RectangleFigure, Rect, RuntimeBlock, SceneGraph, Viewport, XYLayout};
+pub use novadraw_scene::{BaseFigure, BlockId, Figure, FigureRenderer, FillLayout, LayoutManager, PaintTask, Point, Rectangle, RectangleFigure, RuntimeBlock, SceneGraph, Viewport, XYLayout};
