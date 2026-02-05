@@ -333,12 +333,6 @@ impl VelloRenderer {
             vello::wgpu::PresentMode::AutoVsync,
         );
         self.surface = pollster::block_on(surface_future).expect("Failed to recreate surface");
-
-        // 重新创建 renderer（因为 surface 已更改）
-        self.renderers
-            .resize_with(self.render_context.devices.len(), || None);
-        self.renderers[self.surface.dev_id]
-            .get_or_insert_with(|| create_renderer(&self.render_context, &self.surface));
     }
 }
 
