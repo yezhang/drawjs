@@ -7,9 +7,9 @@ members = [
   "novadraw-core",
   "novadraw-render",
   "novadraw-scene",
-  "novadraw-gef",
 
   "apps/editor",
+  "apps/vello-demo",
 ]
 
 [workspace.package]

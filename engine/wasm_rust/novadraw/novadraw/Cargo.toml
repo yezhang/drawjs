@@ -6,7 +6,6 @@ edition.workspace = true
 [features]
 default = ["vello"]
 vello = ["novadraw-render/vello", "novadraw-scene/vello"]
-gef = ["novadraw-gef"]
 debug_render = ["novadraw-scene/debug_render"]
 
 [dependencies]
@@ -20,4 +19,3 @@ novadraw-math = { path = "../novadraw-math" }
 novadraw-core = { path = "../novadraw-core" }
 novadraw-render = { path = "../novadraw-render", optional = true }
 novadraw-scene = { path = "../novadraw-scene", optional = true }
-novadraw-gef = { path = "../novadraw-gef", optional = true }
