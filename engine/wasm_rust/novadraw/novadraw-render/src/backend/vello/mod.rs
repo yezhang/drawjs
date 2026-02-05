@@ -1,7 +1,12 @@
 //! Vello 渲染器实现
+//!
+//! 实现 RenderCommand 解释器，维护独立的状态栈。
+//! 状态管理从 NdCanvas 移到本模块（参考 skia/Flutter DisplayList 设计）。
 
 use std::sync::Arc;
 
+use glam::DVec2;
+use novadraw_geometry::Transform;
 use vello::kurbo::Stroke;
 use vello::peniko::Color as VelloColor;
 use vello::util::{RenderContext, RenderSurface};
@@ -13,6 +18,24 @@ use crate::traits::{Renderer as RendererTrait, WindowProxy};
 pub mod winit;
 pub use winit::{WinitWindowProxy, WinitWindowProxyInner};
 
+/// 渲染状态
+#[derive(Clone, Debug)]
+struct RenderState {
+    /// 当前变换矩阵
+    transform: Transform,
+    /// 当前裁剪区域
+    clip: Option<[DVec2; 2]>,
+}
+
+impl Default for RenderState {
+    fn default() -> Self {
+        Self {
+            transform: Transform::IDENTITY,
+            clip: None,
+        }
+    }
+}
+
 pub struct VelloRenderer {
     render_context: RenderContext,
     renderers: Vec<Option<Renderer>>,
@@ -20,6 +43,8 @@ pub struct VelloRenderer {
     surface: RenderSurface<'static>,
     window: Arc<WinitWindowProxy>,
     scale_factor: f64,
+    /// 状态栈
+    state_stack: Vec<RenderState>,
 }
 
 impl VelloRenderer {
@@ -39,8 +64,7 @@ impl VelloRenderer {
 
         let mut renderers = vec![];
         renderers.resize_with(render_context.devices.len(), || None);
-        renderers[surface.dev_id]
-            .get_or_insert_with(|| create_renderer(&render_context, &surface));
+        renderers[surface.dev_id].get_or_insert_with(|| create_renderer(&render_context, &surface));
 
         VelloRenderer {
             render_context,
@@ -49,68 +73,74 @@ impl VelloRenderer {
             surface,
             window,
             scale_factor,
+            state_stack: vec![RenderState::default()],
         }
     }
 
-    fn render_command(scene: &mut vello::Scene, cmd: &RenderCommand, scale_factor: f64) {
-        let transform = cmd.transform();
-        let matrix = transform.matrix();
+    /// 获取当前状态
+    fn current_state(&self) -> &RenderState {
+        self.state_stack.last().unwrap()
+    }
 
-        let matrix_arr = matrix.to_array();
-        let a = matrix_arr[0][0];
-        let b = matrix_arr[1][0];
-        let c = matrix_arr[0][1];
-        let d = matrix_arr[1][1];
+    /// 获取可变当前状态
+    fn current_state_mut(&mut self) -> &mut RenderState {
+        self.state_stack.last_mut().unwrap()
+    }
 
-        let e = matrix_arr[0][2];
-        let f = matrix_arr[1][2];
-
-        let affine = vello::kurbo::Affine::new([
-            a, b,
-            c, d,
-            e * scale_factor, f * scale_factor,
-        ]);
-
+    /// 处理单个渲染命令
+    fn render_command(&mut self, cmd: &RenderCommand) {
         match &cmd.kind {
-            crate::command::RenderCommandKind::ClearRect { rect } => {
-                let x0 = rect[0].x * scale_factor;
-                let y0 = rect[0].y * scale_factor;
-                let x1 = rect[1].x * scale_factor;
-                let y1 = rect[1].y * scale_factor;
-                let kurbo_rect = vello::kurbo::Rect::new(x0, y0, x1, y1);
-                let vello_color = VelloColor::new([1.0, 1.0, 1.0, 1.0]);
-                scene.fill(vello::peniko::Fill::NonZero, affine, vello_color, None, &kurbo_rect);
+            // ===== 状态管理命令 =====
+            crate::command::RenderCommandKind::PushState => {
+                // 保存当前状态到栈
+                self.state_stack.push(self.current_state().clone());
             }
 
-            crate::command::RenderCommandKind::FillRect { rect, fill_color } => {
-                let x0 = rect[0].x * scale_factor;
-                let y0 = rect[0].y * scale_factor;
-                let x1 = rect[1].x * scale_factor;
-                let y1 = rect[1].y * scale_factor;
-                let kurbo_rect = vello::kurbo::Rect::new(x0, y0, x1, y1);
-                let vello_color = VelloColor::new([
-                    fill_color.r as f32,
-                    fill_color.g as f32,
-                    fill_color.b as f32,
-                    fill_color.a as f32,
-                ]);
-                scene.fill(vello::peniko::Fill::NonZero, affine, vello_color, None, &kurbo_rect);
+            crate::command::RenderCommandKind::RestoreState => {
+                // 恢复到最近保存状态，不弹出
+                // 恢复到栈顶-2（即最近一次 pushState 保存的状态）
+                if self.state_stack.len() >= 2 {
+                    let last_idx = self.state_stack.len() - 1;
+                    let saved_idx = self.state_stack.len() - 2;
+                    self.state_stack[last_idx] = self.state_stack[saved_idx].clone();
+                }
             }
 
-            crate::command::RenderCommandKind::StrokeRect { rect, stroke_color, width } => {
-                let x0 = rect[0].x * scale_factor;
-                let y0 = rect[0].y * scale_factor;
-                let x1 = rect[1].x * scale_factor;
-                let y1 = rect[1].y * scale_factor;
+            crate::command::RenderCommandKind::PopState => {
+                // 弹出并恢复状态
+                if self.state_stack.len() > 1 {
+                    self.state_stack.pop();
+                }
+            }
+
+            crate::command::RenderCommandKind::ConcatTransform { matrix } => {
+                // 叠加变换
+                let new_transform = self.current_state().transform * *matrix;
+                self.current_state_mut().transform = new_transform;
+            }
+
+            crate::command::RenderCommandKind::Clip { rect } => {
+                // 设置裁剪区域
+                self.current_state_mut().clip = Some(*rect);
+            }
+
+            // ===== 绘制命令 =====
+            crate::command::RenderCommandKind::ClearRect { rect, color } => {
+                let affine =
+                    Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
+                let x0 = rect[0].x * self.scale_factor;
+                let y0 = rect[0].y * self.scale_factor;
+                let x1 = rect[1].x * self.scale_factor;
+                let y1 = rect[1].y * self.scale_factor;
                 let kurbo_rect = vello::kurbo::Rect::new(x0, y0, x1, y1);
                 let vello_color = VelloColor::new([
-                    stroke_color.r as f32,
-                    stroke_color.g as f32,
-                    stroke_color.b as f32,
-                    stroke_color.a as f32,
+                    color.r as f32,
+                    color.g as f32,
+                    color.b as f32,
+                    color.a as f32,
                 ]);
-                scene.stroke(
-                    &Stroke::new(*width * scale_factor),
+                self.scene.fill(
+                    vello::peniko::Fill::NonZero,
                     affine,
                     vello_color,
                     None,
@@ -118,18 +148,79 @@ impl VelloRenderer {
                 );
             }
 
-            crate::command::RenderCommandKind::Clear { color } => {
-                let _ = scene;
-                let _ = color;
+            crate::command::RenderCommandKind::FillRect { rect, color } => {
+                let affine =
+                    Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
+                let x0 = rect[0].x * self.scale_factor;
+                let y0 = rect[0].y * self.scale_factor;
+                let x1 = rect[1].x * self.scale_factor;
+                let y1 = rect[1].y * self.scale_factor;
+                let kurbo_rect = vello::kurbo::Rect::new(x0, y0, x1, y1);
+                let vello_color = VelloColor::new([
+                    color.r as f32,
+                    color.g as f32,
+                    color.b as f32,
+                    color.a as f32,
+                ]);
+                self.scene.fill(
+                    vello::peniko::Fill::NonZero,
+                    affine,
+                    vello_color,
+                    None,
+                    &kurbo_rect,
+                );
             }
 
-            crate::command::RenderCommandKind::Line { p1, p2, color, width, .. } => {
-                let v1 = vello::kurbo::Point::new(p1.x * scale_factor, p1.y * scale_factor);
-                let v2 = vello::kurbo::Point::new(p2.x * scale_factor, p2.y * scale_factor);
-                let vello_color = VelloColor::new([color.r as f32, color.g as f32, color.b as f32, color.a as f32]);
+            crate::command::RenderCommandKind::StrokeRect { rect, color, width } => {
+                let affine =
+                    Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
+                let x0 = rect[0].x * self.scale_factor;
+                let y0 = rect[0].y * self.scale_factor;
+                let x1 = rect[1].x * self.scale_factor;
+                let y1 = rect[1].y * self.scale_factor;
+                let kurbo_rect = vello::kurbo::Rect::new(x0, y0, x1, y1);
+                let vello_color = VelloColor::new([
+                    color.r as f32,
+                    color.g as f32,
+                    color.b as f32,
+                    color.a as f32,
+                ]);
+                self.scene.stroke(
+                    &Stroke::new(*width * self.scale_factor),
+                    affine,
+                    vello_color,
+                    None,
+                    &kurbo_rect,
+                );
+            }
 
-                scene.stroke(
-                    &Stroke::new(*width * scale_factor),
+            crate::command::RenderCommandKind::Clear { color: _ } => {
+                // 未实现
+            }
+
+            crate::command::RenderCommandKind::Line {
+                p1,
+                p2,
+                color,
+                width,
+                cap: _,
+                join: _,
+            } => {
+                let affine =
+                    Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
+                let v1 =
+                    vello::kurbo::Point::new(p1.x * self.scale_factor, p1.y * self.scale_factor);
+                let v2 =
+                    vello::kurbo::Point::new(p2.x * self.scale_factor, p2.y * self.scale_factor);
+                let vello_color = VelloColor::new([
+                    color.r as f32,
+                    color.g as f32,
+                    color.b as f32,
+                    color.a as f32,
+                ]);
+
+                self.scene.stroke(
+                    &Stroke::new(*width * self.scale_factor),
                     affine,
                     vello_color,
                     None,
@@ -137,10 +228,24 @@ impl VelloRenderer {
                 );
             }
 
-            _ => {
-                // 其他命令暂未实现
-            }
+            // 其他命令暂未实现
+            _ => {}
         }
+    }
+
+    /// 将 Transform 转换为 vello Affine
+    fn transform_to_affine(transform: &Transform, scale_factor: f64) -> vello::kurbo::Affine {
+        let coeffs = transform.coeffs();
+        // coeffs = [a, b, c, d, e, f]
+        // Apply scale factor to translation components (e, f)
+        vello::kurbo::Affine::new([
+            coeffs[0],
+            coeffs[1],
+            coeffs[2],
+            coeffs[3],
+            coeffs[4] * scale_factor,
+            coeffs[5] * scale_factor,
+        ])
     }
 }
 
@@ -153,10 +258,15 @@ impl RendererTrait for VelloRenderer {
 
     fn render(&mut self, commands: &[RenderCommand]) {
         self.scene.reset();
+        // self.scene = vello::Scene::new();
 
-        let scale_factor = self.scale_factor;
+        // 重置状态栈
+        self.state_stack.clear();
+        self.state_stack.push(RenderState::default());
+
+        // 按顺序解释执行命令
         for cmd in commands {
-            Self::render_command(&mut self.scene, cmd, scale_factor);
+            self.render_command(cmd);
         }
 
         let device_handle = &self.render_context.devices[self.surface.dev_id];
@@ -186,11 +296,12 @@ impl RendererTrait for VelloRenderer {
             .get_current_texture()
             .expect("Failed to get surface texture");
 
-        let mut encoder = device_handle
-            .device
-            .create_command_encoder(&vello::wgpu::CommandEncoderDescriptor {
-                label: Some("Surface Blit"),
-            });
+        let mut encoder =
+            device_handle
+                .device
+                .create_command_encoder(&vello::wgpu::CommandEncoderDescriptor {
+                    label: Some("Surface Blit"),
+                });
 
         self.surface.blitter.copy(
             &device_handle.device,
@@ -205,10 +316,29 @@ impl RendererTrait for VelloRenderer {
         surface_texture.present();
     }
 
-    fn resize(&mut self, width: u32, height: u32) {
-        let pixel_width = (width as f64 * self.scale_factor) as u32;
-        let pixel_height = (height as f64 * self.scale_factor) as u32;
-        self.render_context.resize_surface(&mut self.surface, pixel_width, pixel_height);
+    fn resize(&mut self, pixel_width: u32, pixel_height: u32, scale_factor: f64) {
+        self.scale_factor = scale_factor;
+        self.render_context
+            .resize_surface(&mut self.surface, pixel_width, pixel_height);
+    }
+}
+
+impl VelloRenderer {
+    /// 重新创建 surface（用于 resize 时确保配置更新）
+    pub fn recreate_surface(&mut self, pixel_width: u32, pixel_height: u32) {
+        let surface_future = self.render_context.create_surface(
+            self.window.window().clone(),
+            pixel_width,
+            pixel_height,
+            vello::wgpu::PresentMode::AutoVsync,
+        );
+        self.surface = pollster::block_on(surface_future).expect("Failed to recreate surface");
+
+        // 重新创建 renderer（因为 surface 已更改）
+        self.renderers
+            .resize_with(self.render_context.devices.len(), || None);
+        self.renderers[self.surface.dev_id]
+            .get_or_insert_with(|| create_renderer(&self.render_context, &self.surface));
     }
 }
 

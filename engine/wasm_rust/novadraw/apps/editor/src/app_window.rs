@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::scene_manager::SceneManager;
 use novadraw::traits::{Renderer, WindowProxy};
-use winit::dpi;
+use winit::dpi::{self, PhysicalSize};
 use winit::event::ElementState;
 use winit::window::WindowAttributes;
 use winit::{
@@ -55,7 +55,7 @@ impl ApplicationHandler<()> for GraphicsApp {
                 event_loop
                     .create_window(
                         WindowAttributes::default()
-                            .with_title("Novadraw - Trampoline 验证")
+                            .with_title("Novadraw - 渲染验证 (按 0-5 切换场景)")
                             .with_inner_size(dpi::LogicalSize::new(800, 600))
                             .with_resizable(true),
                     )
@@ -92,10 +92,12 @@ impl ApplicationHandler<()> for GraphicsApp {
             WindowEvent::Resized(new_size) => {
                 if let Some(renderer) = &mut self.renderer {
                     let scale_factor = renderer.window().scale_factor();
-                    let logical_width = new_size.width as f64 / scale_factor;
-                    let logical_height = new_size.height as f64 / scale_factor;
+                    let PhysicalSize { width, height } = new_size;
 
-                    renderer.resize(logical_width as u32, logical_height as u32);
+                    renderer.resize(width, height, scale_factor);
+                    // 重新创建 surface 以确保配置正确更新，避免抖动
+                    renderer.recreate_surface(width, height);
+                    renderer.window().request_redraw();
                 }
             }
             WindowEvent::KeyboardInput { event, .. } => {
@@ -104,8 +106,68 @@ impl ApplicationHandler<()> for GraphicsApp {
                 }
 
                 match event.physical_key {
+                    PhysicalKey::Code(KeyCode::Digit0) => {
+                        // 切换到场景 0：基础四个定位点
+                        if let Some(manager) = &mut self.scene_manager {
+                            use crate::scene_manager::SceneType;
+                            manager.switch_scene(SceneType::BasicAnchors);
+                            self.redraw();
+                        }
+                    }
                     PhysicalKey::Code(KeyCode::Escape) => {
                         event_loop.exit();
+                    }
+                    PhysicalKey::Code(KeyCode::Digit1) => {
+                        // 切换到场景 1：嵌套父子结构
+                        if let Some(manager) = &mut self.scene_manager {
+                            use crate::scene_manager::SceneType;
+                            manager.switch_scene(SceneType::Nested);
+                            self.redraw();
+                        }
+                    }
+                    PhysicalKey::Code(KeyCode::Digit2) => {
+                        // 切换到场景 2：嵌套场景（含透明根节点）
+                        if let Some(manager) = &mut self.scene_manager {
+                            use crate::scene_manager::SceneType;
+                            manager.switch_scene(SceneType::NestedWithRoot);
+                            self.redraw();
+                        }
+                    }
+                    PhysicalKey::Code(KeyCode::Digit3) => {
+                        // 切换到场景 3：Z-order
+                        if let Some(manager) = &mut self.scene_manager {
+                            use crate::scene_manager::SceneType;
+                            manager.switch_scene(SceneType::ZOrder);
+                            self.redraw();
+                        }
+                    }
+                    PhysicalKey::Code(KeyCode::Digit4) => {
+                        // 切换到场景 4：不可见过滤
+                        if let Some(manager) = &mut self.scene_manager {
+                            use crate::scene_manager::SceneType;
+                            manager.switch_scene(SceneType::Visibility);
+                            self.redraw();
+                        }
+                    }
+                    PhysicalKey::Code(KeyCode::Digit5) => {
+                        // 切换到场景 5：BoundsTranslate 平移传播
+                        if let Some(manager) = &mut self.scene_manager {
+                            use crate::scene_manager::SceneType;
+                            manager.switch_scene(SceneType::BoundsTranslate);
+                            self.redraw();
+                        }
+                    }
+                    PhysicalKey::Code(KeyCode::KeyT) => {
+                        // 按 T 键：在 BoundsTranslate 场景中平移父节点
+                        if let Some(manager) = &mut self.scene_manager {
+                            use crate::scene_manager::SceneType;
+                            if manager.current_scene == SceneType::BoundsTranslate {
+                                if let Some(root_id) = manager.scene().get_contents() {
+                                    manager.scene_mut().prim_translate(root_id, 10.0, 10.0);
+                                    self.redraw();
+                                }
+                            }
+                        }
                     }
                     _ => {}
                 }
@@ -133,7 +195,11 @@ pub fn start_app() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut app = GraphicsApp::new();
 
-    println!("启动事件循环... (按 ESC 退出)");
+    println!("启动事件循环...");
+    println!("  按 0-5 切换场景：");
+    println!("    0=基础定位点 1=嵌套父子 2=嵌套(含根) 3=Z-order 4=不可见 5=平移验证");
+    println!("  按 T 键：在场景 5 中平移父节点");
+    println!("  按 ESC 退出");
     event_loop.run_app(&mut app)?;
 
     Ok(())
