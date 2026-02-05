@@ -182,6 +182,56 @@ impl Transform {
     pub fn into_inner(self) -> Affine {
         self.inner
     }
+
+    /// 追加平移
+    ///
+    /// 语义：`self.then_translate(...)` 等价于 `Transform::from_translation(...) * self`
+    #[inline]
+    pub fn then_translate(self, x: f64, y: f64) -> Self {
+        Self {
+            inner: self.inner.then_translate(kurbo::Vec2::new(x, y)),
+        }
+    }
+
+    /// 追加统一缩放
+    #[inline]
+    pub fn then_scale(self, scale: f64) -> Self {
+        Self {
+            inner: self.inner.then_scale(scale),
+        }
+    }
+
+    /// 追加非均匀缩放
+    #[inline]
+    pub fn then_scale_non_uniform(self, scale_x: f64, scale_y: f64) -> Self {
+        Self {
+            inner: self.inner.then_scale_non_uniform(scale_x, scale_y),
+        }
+    }
+
+    /// 追加旋转（弧度，绕原点，逆时针）
+    #[inline]
+    pub fn then_rotate(self, radians: f64) -> Self {
+        Self {
+            inner: self.inner.then_rotate(radians),
+        }
+    }
+
+    /// 追加旋转（绕指定点）
+    #[inline]
+    pub fn then_rotate_about(self, radians: f64, cx: f64, cy: f64) -> Self {
+        Self {
+            inner: self.inner.then_rotate_about(radians, kurbo::Point::new(cx, cy)),
+        }
+    }
+
+    /// 追加缩放（绕指定点）
+    #[inline]
+    pub fn then_scale_about(self, scale: f64, cx: f64, cy: f64) -> Self {
+        Self {
+            inner: self.inner.then_scale_about(scale, kurbo::Point::new(cx, cy)),
+        }
+    }
 }
 
 impl Default for Transform {
@@ -326,5 +376,86 @@ mod tests {
         let v = t.transform_vector(5.0, 5.0);
         // 向量不应该包含平移
         assert_eq!(v, (5.0, 5.0));
+    }
+
+    #[test]
+    fn test_then_translate() {
+        // 先平移(10,0)，再追加平移(0,5)
+        let t = Transform::IDENTITY.then_translate(10.0, 0.0).then_translate(0.0, 5.0);
+        let p = t.transform_point(0.0, 0.0);
+        assert_eq!(p, (10.0, 5.0));
+    }
+
+    #[test]
+    fn test_then_scale() {
+        let t = Transform::IDENTITY.then_scale(2.0);
+        let p = t.transform_point(5.0, 10.0);
+        assert_eq!(p, (10.0, 20.0));
+    }
+
+    #[test]
+    fn test_then_scale_non_uniform() {
+        let t = Transform::IDENTITY.then_scale_non_uniform(2.0, 3.0);
+        let p = t.transform_point(5.0, 10.0);
+        assert_eq!(p, (10.0, 30.0));
+    }
+
+    #[test]
+    fn test_then_rotate() {
+        let t = Transform::IDENTITY.then_rotate(std::f64::consts::FRAC_PI_2);
+        let p = t.transform_point(1.0, 0.0);
+        // 逆时针旋转90度: (1, 0) -> (0, 1)
+        assert!((p.0 - 0.0).abs() < 1e-10);
+        assert!((p.1 - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_then_rotate_about() {
+        // 绕点(1,0)旋转90度
+        let t = Transform::IDENTITY.then_rotate_about(std::f64::consts::FRAC_PI_2, 1.0, 0.0);
+        let p = t.transform_point(1.0, 0.0);
+        // 绕(1,0)旋转，自身不变
+        assert!((p.0 - 1.0).abs() < 1e-10);
+        assert!((p.1 - 0.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_then_scale_about() {
+        // 绕点(1,1)缩放2倍
+        let t = Transform::IDENTITY.then_scale_about(2.0, 1.0, 1.0);
+        let p = t.transform_point(1.0, 1.0);
+        // 绕(1,1)缩放，自身不变
+        assert!((p.0 - 1.0).abs() < 1e-10);
+        assert!((p.1 - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_then_chain() {
+        let t = Transform::IDENTITY
+            .then_translate(10.0, 0.0)
+            .then_rotate(std::f64::consts::FRAC_PI_2)
+            .then_scale(2.0);
+
+        let p = t.transform_point(5.0, 0.0);
+        // 先平移(10,0): (5,0) -> (15,0)
+        // 再旋转90度: (15,0) -> (0,15)
+        // 再缩放2倍: (0,15) -> (0,30)
+        assert!((p.0 - 0.0).abs() < 1e-10);
+        assert!((p.1 - 30.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_then_equivalent_to_multiply() {
+        let t1 = Transform::IDENTITY
+            .then_translate(10.0, 0.0)
+            .then_scale(2.0);
+
+        let t2 = Transform::from_scale(2.0, 2.0) * Transform::from_translation(10.0, 0.0);
+
+        let p1 = t1.transform_point(0.0, 5.0);
+        let p2 = t2.transform_point(0.0, 5.0);
+
+        assert!((p1.0 - p2.0).abs() < 1e-10);
+        assert!((p1.1 - p2.1).abs() < 1e-10);
     }
 }
