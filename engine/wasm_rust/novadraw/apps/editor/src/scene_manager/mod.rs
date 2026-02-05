@@ -1,4 +1,4 @@
-use novadraw::{Color, RectangleFigure, SceneGraph, BlockId};
+use novadraw::{Color, RectangleFigure, SceneGraph};
 
 pub struct SceneManager {
     pub scene: SceneGraph,
@@ -8,16 +8,18 @@ pub struct SceneManager {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SceneType {
-    Nested,      // 场景1：嵌套父子结构
-    ZOrder,      // 场景2：Z-order 叠加
-    Visibility,  // 场景3：不可见节点过滤
-    Selection,   // 场景4：选中高亮测试
+    BasicAnchors,      // 场景0：基础四个定位点
+    Nested,            // 场景1：嵌套父子结构
+    NestedWithRoot,    // 场景2：嵌套场景（含透明根节点）
+    ZOrder,            // 场景3：Z-order 叠加
+    Visibility,        // 场景4：不可见节点过滤
+    BoundsTranslate,   // 场景5：prim_translate 平移传播
 }
 
 impl SceneManager {
-    /// 创建默认场景（场景4：选中高亮测试）
+    /// 创建默认场景（场景0：基础四个定位点）
     pub fn new() -> Self {
-        Self::with_scene(SceneType::Selection)
+        Self::with_scene(SceneType::BasicAnchors)
     }
 
     /// 根据场景类型创建场景
@@ -25,38 +27,115 @@ impl SceneManager {
         let mut scene = SceneGraph::new();
 
         match scene_type {
-            SceneType::Selection => Self::create_selection_scene(&mut scene),
-            SceneType::Visibility => Self::create_visibility_scene(&mut scene),
-            SceneType::ZOrder => Self::create_zorder_scene(&mut scene),
+            SceneType::BasicAnchors => Self::create_basic_anchors_scene(&mut scene),
             SceneType::Nested => Self::create_nested_scene(&mut scene),
+            SceneType::NestedWithRoot => Self::create_nested_with_root_scene(&mut scene),
+            SceneType::ZOrder => Self::create_zorder_scene(&mut scene),
+            SceneType::Visibility => Self::create_visibility_scene(&mut scene),
+            SceneType::BoundsTranslate => Self::create_bounds_translate_scene(&mut scene),
         }
 
-        Self { scene, current_scene: scene_type }
+        Self {
+            scene,
+            current_scene: scene_type,
+        }
     }
 
-    /// 场景 4：选中高亮测试
+    /// 场景 0：基础四个定位点（只有四个小正方形）
     ///
-    /// 验证：`paint_highlight` 在 `PaintBorder` 之后执行
-    fn create_selection_scene(scene: &mut SceneGraph) {
-        // Normal - 未选中节点 (灰色)
-        let rect_normal = RectangleFigure::new_with_color(
-            50.0, 50.0, 150.0, 60.0,
-            Color::rgba(0.5, 0.5, 0.5, 1.0),
+    /// 用于验证最基本的渲染逻辑
+    fn create_basic_anchors_scene(scene: &mut SceneGraph) {
+        // 创建一个基准矩形作为父容器（灰色边框）
+        let root_fig = RectangleFigure::new_with_color(
+            100.0,
+            100.0,
+            600.0,
+            400.0,
+            Color::rgba(0.3, 0.3, 0.3, 1.0),
         );
-        let root_id = scene.set_contents(Box::new(rect_normal));
+        let root_bounds = root_fig.bounds;
+        let parent_id = scene.set_contents(Box::new(root_fig));
 
-        // Selected - 选中节点 (紫色)
-        let rect_selected = RectangleFigure::new_with_color(
-            50.0, 150.0, 150.0, 60.0,
-            Color::rgba(0.6, 0.3, 0.8, 1.0),
+        // 角点手柄大小
+        let handle_size = 20.0;
+
+        // 左上角 - 红色小正方形
+        let rect_tl = RectangleFigure::new_with_color(
+            root_bounds.x,
+            root_bounds.y,
+            handle_size,
+            handle_size,
+            Color::rgba(0.9, 0.2, 0.2, 1.0),
         );
-        let id_selected = scene.add_child_to(root_id, Box::new(rect_selected));
+        scene.add_child_to(parent_id, Box::new(rect_tl));
 
-        // 设置选中状态
-        scene.blocks.get_mut(id_selected).unwrap().is_selected = true;
+        // 右上角 - 绿色小正方形
+        let rect_tr = RectangleFigure::new_with_color(
+            root_bounds.x + root_bounds.width - handle_size,
+            root_bounds.y,
+            handle_size,
+            handle_size,
+            Color::rgba(0.2, 0.8, 0.3, 1.0),
+        );
+        scene.add_child_to(parent_id, Box::new(rect_tr));
 
-        // 保留：四个角矩形
-        Self::add_corner_rects(scene, root_id);
+        // 左下角 - 蓝色小正方形
+        let rect_bl = RectangleFigure::new_with_color(
+            root_bounds.x,
+            root_bounds.y + root_bounds.height - handle_size,
+            handle_size,
+            handle_size,
+            Color::rgba(0.2, 0.4, 0.9, 1.0),
+        );
+        scene.add_child_to(parent_id, Box::new(rect_bl));
+
+        // 右下角 - 黄色小正方形
+        let rect_br = RectangleFigure::new_with_color(
+            root_bounds.x + root_bounds.width - handle_size,
+            root_bounds.y + root_bounds.height - handle_size,
+            handle_size,
+            handle_size,
+            Color::rgba(0.9, 0.8, 0.2, 1.0),
+        );
+        scene.add_child_to(parent_id, Box::new(rect_br));
+    }
+
+    /// 场景 4：prim_translate 平移传播测试
+    ///
+    /// 验证：`prim_translate` 平移操作会传播到所有子节点
+    fn create_bounds_translate_scene(scene: &mut SceneGraph) {
+        // Parent - 深紫容器
+        let parent = RectangleFigure::new_with_color(
+            200.0,
+            150.0,
+            300.0,
+            200.0,
+            Color::rgba(0.4, 0.2, 0.5, 1.0),
+        );
+        let parent_id = scene.set_contents(Box::new(parent));
+
+        // Child - 橙色（相对于父节点）
+        let child = RectangleFigure::new_with_color(
+            30.0,
+            30.0,
+            100.0,
+            80.0,
+            Color::rgba(0.9, 0.5, 0.1, 1.0),
+        );
+        let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+        // Grandchild - 青色（选中状态）
+        let grandchild = RectangleFigure::new_with_color(
+            20.0,
+            20.0,
+            40.0,
+            30.0,
+            Color::rgba(0.1, 0.8, 0.8, 1.0),
+        );
+        let gc_id = scene.add_child_to(child_id, Box::new(grandchild));
+
+        // 选中 Grandchild
+        scene.blocks.get_mut(gc_id).unwrap().is_selected = true;
     }
 
     /// 场景 3：不可见节点过滤测试
@@ -65,14 +144,20 @@ impl SceneManager {
     fn create_visibility_scene(scene: &mut SceneGraph) {
         // Visible A - 红色 (contents)
         let rect_a = RectangleFigure::new_with_color(
-            50.0, 50.0, 150.0, 60.0,
+            50.0,
+            50.0,
+            150.0,
+            60.0,
             Color::rgba(0.9, 0.2, 0.2, 1.0),
         );
         let root_id = scene.set_contents(Box::new(rect_a));
 
         // Hidden B - 蓝色 (不可见)
         let rect_b = RectangleFigure::new_with_color(
-            50.0, 150.0, 150.0, 60.0,
+            50.0,
+            150.0,
+            150.0,
+            60.0,
             Color::rgba(0.2, 0.4, 0.9, 1.0),
         );
         let id_b = scene.add_child_to(root_id, Box::new(rect_b));
@@ -82,13 +167,13 @@ impl SceneManager {
 
         // Visible C - 绿色
         let rect_c = RectangleFigure::new_with_color(
-            50.0, 250.0, 150.0, 60.0,
+            50.0,
+            250.0,
+            150.0,
+            60.0,
             Color::rgba(0.2, 0.8, 0.3, 1.0),
         );
         scene.add_child_to(root_id, Box::new(rect_c));
-
-        // 保留：四个角矩形
-        Self::add_corner_rects(scene, root_id);
     }
 
     /// 场景 2：Z-order 叠加测试
@@ -97,27 +182,33 @@ impl SceneManager {
     fn create_zorder_scene(scene: &mut SceneGraph) {
         // Z-Order Parent - 灰色容器
         let z_parent = RectangleFigure::new_with_color(
-            50.0, 50.0, 200.0, 200.0,
+            50.0,
+            50.0,
+            200.0,
+            200.0,
             Color::rgba(0.3, 0.3, 0.3, 1.0),
         );
         let z_parent_id = scene.set_contents(Box::new(z_parent));
 
         // A - 先添加，红色
         let rect_a = RectangleFigure::new_with_color(
-            0.0, 0.0, 100.0, 100.0,
+            0.0,
+            0.0,
+            100.0,
+            100.0,
             Color::rgba(0.9, 0.2, 0.2, 1.0),
         );
         scene.add_child_to(z_parent_id, Box::new(rect_a));
 
         // B - 后添加，蓝色，会覆盖 A 的右下角
         let rect_b = RectangleFigure::new_with_color(
-            50.0, 50.0, 100.0, 100.0,
+            50.0,
+            50.0,
+            100.0,
+            100.0,
             Color::rgba(0.2, 0.4, 0.9, 1.0),
         );
         scene.add_child_to(z_parent_id, Box::new(rect_b));
-
-        // 保留：四个角矩形
-        Self::add_corner_rects(scene, z_parent_id);
     }
 
     /// 场景 1：嵌套父子结构测试
@@ -126,71 +217,88 @@ impl SceneManager {
     fn create_nested_scene(scene: &mut SceneGraph) {
         // Parent - 深紫容器
         let parent = RectangleFigure::new_with_color(
-            150.0, 50.0, 250.0, 200.0,
+            150.0,
+            50.0,
+            250.0,
+            200.0,
             Color::rgba(0.4, 0.2, 0.5, 1.0),
         );
         let parent_id = scene.set_contents(Box::new(parent));
 
         // Child - 橙色
         let child = RectangleFigure::new_with_color(
-            30.0, 30.0, 150.0, 100.0,
+            30.0,
+            30.0,
+            150.0,
+            100.0,
             Color::rgba(0.9, 0.5, 0.1, 1.0),
         );
         let child_id = scene.add_child_to(parent_id, Box::new(child));
 
         // Grandchild - 青色（选中）
         let grandchild = RectangleFigure::new_with_color(
-            20.0, 20.0, 80.0, 40.0,
+            20.0,
+            20.0,
+            80.0,
+            40.0,
             Color::rgba(0.1, 0.8, 0.8, 1.0),
         );
         let gc_id = scene.add_child_to(child_id, Box::new(grandchild));
 
         // 选中 Grandchild
         scene.blocks.get_mut(gc_id).unwrap().is_selected = true;
-
-        // 保留：四个角矩形
-        Self::add_corner_rects(scene, parent_id);
     }
 
-    /// 添加四个角测试矩形（所有场景共用）
-    fn add_corner_rects(scene: &mut SceneGraph, parent_id: BlockId) {
-        // 左上角 - 红色
-        let rect_tl = RectangleFigure::new_with_color(
-            0.0, 0.0, 100.0, 50.0,
-            Color::rgba(0.9, 0.2, 0.2, 1.0),
+    /// 场景 2：嵌套场景（含透明根节点）
+    ///
+    /// contents 根节点下包含一个相对坐标模式的子树，
+    /// 验证局部坐标模式下子元素坐标的累积效果。
+    /// 注意：与场景 1 保持相同的矩形尺寸，方便比较。
+    fn create_nested_with_root_scene(scene: &mut SceneGraph) {
+        // 创建透明背景作为根容器
+        let root = RectangleFigure::new_with_color(
+            0.0, 0.0, 800.0, 600.0,
+            Color::rgba(0.0, 0.0, 0.0, 0.0),
         );
-        scene.add_child_to(parent_id, Box::new(rect_tl));
+        let root_id = scene.set_contents(Box::new(root));
 
-        // 右上角 - 绿色
-        let rect_tr = RectangleFigure::new_with_color(
-            700.0, 0.0, 100.0, 50.0,
-            Color::rgba(0.2, 0.8, 0.3, 1.0),
-        );
-        scene.add_child_to(parent_id, Box::new(rect_tr));
+        // Parent - 深紫色（与场景 1 相同尺寸：250x200）
+        let parent = RectangleFigure::new_with_color(
+            350.0, 50.0, 250.0, 200.0,
+            Color::rgba(0.4, 0.2, 0.5, 1.0),
+        )
+        .with_local_coordinates(true);
+        let parent_id = scene.add_child_to(root_id, Box::new(parent));
 
-        // 左下角 - 蓝色
-        let rect_bl = RectangleFigure::new_with_color(
-            0.0, 550.0, 100.0, 50.0,
-            Color::rgba(0.2, 0.4, 0.9, 1.0),
-        );
-        scene.add_child_to(parent_id, Box::new(rect_bl));
+        // Child - 橙色（与场景 1 相同尺寸：150x100）
+        let child = RectangleFigure::new_with_color(
+            30.0, 30.0, 150.0, 100.0,
+            Color::rgba(0.9, 0.5, 0.1, 1.0),
+        )
+        .with_local_coordinates(true);
+        let child_id = scene.add_child_to(parent_id, Box::new(child));
 
-        // 右下角 - 黄色
-        let rect_br = RectangleFigure::new_with_color(
-            700.0, 550.0, 100.0, 50.0,
-            Color::rgba(0.9, 0.8, 0.2, 1.0),
-        );
-        scene.add_child_to(parent_id, Box::new(rect_br));
+        // Grandchild - 青色（选中状态，与场景 1 相同尺寸：80x40）
+        // 实际位置 = parent(350,50) + child(30,30) + gc(20,20) = (400, 100)
+        let gc = RectangleFigure::new_with_color(
+            20.0, 20.0, 80.0, 40.0,
+            Color::rgba(0.1, 0.8, 0.8, 1.0),
+        )
+        .with_local_coordinates(true);
+        let gc_id = scene.add_child_to(child_id, Box::new(gc));
+        scene.blocks.get_mut(gc_id).unwrap().is_selected = true;
     }
 
     /// 切换场景
     pub fn switch_scene(&mut self, scene_type: SceneType) {
         self.scene = SceneGraph::new();
         match scene_type {
-            SceneType::Selection => Self::create_selection_scene(&mut self.scene),
-            SceneType::Visibility => Self::create_visibility_scene(&mut self.scene),
-            SceneType::ZOrder => Self::create_zorder_scene(&mut self.scene),
+            SceneType::BasicAnchors => Self::create_basic_anchors_scene(&mut self.scene),
             SceneType::Nested => Self::create_nested_scene(&mut self.scene),
+            SceneType::NestedWithRoot => Self::create_nested_with_root_scene(&mut self.scene),
+            SceneType::ZOrder => Self::create_zorder_scene(&mut self.scene),
+            SceneType::Visibility => Self::create_visibility_scene(&mut self.scene),
+            SceneType::BoundsTranslate => Self::create_bounds_translate_scene(&mut self.scene),
         }
         self.current_scene = scene_type;
         println!("[SceneManager] 切换到场景 {:?}", scene_type);
