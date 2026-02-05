@@ -21,6 +21,6 @@ pub mod traits;
 #[cfg(feature = "vello")]
 pub mod backend;
 
-pub use command::{NdStateSnapshot, RenderCommand, RenderCommandKind};
-pub use context::{NdCanvas, NdState};
+pub use command::{RenderCommand, RenderCommandKind};
+pub use context::NdCanvas;
 pub use traits::{Renderer, WindowProxy};

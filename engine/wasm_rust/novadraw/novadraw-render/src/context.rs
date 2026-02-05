@@ -1,40 +1,27 @@
 //! 渲染上下文
 //!
-//! 参考 HTML5 Canvas API 设计，维护统一状态栈。
+//! 参考 HTML5 Canvas API 设计，直接生成命令（无状态栈）。
+//! 状态管理由 VelloRenderer 执行器负责。
 
 use glam::DVec2;
 use novadraw_core::Color;
-use novadraw_geometry::{Transform, Vec2};
-use novadraw_math::Mat3;
+use novadraw_geometry::Transform;
 
-use crate::command::{LineCap, LineJoin, NdStateSnapshot, Path, RenderCommand, RenderCommandKind};
+use crate::command::{RenderCommand, RenderCommandKind};
 
 pub struct NdCanvas {
     commands: Vec<RenderCommand>,
-    state_stack: Vec<NdState>,
 }
 
 impl NdCanvas {
     pub fn new() -> Self {
         Self {
             commands: Vec::new(),
-            state_stack: vec![NdState::default()],
         }
     }
 
-    fn current_state(&self) -> &NdState {
-        self.state_stack.last().unwrap()
-    }
-
-    fn current_state_mut(&mut self) -> &mut NdState {
-        self.state_stack.last_mut().unwrap()
-    }
-
     fn create_command(&mut self, kind: RenderCommandKind) {
-        let command = RenderCommand {
-            kind,
-            transform: self.current_state().transform,
-        };
+        let command = RenderCommand { kind };
         self.commands.push(command);
     }
 
@@ -43,17 +30,7 @@ impl NdCanvas {
     /// 对应 Draw2D: Graphics.pushState()
     /// 将当前状态复制并压入状态栈
     pub fn push_state(&mut self) {
-        let state = NdStateSnapshot {
-            transform: self.current_state().transform,
-            clip: self.current_state().clip,
-            fill_color: self.current_state().fill_color,
-            stroke_color: self.current_state().stroke_color,
-            line_width: self.current_state().line_width,
-            line_cap: self.current_state().line_cap,
-            line_join: self.current_state().line_join,
-        };
-        self.create_command(RenderCommandKind::PushState { state });
-        self.state_stack.push(self.current_state().clone());
+        self.create_command(RenderCommandKind::PushState);
     }
 
     /// 恢复到最近一次 pushState 的状态（不弹出栈）
@@ -61,13 +38,7 @@ impl NdCanvas {
     /// 对应 Draw2D: Graphics.restoreState()
     /// 用于在 paintFigure 之后、paintChildren 之前恢复裁剪区
     pub fn restore_state(&mut self) {
-        // 恢复到最近一次保存的状态，但不改变栈深度
-        if self.state_stack.len() > 1 {
-            let saved = self.state_stack.len() - 2;
-            let state = self.state_stack[saved].clone();
-            *self.state_stack.last_mut().unwrap() = state;
-        }
-        self.create_command(RenderCommandKind::Restore);
+        self.create_command(RenderCommandKind::RestoreState);
     }
 
     /// 弹出并恢复状态
@@ -75,117 +46,72 @@ impl NdCanvas {
     /// 对应 Draw2D: Graphics.popState()
     /// 用于在所有绘制完成后恢复 pushState 前的状态
     pub fn pop_state(&mut self) {
-        if self.state_stack.len() > 1 {
-            self.state_stack.pop();
-        }
         self.create_command(RenderCommandKind::PopState);
     }
 
-    pub fn push_transform(&mut self, transform: Transform) {
-        self.current_state_mut().transform = self.current_state().transform * transform;
-    }
-
-    pub fn pop_transform(&mut self) {}
-
+    /// 平移
+    ///
+    /// 生成 ConcatTransform 命令
     pub fn translate(&mut self, x: f64, y: f64) {
         let t = Transform::from_translation(x, y);
-        self.current_state_mut().transform = self.current_state().transform * t;
+        self.create_command(RenderCommandKind::ConcatTransform { matrix: t });
     }
 
+    /// 旋转
+    ///
+    /// 生成 ConcatTransform 命令
     pub fn rotate(&mut self, angle: f64) {
         let t = Transform::from_rotation(angle);
-        self.current_state_mut().transform = self.current_state().transform * t;
+        self.create_command(RenderCommandKind::ConcatTransform { matrix: t });
     }
 
+    /// 缩放
+    ///
+    /// 生成 ConcatTransform 命令
     pub fn scale(&mut self, x: f64, y: f64) {
         let t = Transform::from_scale(x, y);
-        self.current_state_mut().transform = self.current_state().transform * t;
+        self.create_command(RenderCommandKind::ConcatTransform { matrix: t });
     }
 
     pub fn transform(&mut self, a: f64, b: f64, c: f64, d: f64, e: f64, f: f64) {
-        let matrix = Mat3::new(a, c, e, b, d, f, 0.0, 0.0, 1.0);
-        let t = Transform::new(matrix, Vec2::ZERO);
-        self.current_state_mut().transform = self.current_state().transform * t;
+        let t = Transform::new(a, b, c, d, e, f);
+        self.create_command(RenderCommandKind::ConcatTransform { matrix: t });
     }
 
     pub fn set_transform(&mut self, a: f64, b: f64, c: f64, d: f64, e: f64, f: f64) {
-        let matrix = Mat3::new(a, c, e, b, d, f, 0.0, 0.0, 1.0);
-        self.current_state_mut().transform = Transform::new(matrix, Vec2::ZERO);
+        let t = Transform::new(a, b, c, d, e, f);
+        self.create_command(RenderCommandKind::ConcatTransform { matrix: t });
     }
 
     pub fn reset_transform(&mut self) {
-        self.current_state_mut().transform = Transform::IDENTITY;
+        let t = Transform::IDENTITY;
+        self.create_command(RenderCommandKind::ConcatTransform { matrix: t });
     }
 
-    pub fn set_fill_color(&mut self, color: Color) {
-        self.current_state_mut().fill_color = Some(color);
-    }
-
-    pub fn set_stroke_color(&mut self, color: Color) {
-        self.current_state_mut().stroke_color = Some(color);
-    }
-
-    pub fn set_line_width(&mut self, width: f64) {
-        self.current_state_mut().line_width = width;
-    }
-
-    pub fn set_line_cap(&mut self, cap: LineCap) {
-        self.current_state_mut().line_cap = cap;
-    }
-
-    pub fn set_line_join(&mut self, join: LineJoin) {
-        self.current_state_mut().line_join = join;
-    }
-
-    pub fn clear_rect(&mut self, x: f64, y: f64, width: f64, height: f64) {
+    pub fn clear_rect(&mut self, x: f64, y: f64, width: f64, height: f64, color: Color) {
         let rect = [DVec2::new(x, y), DVec2::new(x + width, y + height)];
-        self.create_command(RenderCommandKind::ClearRect { rect });
+        self.create_command(RenderCommandKind::ClearRect { rect, color });
     }
 
-    pub fn fill_rect(&mut self, x: f64, y: f64, width: f64, height: f64) {
+    pub fn fill_rect(&mut self, x: f64, y: f64, width: f64, height: f64, color: Color) {
         let rect = [DVec2::new(x, y), DVec2::new(x + width, y + height)];
-        let fill_color = self.current_state().fill_color.unwrap_or(Color::BLACK);
-        self.create_command(RenderCommandKind::FillRect { rect, fill_color });
+        self.create_command(RenderCommandKind::FillRect { rect, color });
     }
 
-    pub fn stroke_rect(&mut self, x: f64, y: f64, width: f64, height: f64) {
+    pub fn stroke_rect(&mut self, x: f64, y: f64, width: f64, height: f64, color: Color, stroke_width: f64) {
         let rect = [DVec2::new(x, y), DVec2::new(x + width, y + height)];
-        let stroke_color = self.current_state().stroke_color.unwrap_or(Color::BLACK);
-        let width = self.current_state().line_width;
-        self.create_command(RenderCommandKind::StrokeRect {
-            rect,
-            stroke_color,
-            width,
-        });
+        self.create_command(RenderCommandKind::StrokeRect { rect, color, width: stroke_width });
     }
 
-    pub fn begin_path(&mut self) {
-        self.current_state_mut().current_path = Some(Path::new());
-    }
+    pub fn begin_path(&mut self) {}
 
-    pub fn close_path(&mut self) {
-        if let Some(path) = self.current_state_mut().current_path.as_mut() {
-            path.close();
-        }
-    }
+    pub fn close_path(&mut self) {}
 
-    pub fn move_to(&mut self, x: f64, y: f64) {
-        if let Some(path) = self.current_state_mut().current_path.as_mut() {
-            path.move_to(x, y);
-        }
-    }
+    pub fn move_to(&mut self, _x: f64, _y: f64) {}
 
-    pub fn line_to(&mut self, x: f64, y: f64) {
-        if let Some(path) = self.current_state_mut().current_path.as_mut() {
-            path.line_to(x, y);
-        }
-    }
+    pub fn line_to(&mut self, _x: f64, _y: f64) {}
 
-    pub fn rect_path(&mut self, x: f64, y: f64, width: f64, height: f64) {
-        if let Some(path) = self.current_state_mut().current_path.as_mut() {
-            path.rect(x, y, width, height);
-        }
-    }
+    pub fn rect_path(&mut self, _x: f64, _y: f64, _width: f64, _height: f64) {}
 
     pub fn arc(
         &mut self,
@@ -211,33 +137,16 @@ impl NdCanvas {
     ) {
     }
 
-    pub fn fill(&mut self) {
-        if let Some(path) = self.current_state_mut().current_path.take() {
-            self.create_command(RenderCommandKind::FillPath(path));
-        }
-    }
+    pub fn fill(&mut self) {}
 
-    pub fn stroke(&mut self) {
-        if let Some(path) = self.current_state_mut().current_path.take() {
-            self.create_command(RenderCommandKind::StrokePath(path));
-        }
-    }
-
-    pub fn clip(&mut self) {
-        if let Some(rect) = self.current_state_mut().clip {
-            self.create_command(RenderCommandKind::Clip { rect });
-        }
-    }
+    pub fn stroke(&mut self) {}
 
     pub fn clip_rect(&mut self, x: f64, y: f64, width: f64, height: f64) {
         let rect = [DVec2::new(x, y), DVec2::new(x + width, y + height)];
-        self.current_state_mut().clip = Some(rect);
         self.create_command(RenderCommandKind::Clip { rect });
     }
 
-    pub fn reset_clip(&mut self) {
-        self.current_state_mut().clip = None;
-    }
+    pub fn reset_clip(&mut self) {}
 
     pub fn clear_commands(&mut self) {
         self.commands.clear();
@@ -257,9 +166,9 @@ impl NdCanvas {
 
     pub fn line_width(&mut self, _width: f64) {}
 
-    pub fn line_cap(&mut self, _cap: LineCap) {}
+    pub fn line_cap(&mut self, _cap: crate::command::LineCap) {}
 
-    pub fn line_join(&mut self, _join: LineJoin) {}
+    pub fn line_join(&mut self, _join: crate::command::LineJoin) {}
 
     pub fn line_dash_offset(&mut self, _offset: f64) {}
 
@@ -314,37 +223,6 @@ impl NdCanvas {
     }
 
     pub fn clip_depth(&self) -> usize {
-        if self.current_state().clip.is_some() {
-            1
-        } else {
-            0
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct NdState {
-    pub transform: Transform,
-    pub clip: Option<[DVec2; 2]>,
-    pub fill_color: Option<Color>,
-    pub stroke_color: Option<Color>,
-    pub line_width: f64,
-    pub line_cap: LineCap,
-    pub line_join: LineJoin,
-    pub current_path: Option<Path>,
-}
-
-impl Default for NdState {
-    fn default() -> Self {
-        Self {
-            transform: Transform::IDENTITY,
-            clip: None,
-            fill_color: None,
-            stroke_color: None,
-            line_width: 1.0,
-            line_cap: LineCap::Butt,
-            line_join: LineJoin::Miter,
-            current_path: None,
-        }
+        0
     }
 }

@@ -12,15 +12,6 @@ use novadraw_geometry::Transform;
 pub struct RenderCommand {
     /// 命令类型
     pub kind: RenderCommandKind,
-    /// 当前变换矩阵
-    pub transform: Transform,
-}
-
-impl RenderCommand {
-    /// 获取当前变换矩阵
-    pub fn transform(&self) -> &Transform {
-        &self.transform
-    }
 }
 
 /// 渲染命令类型
@@ -28,31 +19,43 @@ impl RenderCommand {
 /// 初期只支持矩形绘制，其他图形保留扩展。
 #[derive(Clone, Debug)]
 pub enum RenderCommandKind {
-    /// 保存当前状态快照
-    PushState {
-        /// 状态快照
-        state: NdStateSnapshot,
-    },
+    /// 保存当前 transform 和 clip 到栈
+    PushState,
 
-    /// 恢复之前保存的状态，不执行弹出
-    Restore,
+    /// 恢复到最近保存状态，不弹出
+    RestoreState,
 
-    /// 回复之前保存的状态，执行弹出
+    /// 弹出并恢复到最近保存状态
     PopState,
 
+    /// 叠加变换矩阵
+    ConcatTransform {
+        /// 变换矩阵
+        matrix: Transform,
+    },
+
+    /// 设置裁剪区域
+    Clip {
+        /// 裁剪矩形 [左上角, 右下角]
+        rect: [glam::DVec2; 2],
+    },
+
     /// 清除矩形区域
-    ClearRect { rect: [glam::DVec2; 2] },
+    ClearRect {
+        rect: [glam::DVec2; 2],
+        color: Color,
+    },
 
     /// 填充矩形
     FillRect {
         rect: [glam::DVec2; 2],
-        fill_color: Color,
+        color: Color,
     },
 
     /// 描边矩形
     StrokeRect {
         rect: [glam::DVec2; 2],
-        stroke_color: Color,
+        color: Color,
         width: f64,
     },
 
@@ -141,33 +144,6 @@ pub enum RenderCommandKind {
         position: glam::DVec2,
         max_width: Option<f64>,
     },
-
-    /// 设置裁剪区域
-    Clip {
-        /// 裁剪矩形 [左上角, 右下角]
-        rect: [glam::DVec2; 2],
-    },
-}
-
-/// 渲染状态快照
-///
-/// 用于 save/restore 命令中保存和恢复状态。
-#[derive(Clone, Debug, Default)]
-pub struct NdStateSnapshot {
-    /// 变换矩阵
-    pub transform: Transform,
-    /// 裁剪区域
-    pub clip: Option<[glam::DVec2; 2]>,
-    /// 填充颜色
-    pub fill_color: Option<Color>,
-    /// 描边颜色
-    pub stroke_color: Option<Color>,
-    /// 线条宽度
-    pub line_width: f64,
-    /// 线帽样式
-    pub line_cap: LineCap,
-    /// 线连接样式
-    pub line_join: LineJoin,
 }
 
 /// 线帽样式

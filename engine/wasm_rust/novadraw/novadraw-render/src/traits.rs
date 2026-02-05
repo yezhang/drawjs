@@ -32,5 +32,10 @@ pub trait Renderer {
     fn render(&mut self, commands: &[RenderCommand]);
 
     /// 处理窗口大小变化
-    fn resize(&mut self, width: u32, height: u32);
+    ///
+    /// # 参数
+    /// - `pixel_width`: 物理像素宽度
+    /// - `pixel_height`: 物理像素高度
+    /// - `scale_factor`: 当前缩放因子
+    fn resize(&mut self, pixel_width: u32, pixel_height: u32, scale_factor: f64);
 }
