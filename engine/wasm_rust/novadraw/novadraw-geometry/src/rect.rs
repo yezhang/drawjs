@@ -80,9 +80,10 @@ impl From<Size> for SizeSerde {
 /// 矩形类型
 ///
 /// 使用左上角坐标 (x, y) 和宽高 (width, height) 定义。
+/// 对应 d2: org.eclipse.draw2d.geometry.Rectangle
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
-#[serde(from = "RectSerde", into = "RectSerde")]
-pub struct Rect {
+#[serde(from = "RectangleSerde", into = "RectangleSerde")]
+pub struct Rectangle {
     /// 左上角 X 坐标
     pub x: f64,
     /// 左上角 Y 坐标
@@ -93,7 +94,7 @@ pub struct Rect {
     pub height: f64,
 }
 
-impl Rect {
+impl Rectangle {
     /// 创建新矩形
     #[inline]
     pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
@@ -124,7 +125,7 @@ impl Rect {
     }
 
     /// 空矩形
-    pub const ZERO: Rect = Rect { x: 0.0, y: 0.0, width: 0.0, height: 0.0 };
+    pub const ZERO: Rectangle = Rectangle { x: 0.0, y: 0.0, width: 0.0, height: 0.0 };
 
     /// 左上角
     #[inline]
@@ -173,7 +174,7 @@ impl Rect {
 
     /// 检查与另一个矩形是否相交
     #[inline]
-    pub fn intersects(self, other: Rect) -> bool {
+    pub fn intersects(self, other: Rectangle) -> bool {
         self.x < other.x + other.width
             && self.x + self.width > other.x
             && self.y < other.y + other.height
@@ -182,24 +183,24 @@ impl Rect {
 
     /// 合并两个矩形
     #[inline]
-    pub fn union(self, other: Rect) -> Rect {
+    pub fn union(self, other: Rectangle) -> Rectangle {
         let left = self.x.min(other.x);
         let top = self.y.min(other.y);
         let right = (self.x + self.width).max(other.x + other.width);
         let bottom = (self.y + self.height).max(other.y + other.height);
-        Rect::new(left, top, right - left, bottom - top)
+        Rectangle::new(left, top, right - left, bottom - top)
     }
 
     /// 与另一个矩形求交集
     #[inline]
-    pub fn intersection(self, other: Rect) -> Option<Rect> {
+    pub fn intersection(self, other: Rectangle) -> Option<Rectangle> {
         let left = self.x.max(other.x);
         let top = self.y.max(other.y);
         let right = (self.x + self.width).min(other.x + other.width);
         let bottom = (self.y + self.height).min(other.y + other.height);
 
         if right > left && bottom > top {
-            Some(Rect::new(left, top, right - left, bottom - top))
+            Some(Rectangle::new(left, top, right - left, bottom - top))
         } else {
             None
         }
@@ -207,8 +208,8 @@ impl Rect {
 
     /// 膨胀矩形（扩大或缩小）
     #[inline]
-    pub fn inflate(self, dx: f64, dy: f64) -> Rect {
-        Rect {
+    pub fn inflate(self, dx: f64, dy: f64) -> Rectangle {
+        Rectangle {
             x: self.x - dx,
             y: self.y - dy,
             width: self.width + 2.0 * dx,
@@ -217,38 +218,38 @@ impl Rect {
     }
 }
 
-impl From<(f64, f64, f64, f64)> for Rect {
+impl From<(f64, f64, f64, f64)> for Rectangle {
     #[inline]
     fn from((x, y, width, height): (f64, f64, f64, f64)) -> Self {
-        Rect::new(x, y, width, height)
+        Rectangle::new(x, y, width, height)
     }
 }
 
-impl From<Rect> for (f64, f64, f64, f64) {
+impl From<Rectangle> for (f64, f64, f64, f64) {
     #[inline]
-    fn from(rect: Rect) -> Self {
+    fn from(rect: Rectangle) -> Self {
         (rect.x, rect.y, rect.width, rect.height)
     }
 }
 
-impl std::fmt::Display for Rect {
+impl std::fmt::Display for Rectangle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Rect({:.4}, {:.4}, {:.4} × {:.4})", self.x, self.y, self.width, self.height)
+        write!(f, "Rectangle({:.4}, {:.4}, {:.4} × {:.4})", self.x, self.y, self.width, self.height)
     }
 }
 
 #[derive(Serialize, Deserialize)]
-struct RectSerde(f64, f64, f64, f64);
+struct RectangleSerde(f64, f64, f64, f64);
 
-impl From<RectSerde> for Rect {
-    fn from(val: RectSerde) -> Self {
-        Rect::new(val.0, val.1, val.2, val.3)
+impl From<RectangleSerde> for Rectangle {
+    fn from(val: RectangleSerde) -> Self {
+        Rectangle::new(val.0, val.1, val.2, val.3)
     }
 }
 
-impl From<Rect> for RectSerde {
-    fn from(val: Rect) -> Self {
-        RectSerde(val.x, val.y, val.width, val.height)
+impl From<Rectangle> for RectangleSerde {
+    fn from(val: Rectangle) -> Self {
+        RectangleSerde(val.x, val.y, val.width, val.height)
     }
 }
 
@@ -258,7 +259,7 @@ mod tests {
 
     #[test]
     fn test_contains() {
-        let rect = Rect::new(0.0, 0.0, 10.0, 10.0);
+        let rect = Rectangle::new(0.0, 0.0, 10.0, 10.0);
         assert!(rect.contains(Point::new(5.0, 5.0)));
         assert!(rect.contains(Point::new(0.0, 0.0)));
         assert!(rect.contains(Point::new(10.0, 10.0))); // 边界上
@@ -267,18 +268,18 @@ mod tests {
 
     #[test]
     fn test_intersects() {
-        let a = Rect::new(0.0, 0.0, 10.0, 10.0);
-        let b = Rect::new(5.0, 5.0, 10.0, 10.0);
+        let a = Rectangle::new(0.0, 0.0, 10.0, 10.0);
+        let b = Rectangle::new(5.0, 5.0, 10.0, 10.0);
         assert!(a.intersects(b));
 
-        let c = Rect::new(20.0, 20.0, 10.0, 10.0);
+        let c = Rectangle::new(20.0, 20.0, 10.0, 10.0);
         assert!(!a.intersects(c));
     }
 
     #[test]
     fn test_union() {
-        let a = Rect::new(0.0, 0.0, 10.0, 10.0);
-        let b = Rect::new(20.0, 20.0, 10.0, 10.0);
+        let a = Rectangle::new(0.0, 0.0, 10.0, 10.0);
+        let b = Rectangle::new(20.0, 20.0, 10.0, 10.0);
         let union = a.union(b);
         assert_eq!(union.x, 0.0);
         assert_eq!(union.y, 0.0);
@@ -290,7 +291,7 @@ mod tests {
     fn test_from_corners() {
         let p1 = Point::new(10.0, 10.0);
         let p2 = Point::new(0.0, 0.0);
-        let rect = Rect::from_corners(p1, p2);
+        let rect = Rectangle::from_corners(p1, p2);
         assert_eq!(rect.x, 0.0);
         assert_eq!(rect.y, 0.0);
         assert_eq!(rect.width, 10.0);

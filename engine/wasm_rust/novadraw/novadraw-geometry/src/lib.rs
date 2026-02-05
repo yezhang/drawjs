@@ -15,6 +15,5 @@ pub mod rect;
 pub mod transform;
 
 pub use vec2::Vec2;
-pub use rect::{Point, Rect, Size};
-pub use novadraw_math::Mat3;
-pub use transform::{AffineTransform, Transform};
+pub use rect::{Point, Rectangle, Size};
+pub use transform::Transform;
