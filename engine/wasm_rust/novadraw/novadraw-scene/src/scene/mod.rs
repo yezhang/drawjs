@@ -4,20 +4,41 @@
 
 use std::sync::Arc;
 
-use novadraw_geometry::{Point, Rect};
+use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 use slotmap::SlotMap;
 use uuid::Uuid;
 
 use super::layout::LayoutManager;
 
-pub mod hit_test;
 pub mod figure_paint;
-
-pub use hit_test::HitTestResult;
 pub use figure_paint::{FigureRenderer, PaintTask, SceneGraphRenderRef};
 
+#[cfg(test)]
+pub mod bounds_test;
+
 slotmap::new_key_type! { pub struct BlockId; }
+
+/// 可坐标转换的几何类型
+///
+/// 允许对坐标点进行平移操作，用于坐标系统之间的转换。
+pub trait Translatable {
+    fn translate(&mut self, dx: f64, dy: f64);
+}
+
+impl Translatable for (f64, f64) {
+    fn translate(&mut self, dx: f64, dy: f64) {
+        self.0 += dx;
+        self.1 += dy;
+    }
+}
+
+impl Translatable for Rectangle {
+    fn translate(&mut self, dx: f64, dy: f64) {
+        self.x += dx;
+        self.y += dy;
+    }
+}
 
 /// 运行时块
 ///
@@ -76,13 +97,8 @@ impl RuntimeBlock {
     }
 
     /// 获取图形的边界（局部坐标）
-    pub fn figure_bounds(&self) -> Rect {
+    pub fn figure_bounds(&self) -> Rectangle {
         self.figure.bounds()
-    }
-
-    /// 检查点在图形边界内（局部坐标）
-    pub fn contains_local(&self, point: Point) -> bool {
-        self.figure.hit_test(point)
     }
 
     /// 获取首选尺寸
@@ -141,7 +157,7 @@ impl RuntimeBlock {
 }
 
 #[inline]
-fn rect_intersects(a: &Rect, b: &Rect) -> bool {
+fn rect_intersects(a: &Rectangle, b: &Rectangle) -> bool {
     a.x < b.x + b.width
         && a.x + a.width > b.x
         && a.y < b.y + b.height
@@ -228,24 +244,24 @@ impl SceneGraph {
         self.new_block_with_parent(figure, parent_id)
     }
 
-    /// 添加子块到指定父块，并设置相对于父节点的局部位置和尺寸（类似 Draw2d 的 Figure.setBounds）
+    /// 添加子块到指定父块，并设置子块的位置和尺寸
     ///
-    /// # 与 Draw2D 的一致性
+    /// # 坐标语义
     ///
-    /// - Figure 的 bounds (x, y, width, height) 直接存储在 Figure 中
-    /// - bounds 的 x, y 就是相对于父节点的位置
-    /// - 位置由 Figure.bounds() 定义，无独立的运行时变换
+    /// - bounds 是绝对坐标（相对于坐标根），不是相对于父节点的偏移
+    /// - 添加后，子节点的 bounds 保持不变
+    /// - 平移操作由 `prim_translate` 负责，会修改 bounds 并传播到子节点
     ///
     /// # 示例
     ///
     /// ```
     /// use novadraw_core::Color;
-    /// use novadraw_scene::{figure::Rectangle, SceneGraph};
+    /// use novadraw_scene::{figure::RectangleFigure, SceneGraph};
     ///
     /// let mut scene = SceneGraph::new();
-    /// let parent_id = scene.set_contents(Box::new(Rectangle::new(0.0, 0.0, 100.0, 100.0)));
+    /// let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 100.0, 100.0)));
     /// let color = Color::hex("#3498db");
-    /// // 添加子节点，相对于父节点位于 (10, 10)，尺寸 50x50
+    /// // 添加子节点，bounds 是绝对坐标 (10, 10, 50, 50)
     /// let _child_id = scene.add_child_with_bounds(parent_id, 10.0, 10.0, 50.0, 50.0, color);
     /// ```
     pub fn add_child_with_bounds(
@@ -257,7 +273,7 @@ impl SceneGraph {
         height: f64,
         color: novadraw_core::Color,
     ) -> BlockId {
-        let figure = super::figure::Rectangle::new_with_color(x, y, width, height, color);
+        let figure = super::figure::RectangleFigure::new_with_color(x, y, width, height, color);
         self.new_block_with_parent(Box::new(figure), parent_id)
     }
 
@@ -293,7 +309,7 @@ impl SceneGraph {
     }
 
     /// 重新验证布局，如果布局无效则重新计算
-    pub fn revalidate(&mut self, container_bounds: Rect) {
+    pub fn revalidate(&mut self, container_bounds: Rectangle) {
         if !self.layout_valid {
             self.apply_layout(container_bounds);
             self.layout_valid = true;
@@ -305,26 +321,20 @@ impl SceneGraph {
         self.layout_valid
     }
 
-    /// 内容块命中测试（简单版本）
-    ///
-    /// 返回命中的 BlockId，不包含路径信息。
-    /// 使用 Trampoline 模式避免递归栈溢出。
-    pub fn hit_test_content(&self, point: Point) -> Option<BlockId> {
-        self.hit_test_with_path(point).map(|r| r.target())
-    }
+    /// 按矩形选择
+    pub fn select_by_rect(&mut self, rect: Rectangle) {
+        for block in self.blocks.values_mut() {
+            block.is_selected = false;
+        }
 
-    /// 矩形选择命中测试
-    pub fn hit_test_rect(&self, rect: Rect) -> Vec<BlockId> {
-        let mut selected = Vec::new();
+        // 收集需要选中的 ID
+        let mut to_select: Vec<BlockId> = Vec::new();
         let mut stack = vec![self.root];
-
         while let Some(node_id) = stack.pop() {
             if let Some(block) = self.blocks.get(node_id) {
                 if !block.is_visible {
                     continue;
                 }
-
-                let bounds = block.figure_bounds();
 
                 // 先处理子节点
                 for &child_id in block.children.iter().rev() {
@@ -332,21 +342,15 @@ impl SceneGraph {
                 }
 
                 // 检查矩形相交
+                let bounds = block.figure_bounds();
                 if rect_intersects(&rect, &bounds) {
-                    selected.push(node_id);
+                    to_select.push(node_id);
                 }
             }
         }
-        selected
-    }
 
-    /// 按矩形选择
-    pub fn select_by_rect(&mut self, rect: Rect) {
-        let selected = self.hit_test_rect(rect);
-        for block in self.blocks.values_mut() {
-            block.is_selected = false;
-        }
-        for id in selected {
+        // 设置选中状态
+        for id in to_select {
             if let Some(block) = self.blocks.get_mut(id) {
                 block.is_selected = true;
             }
@@ -380,6 +384,79 @@ impl SceneGraph {
         None
     }
 
+    /// 命中测试
+    ///
+    /// 检测指定点是否命中任意图形，返回从根到目标的路径。
+    /// 使用深度优先遍历（从后往前，确保先命中最上层的图形）。
+    ///
+    /// # 参数
+    ///
+    /// - `point`: 待检测的坐标（屏幕坐标）
+    ///
+    /// # 返回
+    ///
+    /// Some((target, path)) 其中 target 是最底层命中的图形，path 是从根到目标的路径
+    /// None 表示未命中任何图形
+    pub fn hit_test(&self, point: (f64, f64)) -> Option<(BlockId, Vec<BlockId>)> {
+        let start_id = self.contents.unwrap_or(self.root);
+        let mut stack = vec![start_id];
+        let mut path = Vec::new();
+
+        while let Some(id) = stack.pop() {
+            if let Some(block) = self.blocks.get(id) {
+                // 将当前节点加入路径
+                path.push(id);
+
+                // 收集可见子节点（逆序，保证先处理后添加的）
+                let mut children: Vec<BlockId> = block
+                    .children
+                    .iter()
+                    .filter(|&&child_id| {
+                        if let Some(child) = self.blocks.get(child_id) {
+                            child.is_visible && child.is_enabled
+                        } else {
+                            false
+                        }
+                    })
+                    .cloned()
+                    .collect();
+                children.reverse();
+
+                // 检查当前节点是否包含点
+                if block.is_visible && block.is_enabled {
+                    let bounds = block.figure_bounds();
+                    if point.0 >= bounds.x
+                        && point.0 <= bounds.x + bounds.width
+                        && point.1 >= bounds.y
+                        && point.1 <= bounds.y + bounds.height
+                    {
+                        // 命中，返回完整路径
+                        let target = id;
+                        let full_path = path.clone();
+                        return Some((target, full_path));
+                    }
+                }
+
+                // 将子节点加入栈
+                for child_id in children {
+                    stack.push(child_id);
+                }
+            } else {
+                // 退出当前分支，从路径中移除
+                path.pop();
+            }
+        }
+
+        None
+    }
+
+    /// 简单的命中测试
+    ///
+    /// 只返回第一个命中的块 ID，不包含路径。
+    pub fn hit_test_simple(&self, point: (f64, f64)) -> Option<BlockId> {
+        self.hit_test(point).map(|(target, _)| target)
+    }
+
     /// 渲染场景图（Trampoline 模式）
     ///
     /// 使用 Trampoline 模式实现 Figure 树的渲染遍历。
@@ -410,47 +487,6 @@ impl SceneGraph {
         renderer.render(start_id);
     }
 
-    // ========== 命中测试方法 ==========
-
-    /// 命中测试（带路径）
-    ///
-    /// 使用 Trampoline 模式实现非递归的深度优先遍历。
-    /// 从 contents 开始检测，返回包含路径的命中结果。
-    ///
-    /// # 算法
-    ///
-    /// - 从 contents 开始（用户可见内容区域）
-    /// - 逆序遍历直接子节点（后添加的在上层，先检测）
-    /// - 利用 bounds 进行剪枝
-    /// - 找到命中的最深层节点即返回
-    ///
-    /// # 返回
-    ///
-    /// 如果命中，返回 `HitTestResult`，包含：
-    /// - `target()`: 命中的 BlockId
-    /// - `path()`: 从 contents 到命中节点的路径
-    pub fn hit_test_with_path(&self, point: Point) -> Option<HitTestResult> {
-        use crate::scene::hit_test::{HitTestRef, HitTester};
-
-        let start_id = self.contents.unwrap_or(self.root);
-        let scene_ref = HitTestRef {
-            blocks: &self.blocks,
-        };
-        let mut tester = HitTester::new(&scene_ref);
-        tester.hit_test(start_id, point)
-    }
-
-    /// 命中测试并选中
-    ///
-    /// 执行命中测试，并将命中的节点设为选中状态。
-    /// 返回命中的节点 ID。
-    pub fn hit_test_and_select(&mut self, point: Point) -> Option<BlockId> {
-        let result = self.hit_test_with_path(point);
-        let target_id = result.map(|hit| hit.target());
-        self.select_single(target_id);
-        target_id
-    }
-
     // ========== 调试验证方法 ==========
 
     /// 打印场景图树结构（用于调试）
@@ -458,8 +494,8 @@ impl SceneGraph {
     /// 使用 `eprintln!` 输出到 stderr，格式示例：
     /// ```text
     /// V BlockId(0x1): Figure bounds=(0,0,100,100)
-    ///   V BlockId(0x2): Rectangle bounds=(10,10,50,50)
-    ///   H BlockId(0x3): Rectangle bounds=(50,50,50,50)  // 不可见
+    ///   V BlockId(0x2): RectangleFigure bounds=(10,10,50,50)
+    ///   H BlockId(0x3): RectangleFigure bounds=(50,50,50,50)  // 不可见
     /// ```
     #[cfg(feature = "debug_render")]
     pub fn print_tree(&self) {
@@ -543,7 +579,7 @@ impl SceneGraph {
     /// 应用布局
     ///
     /// 根据布局管理器重新计算子元素的位置。
-    pub fn apply_layout(&mut self, container_bounds: Rect) {
+    pub fn apply_layout(&mut self, container_bounds: Rectangle) {
         let Some(layout_manager) = &self.layout_manager else {
             return;
         };
@@ -571,7 +607,7 @@ impl SceneGraph {
     }
 
     /// 计算布局大小
-    pub fn compute_layout_size(&self, container_bounds: Rect) -> (f64, f64) {
+    pub fn compute_layout_size(&self, container_bounds: Rectangle) -> (f64, f64) {
         let Some(layout_manager) = &self.layout_manager else {
             return (container_bounds.width, container_bounds.height);
         };
@@ -588,6 +624,213 @@ impl SceneGraph {
             (container_bounds.width, container_bounds.height)
         }
     }
+
+    // ========== 坐标变换方法 ==========
+
+    /// 原始平移（对应 d2: primTranslate）
+    ///
+    /// 移动 Figure 的位置并传播到子节点。
+    /// 如果 `use_local_coordinates()` 为 false（默认），子节点的 bounds 也会被平移。
+    /// 如果 `use_local_coordinates()` 为 true，只平移当前节点，不传播到子节点。
+    ///
+    /// # 关键特性
+    ///
+    /// - 使用**显式栈**迭代实现，避免递归栈溢出
+    /// - 所有 bounds 都是**绝对坐标**（相对于坐标根）
+    /// - `use_local_coordinates()` 为 true 时，当前节点是坐标根，不传播到子节点
+    ///
+    /// # 坐标语义说明
+    ///
+    /// - 子节点的 bounds 也是绝对坐标，所以平移时会同时修改父子节点的 bounds
+    /// - 这种设计确保所有 bounds 始终相对于坐标根
+    /// - 当 `use_local_coordinates()` 为 true 时，坐标根的 bounds 变化会触发事件通知
+    ///
+    /// # 与 d2 的一致性
+    ///
+    /// ```java
+    /// // Figure.java:1390-1397 - primTranslate
+    /// protected void primTranslate(int dx, int dy) {
+    ///     bounds.x += dx;
+    ///     bounds.y += dy;
+    ///
+    ///     if (useLocalCoordinates()) {
+    ///         fireCoordinateSystemChanged();
+    ///         return;
+    ///     }
+    ///     children.forEach(child -> child.translate(dx, dy));
+    /// }
+    /// ```
+    pub fn prim_translate(&mut self, block_id: BlockId, dx: f64, dy: f64) {
+        // 使用显式栈实现迭代式深度优先遍历
+        let mut stack = vec![block_id];
+
+        while let Some(id) = stack.pop() {
+            if let Some(block) = self.blocks.get_mut(id) {
+                // 修改当前节点的 bounds (x, y)
+                if let Some(rect) = block.figure.as_rectangle_mut() {
+                    rect.bounds.x += dx;
+                    rect.bounds.y += dy;
+                }
+
+                // 检查是否使用本地坐标模式
+                if block.figure.use_local_coordinates() {
+                    // 本地坐标模式：不传播，但可能需要触发事件
+                    // TODO: 实现 fireCoordinateSystemChanged()
+                    continue;
+                }
+
+                // 默认模式：将所有子节点加入栈进行平移
+                for &child_id in &block.children {
+                    stack.push(child_id);
+                }
+            }
+        }
+    }
+
+    /// 获取节点的绝对位置
+    ///
+    /// 对应 d2: translateToAbsolute
+    ///
+    /// # 算法
+    ///
+    /// 从当前节点向根遍历：
+    /// - 如果父节点是坐标根（useLocalCoordinates = true），累加当前节点的 bounds
+    /// - 否则继续向上（当前节点的 bounds 已相对于最近坐标根）
+    /// - 到达根时停止
+    ///
+    /// # 注意
+    ///
+    /// 此方法返回的是相对于最近坐标根的偏移量。如果节点的父节点不是坐标根，
+    /// 则返回当前节点的 bounds（即相对于最近坐标根的位置）。
+    pub fn translate_to_absolute(&self, block_id: BlockId) -> (f64, f64) {
+        let mut x = 0.0;
+        let mut y = 0.0;
+
+        let mut current_id = Some(block_id);
+        while let Some(id) = current_id {
+            if let Some(block) = self.blocks.get(id) {
+                // 检查父节点是否是坐标根
+                if let Some(parent_id) = block.parent {
+                    if let Some(parent) = self.blocks.get(parent_id) {
+                        if parent.figure.use_local_coordinates() {
+                            // 父节点是坐标根，累加当前节点的 bounds
+                            let bounds = block.figure.bounds();
+                            x += bounds.x;
+                            y += bounds.y;
+                        }
+                    }
+                }
+
+                current_id = block.parent;
+            } else {
+                break;
+            }
+        }
+
+        (x, y)
+    }
+
+    /// 检查节点是否是坐标根
+    ///
+    /// 对应 d2: isCoordinateSystem()
+    /// 返回 true 如果节点使用本地坐标（即它是子节点的坐标根）。
+    pub fn is_coordinate_system(&self, block_id: BlockId) -> bool {
+        if let Some(block) = self.blocks.get(block_id) {
+            block.figure.use_local_coordinates()
+        } else {
+            false
+        }
+    }
+
+    /// 将本地坐标转换为父节点坐标
+    ///
+    /// 对应 d2: translateToParent(Translatable)
+    ///
+    /// # 算法
+    ///
+    /// 当父节点是坐标根（`useLocalCoordinates() = true`）时：
+    /// - 本地坐标需要累加父节点的 insets 才能得到父节点坐标
+    /// - 因为本地 (0, 0) 对应父坐标 (left_insets, top_insets)
+    ///
+    /// # 示例
+    ///
+    /// 假设：
+    /// - 父节点 bounds = (0, 0, 100, 100)，left/top insets = 5
+    /// - 子节点的本地坐标 (10, 20) 转换为父坐标 (15, 25)
+    pub fn translate_to_parent<T: Translatable>(&self, block_id: BlockId, t: &mut T) {
+        if let Some(block) = self.blocks.get(block_id) {
+            if let Some(parent_id) = block.parent {
+                if let Some(parent) = self.blocks.get(parent_id) {
+                    if parent.figure.use_local_coordinates() {
+                        // 只有当父节点是坐标根时才转换
+                        // 本地 (0, 0) 对应父坐标 (left, top)
+                        let (top, left, _, _) = parent.figure.insets();
+                        t.translate(left, top);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    /// 将父节点坐标转换为本地坐标
+    ///
+    /// 对应 d2: translateFromParent(Translatable)
+    ///
+    /// # 算法
+    ///
+    /// 当父节点是坐标根时：
+    /// - 父坐标需要减去父节点的 insets 才能得到本地坐标
+    /// - 因为父坐标 (left_insets, top_insets) 对应本地 (0, 0)
+    pub fn translate_from_parent<T: Translatable>(&self, block_id: BlockId, t: &mut T) {
+        if let Some(block) = self.blocks.get(block_id) {
+            if let Some(parent_id) = block.parent {
+                if let Some(parent) = self.blocks.get(parent_id) {
+                    if parent.figure.use_local_coordinates() {
+                        // 只有当父节点是坐标根时才转换
+                        let (top, left, _, _) = parent.figure.insets();
+                        t.translate(-left, -top);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    /// 将绝对坐标转换为本地坐标
+    ///
+    /// 对应 d2: translateToRelative(Translatable)
+    ///
+    /// # 算法
+    ///
+    /// 绝对坐标是相对于场景根的坐标。
+    /// 递归向父节点遍历：
+    /// 1. 递归处理父节点
+    /// 2. 如果当前节点的父节点是坐标根，减去父节点的 bounds
+    ///    因为：absolute = coord_root_bounds + local
+    ///    所以：local = absolute - coord_root_bounds
+    ///
+    /// # 注意
+    ///
+    /// 此方法将绝对坐标（相对于场景根）转换为本地坐标（相对于最近坐标根）。
+    pub fn translate_to_relative<T: Translatable>(&self, block_id: BlockId, t: &mut T) {
+        if let Some(block) = self.blocks.get(block_id) {
+            if let Some(parent_id) = block.parent {
+                // 递归处理父节点
+                self.translate_to_relative(parent_id, t);
+
+                // 如果父节点是坐标根，减去父节点的 bounds
+                // 因为 absolute = coord_root_bounds + local
+                // 所以 local = absolute - coord_root_bounds
+                if let Some(parent) = self.blocks.get(parent_id) {
+                    if parent.figure.use_local_coordinates() {
+                        let bounds = parent.figure.bounds();
+                        t.translate(-bounds.x, -bounds.y);
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl Default for SceneGraph {
@@ -598,8 +841,8 @@ impl Default for SceneGraph {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::figure::Rectangle;
+    use super::super::figure::{Figure, RectangleFigure};
+    use crate::{Rectangle, SceneGraph};
 
     /// 测试渲染顺序：Z-order 验证
     ///
@@ -611,17 +854,17 @@ mod tests {
         let mut scene = SceneGraph::new();
 
         // 创建父容器（100x100）
-        let parent = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+        let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
         let parent_id = scene.set_contents(Box::new(parent));
 
         // 添加三个子矩形（从下到上添加）
-        let child1 = Rectangle::new(10.0, 10.0, 20.0, 20.0);
+        let child1 = RectangleFigure::new(10.0, 10.0, 20.0, 20.0);
         let _c1 = scene.add_child_to(parent_id, Box::new(child1));
 
-        let child2 = Rectangle::new(30.0, 30.0, 20.0, 20.0);
+        let child2 = RectangleFigure::new(30.0, 30.0, 20.0, 20.0);
         let _c2 = scene.add_child_to(parent_id, Box::new(child2));
 
-        let child3 = Rectangle::new(50.0, 50.0, 20.0, 20.0);
+        let child3 = RectangleFigure::new(50.0, 50.0, 20.0, 20.0);
         let _c3 = scene.add_child_to(parent_id, Box::new(child3));
 
         // 打印树结构（用于手动验证）
@@ -669,15 +912,15 @@ mod tests {
         let mut scene = SceneGraph::new();
 
         // 根
-        let root = Rectangle::new(0.0, 0.0, 200.0, 200.0);
+        let root = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
         let root_id = scene.set_contents(Box::new(root));
 
         // 子
-        let child = Rectangle::new(50.0, 50.0, 100.0, 100.0);
+        let child = RectangleFigure::new(50.0, 50.0, 100.0, 100.0);
         let child_id = scene.add_child_to(root_id, Box::new(child));
 
         // 孙
-        let grandchild = Rectangle::new(60.0, 60.0, 30.0, 30.0);
+        let grandchild = RectangleFigure::new(60.0, 60.0, 30.0, 30.0);
         let _gc_id = scene.add_child_to(child_id, Box::new(grandchild));
 
         // 打印树结构
@@ -712,15 +955,15 @@ mod tests {
     fn test_visibility_filter() {
         let mut scene = SceneGraph::new();
 
-        let parent = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+        let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
         let parent_id = scene.set_contents(Box::new(parent));
 
         // 可见子元素
-        let visible_child = Rectangle::new(10.0, 10.0, 20.0, 20.0);
+        let visible_child = RectangleFigure::new(10.0, 10.0, 20.0, 20.0);
         let _ = scene.add_child_to(parent_id, Box::new(visible_child));
 
         // 不可见子元素
-        let invisible_child = Rectangle::new(50.0, 50.0, 20.0, 20.0);
+        let invisible_child = RectangleFigure::new(50.0, 50.0, 20.0, 20.0);
         let invisible_id = scene.add_child_to(parent_id, Box::new(invisible_child));
 
         // 设置不可见
@@ -743,10 +986,10 @@ mod tests {
     fn test_transform_accumulation() {
         let mut scene = SceneGraph::new();
 
-        let parent = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+        let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
         let parent_id = scene.set_contents(Box::new(parent));
 
-        let child = Rectangle::new(25.0, 25.0, 50.0, 50.0);
+        let child = RectangleFigure::new(25.0, 25.0, 50.0, 50.0);
         let _child_id = scene.add_child_to(parent_id, Box::new(child));
 
         // 打印场景结构
@@ -770,5 +1013,584 @@ mod tests {
             matches!(cmd.kind, novadraw_render::command::RenderCommandKind::FillRect { .. })
         });
         assert!(has_fill_rect, "应有 FillRect 命令");
+    }
+
+    // ========== 坐标变换测试 ==========
+
+    /// 测试 prim_translate 基本功能
+    ///
+    /// 场景：平移父节点，子节点也应被平移
+    /// 期望：父子节点的 bounds 都被平移相同的量
+    #[test]
+    fn test_prim_translate_basic() {
+        let mut scene = SceneGraph::new();
+
+        // 创建父子层次
+        let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
+        let parent_id = scene.set_contents(Box::new(parent));
+
+        let child = RectangleFigure::new(10.0, 10.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+        // 平移父节点 (10, 20)
+        scene.prim_translate(parent_id, 10.0, 20.0);
+
+        // 验证父节点 bounds
+        let parent_bounds = scene.blocks.get(parent_id).unwrap().figure_bounds();
+        assert_eq!(parent_bounds.x, 10.0, "父节点 x 应为 10");
+        assert_eq!(parent_bounds.y, 20.0, "父节点 y 应为 20");
+
+        // 验证子节点 bounds 也被平移
+        let child_bounds = scene.blocks.get(child_id).unwrap().figure_bounds();
+        assert_eq!(child_bounds.x, 20.0, "子节点 x 应为 20 (10 + 10)");
+        assert_eq!(child_bounds.y, 30.0, "子节点 y 应为 30 (10 + 20)");
+    }
+
+    /// 测试 prim_translate 嵌套传播
+    ///
+    /// 场景：平移根节点，所有后代都被平移
+    /// 期望：整棵子树的 bounds 都被平移
+    #[test]
+    fn test_prim_translate_nested() {
+        let mut scene = SceneGraph::new();
+
+        // 创建三层层次：root -> parent -> child
+        let root = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
+        let root_id = scene.set_contents(Box::new(root));
+
+        let parent = RectangleFigure::new(50.0, 50.0, 100.0, 100.0);
+        let parent_id = scene.add_child_to(root_id, Box::new(parent));
+
+        let child = RectangleFigure::new(10.0, 10.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+        // 平移根节点 (5, 10)
+        scene.prim_translate(root_id, 5.0, 10.0);
+
+        // 验证所有节点都被平移
+        let root_bounds = scene.blocks.get(root_id).unwrap().figure_bounds();
+        assert_eq!(root_bounds.x, 5.0);
+        assert_eq!(root_bounds.y, 10.0);
+
+        let parent_bounds = scene.blocks.get(parent_id).unwrap().figure_bounds();
+        assert_eq!(parent_bounds.x, 55.0, "父节点 x 应为 55 (50 + 5)");
+        assert_eq!(parent_bounds.y, 60.0, "父节点 y 应为 60 (50 + 10)");
+
+        let child_bounds = scene.blocks.get(child_id).unwrap().figure_bounds();
+        assert_eq!(child_bounds.x, 15.0, "子节点 x 应为 15 (10 + 5)");
+        assert_eq!(child_bounds.y, 20.0, "子节点 y 应为 20 (10 + 10)");
+    }
+
+    /// 测试 translate_to_absolute 基本功能
+    ///
+    /// 场景：计算节点的绝对位置，当父节点是坐标根时
+    /// 期望：返回相对于父坐标根的 bounds
+    #[test]
+    fn test_translate_to_absolute_basic() {
+        let mut scene = SceneGraph::new();
+
+        // 创建一个使用本地坐标的 Figure 作为坐标根
+        struct CoordinateRootFigure {
+            bounds: Rectangle,
+        }
+        impl Figure for CoordinateRootFigure {
+            fn bounds(&self) -> Rectangle {
+                self.bounds
+            }
+            fn use_local_coordinates(&self) -> bool {
+                true  // 这个 Figure 是坐标根
+            }
+            fn as_rectangle(&self) -> Option<&RectangleFigure> {
+                None
+            }
+            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+                None
+            }
+            fn name(&self) -> &'static str {
+                "CoordinateRootFigure"
+            }
+        }
+
+        // contents (0,0) -> parent (坐标根, 0,0) -> child (30, 40)
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        // parent 是坐标根
+        let parent_id = scene.add_child_to(
+            contents_id,
+            Box::new(CoordinateRootFigure {
+                bounds: Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            }),
+        );
+
+        // child 相对于 parent
+        let child = RectangleFigure::new(30.0, 40.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+        // 计算子节点的绝对位置
+        let (x, y) = scene.translate_to_absolute(child_id);
+        assert_eq!(x, 30.0, "子节点相对于父坐标根，x 应为 30");
+        assert_eq!(y, 40.0, "子节点相对于父坐标根，y 应为 40");
+    }
+
+    /// 测试 translate_to_absolute 嵌套场景
+    ///
+    /// 场景：计算深层嵌套节点的绝对位置，当祖父节点是坐标根时
+    /// 期望：返回从坐标根到当前节点路径上所有节点 bounds 的累加
+    #[test]
+    fn test_translate_to_absolute_nested() {
+        let mut scene = SceneGraph::new();
+
+        // 创建一个使用本地坐标的 Figure 作为坐标根
+        struct CoordinateRootFigure {
+            bounds: Rectangle,
+        }
+        impl Figure for CoordinateRootFigure {
+            fn bounds(&self) -> Rectangle {
+                self.bounds
+            }
+            fn use_local_coordinates(&self) -> bool {
+                true  // 这个 Figure 是坐标根
+            }
+            fn as_rectangle(&self) -> Option<&RectangleFigure> {
+                None
+            }
+            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+                None
+            }
+            fn name(&self) -> &'static str {
+                "CoordinateRootFigure"
+            }
+        }
+
+        // contents (0,0) -> coord_root (20,30) -> child (10,5)
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        // coord_root 是坐标根
+        let coord_root_id = scene.add_child_to(
+            contents_id,
+            Box::new(CoordinateRootFigure {
+                bounds: Rectangle::new(20.0, 30.0, 100.0, 100.0),
+            }),
+        );
+
+        // child 相对于 coord_root
+        let child = RectangleFigure::new(10.0, 5.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(coord_root_id, Box::new(child));
+
+        // 计算子节点的绝对位置
+        let (x, y) = scene.translate_to_absolute(child_id);
+        // coord_root 是坐标根，child 相对于 coord_root
+        // 累加 child.bounds = (10, 5)
+        assert_eq!(x, 10.0, "子节点相对于坐标根，x 应为 10");
+        assert_eq!(y, 5.0, "子节点相对于坐标根，y 应为 5");
+    }
+
+    /// 测试 is_coordinate_system 功能
+    ///
+    /// 场景：检查节点的坐标根状态
+    /// 期望：默认返回 false，使用本地坐标返回 true
+    #[test]
+    fn test_is_coordinate_system() {
+        let mut scene = SceneGraph::new();
+
+        let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
+        let parent_id = scene.set_contents(Box::new(parent));
+
+        let child = RectangleFigure::new(10.0, 10.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+        // 默认不使用本地坐标
+        assert!(!scene.is_coordinate_system(parent_id), "默认不是坐标根");
+        assert!(!scene.is_coordinate_system(child_id), "默认不是坐标根");
+    }
+
+    // ========== translate_to_parent 测试 ==========
+
+    /// 测试 translate_to_parent 基本功能
+    ///
+    /// 场景：父节点是坐标根且无 insets
+    /// 期望：本地坐标 (10, 20) 转换为父坐标 (10, 20)
+    #[test]
+    fn test_translate_to_parent_basic() {
+        let mut scene = SceneGraph::new();
+
+        struct CoordinateRootFigure {
+            bounds: Rectangle,
+        }
+        impl Figure for CoordinateRootFigure {
+            fn bounds(&self) -> Rectangle {
+                self.bounds
+            }
+            fn use_local_coordinates(&self) -> bool {
+                true
+            }
+            fn as_rectangle(&self) -> Option<&RectangleFigure> {
+                None
+            }
+            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+                None
+            }
+            fn name(&self) -> &'static str {
+                "CoordinateRootFigure"
+            }
+        }
+
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        let parent_id = scene.add_child_to(
+            contents_id,
+            Box::new(CoordinateRootFigure {
+                bounds: Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            }),
+        );
+
+        let child = RectangleFigure::new(10.0, 20.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+        // 本地坐标 (10, 20) 转换为父坐标 (10, 20)
+        let mut point = (10.0, 20.0);
+        scene.translate_to_parent(child_id, &mut point);
+        assert_eq!(point, (10.0, 20.0));
+    }
+
+    /// 测试 translate_to_parent 带 insets
+    ///
+    /// 场景：父节点是坐标根且有 insets
+    /// 期望：本地坐标 (10, 20) 转换为父坐标 (15, 25)，其中 insets = (5, 5, 0, 0)
+    #[test]
+    fn test_translate_to_parent_with_insets() {
+        let mut scene = SceneGraph::new();
+
+        struct FigureWithInsets {
+            bounds: Rectangle,
+        }
+        impl Figure for FigureWithInsets {
+            fn bounds(&self) -> Rectangle {
+                self.bounds
+            }
+            fn use_local_coordinates(&self) -> bool {
+                true
+            }
+            fn insets(&self) -> (f64, f64, f64, f64) {
+                (5.0, 5.0, 0.0, 0.0)
+            }
+            fn as_rectangle(&self) -> Option<&RectangleFigure> {
+                None
+            }
+            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+                None
+            }
+            fn name(&self) -> &'static str {
+                "FigureWithInsets"
+            }
+        }
+
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        let parent_id = scene.add_child_to(
+            contents_id,
+            Box::new(FigureWithInsets {
+                bounds: Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            }),
+        );
+
+        let child = RectangleFigure::new(10.0, 20.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+        // 本地坐标 (10, 20) 转换为父坐标 (15, 25)，即本地 + insets
+        let mut point = (10.0, 20.0);
+        scene.translate_to_parent(child_id, &mut point);
+        assert_eq!(point.0, 15.0, "x 应为 10 + 5");
+        assert_eq!(point.1, 25.0, "y 应为 20 + 5");
+    }
+
+    /// 测试 translate_to_parent 父节点不是坐标根
+    ///
+    /// 场景：父节点不是坐标根
+    /// 期望：不进行转换，返回原坐标
+    #[test]
+    fn test_translate_to_parent_not_coordinate_root() {
+        let mut scene = SceneGraph::new();
+
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
+        let parent_id = scene.add_child_to(contents_id, Box::new(parent));
+
+        let child = RectangleFigure::new(10.0, 20.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+        // 父节点不是坐标根，不转换
+        let mut point = (10.0, 20.0);
+        scene.translate_to_parent(child_id, &mut point);
+        assert_eq!(point, (10.0, 20.0), "父节点不是坐标根时不转换");
+    }
+
+    // ========== translate_from_parent 测试 ==========
+
+    /// 测试 translate_from_parent 基本功能
+    ///
+    /// 场景：父节点是坐标根且无 insets
+    /// 期望：父坐标 (10, 20) 转换为本地坐标 (10, 20)
+    #[test]
+    fn test_translate_from_parent_basic() {
+        let mut scene = SceneGraph::new();
+
+        struct CoordinateRootFigure {
+            bounds: Rectangle,
+        }
+        impl Figure for CoordinateRootFigure {
+            fn bounds(&self) -> Rectangle {
+                self.bounds
+            }
+            fn use_local_coordinates(&self) -> bool {
+                true
+            }
+            fn as_rectangle(&self) -> Option<&RectangleFigure> {
+                None
+            }
+            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+                None
+            }
+            fn name(&self) -> &'static str {
+                "CoordinateRootFigure"
+            }
+        }
+
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        let parent_id = scene.add_child_to(
+            contents_id,
+            Box::new(CoordinateRootFigure {
+                bounds: Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            }),
+        );
+
+        let child = RectangleFigure::new(10.0, 20.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+        // 父坐标 (10, 20) 转换为本地坐标 (10, 20)
+        let mut point = (10.0, 20.0);
+        scene.translate_from_parent(child_id, &mut point);
+        assert_eq!(point, (10.0, 20.0));
+    }
+
+    /// 测试 translate_from_parent 带 insets
+    ///
+    /// 场景：父节点是坐标根且有 insets
+    /// 期望：父坐标 (15, 25) 转换为本地坐标 (10, 20)
+    #[test]
+    fn test_translate_from_parent_with_insets() {
+        let mut scene = SceneGraph::new();
+
+        struct FigureWithInsets {
+            bounds: Rectangle,
+        }
+        impl Figure for FigureWithInsets {
+            fn bounds(&self) -> Rectangle {
+                self.bounds
+            }
+            fn use_local_coordinates(&self) -> bool {
+                true
+            }
+            fn insets(&self) -> (f64, f64, f64, f64) {
+                (5.0, 5.0, 0.0, 0.0)
+            }
+            fn as_rectangle(&self) -> Option<&RectangleFigure> {
+                None
+            }
+            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+                None
+            }
+            fn name(&self) -> &'static str {
+                "FigureWithInsets"
+            }
+        }
+
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        let parent_id = scene.add_child_to(
+            contents_id,
+            Box::new(FigureWithInsets {
+                bounds: Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            }),
+        );
+
+        let child = RectangleFigure::new(10.0, 20.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+        // 父坐标 (15, 25) 转换为本地坐标 (10, 20)，即减去 insets
+        let mut point = (15.0, 25.0);
+        scene.translate_from_parent(child_id, &mut point);
+        assert_eq!(point.0, 10.0, "x 应为 15 - 5");
+        assert_eq!(point.1, 20.0, "y 应为 25 - 5");
+    }
+
+    // ========== translate_to_relative 测试 ==========
+
+    /// 测试 translate_to_relative 基本功能
+    ///
+    /// 场景：父节点是坐标根，bounds = (0, 0)
+    /// 期望：绝对坐标 (30, 40) 转换为本地坐标 (30, 40)
+    #[test]
+    fn test_translate_to_relative_basic() {
+        let mut scene = SceneGraph::new();
+
+        struct CoordinateRootFigure {
+            bounds: Rectangle,
+        }
+        impl Figure for CoordinateRootFigure {
+            fn bounds(&self) -> Rectangle {
+                self.bounds
+            }
+            fn use_local_coordinates(&self) -> bool {
+                true
+            }
+            fn as_rectangle(&self) -> Option<&RectangleFigure> {
+                None
+            }
+            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+                None
+            }
+            fn name(&self) -> &'static str {
+                "CoordinateRootFigure"
+            }
+        }
+
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        let parent_id = scene.add_child_to(
+            contents_id,
+            Box::new(CoordinateRootFigure {
+                bounds: Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            }),
+        );
+
+        let child = RectangleFigure::new(30.0, 40.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+        // 绝对坐标 (30, 40) 减去 coord_root_bounds (0, 0) = 本地坐标 (30, 40)
+        let mut point = (30.0, 40.0);
+        scene.translate_to_relative(child_id, &mut point);
+        assert_eq!(point, (30.0, 40.0));
+    }
+
+    /// 测试 translate_to_relative 嵌套坐标根
+    ///
+    /// 场景：深层嵌套，多个坐标根
+    /// 期望：正确累积转换
+    #[test]
+    fn test_translate_to_relative_nested() {
+        let mut scene = SceneGraph::new();
+
+        struct CoordinateRootFigure {
+            bounds: Rectangle,
+        }
+        impl Figure for CoordinateRootFigure {
+            fn bounds(&self) -> Rectangle {
+                self.bounds
+            }
+            fn use_local_coordinates(&self) -> bool {
+                true
+            }
+            fn as_rectangle(&self) -> Option<&RectangleFigure> {
+                None
+            }
+            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+                None
+            }
+            fn name(&self) -> &'static str {
+                "CoordinateRootFigure"
+            }
+        }
+
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        // coord_root1 (20, 30)
+        let coord_root1_id = scene.add_child_to(
+            contents_id,
+            Box::new(CoordinateRootFigure {
+                bounds: Rectangle::new(20.0, 30.0, 100.0, 100.0),
+            }),
+        );
+
+        // coord_root2 相对于 coord_root1 (10, 5)
+        let coord_root2_id = scene.add_child_to(
+            coord_root1_id,
+            Box::new(CoordinateRootFigure {
+                bounds: Rectangle::new(10.0, 5.0, 50.0, 50.0),
+            }),
+        );
+
+        // child 相对于 coord_root2 (15, 25)
+        let child = RectangleFigure::new(15.0, 25.0, 30.0, 30.0);
+        let child_id = scene.add_child_to(coord_root2_id, Box::new(child));
+
+        // 绝对坐标 = coord_root1 + coord_root2 + child = (20+10+15, 30+5+25) = (45, 60)
+        // 本地坐标 = 绝对坐标 - coord_root1_bounds - coord_root2_bounds = (15, 25)
+        let mut point = (45.0, 60.0);
+        scene.translate_to_relative(child_id, &mut point);
+        assert_eq!(point.0, 15.0, "x 应为 45 - 20 - 10");
+        assert_eq!(point.1, 25.0, "y 应为 60 - 30 - 5");
+    }
+
+    /// 测试 translate_to_relative Rectangle 类型
+    ///
+    /// 场景：使用 Rectangle 类型进行坐标转换
+    /// 期望：Rectangle 的 x, y 被正确转换
+    #[test]
+    fn test_translate_to_relative_rect() {
+        let mut scene = SceneGraph::new();
+
+        struct CoordinateRootFigure {
+            bounds: Rectangle,
+        }
+        impl Figure for CoordinateRootFigure {
+            fn bounds(&self) -> Rectangle {
+                self.bounds
+            }
+            fn use_local_coordinates(&self) -> bool {
+                true
+            }
+            fn as_rectangle(&self) -> Option<&RectangleFigure> {
+                None
+            }
+            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+                None
+            }
+            fn name(&self) -> &'static str {
+                "CoordinateRootFigure"
+            }
+        }
+
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        // coord_root (10, 20)
+        let parent_id = scene.add_child_to(
+            contents_id,
+            Box::new(CoordinateRootFigure {
+                bounds: Rectangle::new(10.0, 20.0, 100.0, 100.0),
+            }),
+        );
+
+        // child 相对于 coord_root (30, 40)
+        let child = RectangleFigure::new(30.0, 40.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+        // 绝对坐标 Rectangle (40, 60, 50, 50) 减去 coord_root_bounds (10, 20) = 本地坐标 (30, 40)
+        let mut rect = Rectangle::new(40.0, 60.0, 50.0, 50.0);
+        scene.translate_to_relative(child_id, &mut rect);
+        assert_eq!(rect.x, 30.0, "x 应为 40 - 10");
+        assert_eq!(rect.y, 40.0, "y 应为 60 - 20");
     }
 }

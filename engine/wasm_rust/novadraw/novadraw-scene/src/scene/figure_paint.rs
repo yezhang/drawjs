@@ -69,7 +69,9 @@ impl<'a> SceneGraphRenderRef<'a> {
 
 impl<'a> Clone for SceneGraphRenderRef<'a> {
     fn clone(&self) -> Self {
-        Self { blocks: self.blocks }
+        Self {
+            blocks: self.blocks,
+        }
     }
 }
 
@@ -151,7 +153,20 @@ impl<'a> FigureRenderer<'a> {
                     if let Some(block) = self.scene.get(block_id) {
                         let figure = &block.figure;
                         figure.push_state(self.gc); // pushState
-                        figure.prepare_context(self.gc, bounds); // translate + clip
+
+                        // 根据 useLocalCoordinates 决定是否需要 translate
+                        // d2 逻辑：
+                        // - useLocalCoordinates = false（默认）：不 translate，使用全局坐标
+                        // - useLocalCoordinates = true：translate 到 bounds 位置，使用本地坐标
+                        if figure.use_local_coordinates() {
+                            // 使用本地坐标：translate 到 bounds 位置
+                            let (top, left, _, _) = figure.insets();
+                            figure.prepare_context(self.gc, bounds, left, top);
+                        } else {
+                            // 不使用本地坐标：设置裁剪区，但不 translate
+                            // 所有 bounds 都是绝对坐标，直接在全局坐标系中绘制
+                            figure.prepare_context_no_translate(self.gc, bounds);
+                        }
                     }
                 }
                 PaintTask::PaintSelf { block_id } => {
@@ -182,9 +197,8 @@ impl<'a> FigureRenderer<'a> {
 
                         figure.paint_border(self.gc);
 
-                        if block.is_selected {
-                            figure.paint_highlight(self.gc);
-                        }
+                        // 高亮由 Selection 机制处理，不在 Figure 职责范围内
+                        // 参考 d2 Figure.paint() 不包含 highlight 绘制
                     }
                 }
                 PaintTask::ExitState { block_id } => {
