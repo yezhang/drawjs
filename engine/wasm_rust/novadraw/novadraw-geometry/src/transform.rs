@@ -226,10 +226,22 @@ impl Transform {
     }
 
     /// 追加缩放（绕指定点）
+    ///
+    /// 语义：`self.then_scale_about(...)` 等价于 `Transform::from_scale_about(...) * self`
     #[inline]
     pub fn then_scale_about(self, scale: f64, cx: f64, cy: f64) -> Self {
         Self {
             inner: self.inner.then_scale_about(scale, kurbo::Point::new(cx, cy)),
+        }
+    }
+
+    /// 追加任意变换
+    ///
+    /// 语义：`self.then_transform(other)` 等价于 `other * self`
+    #[inline]
+    pub fn then_transform(self, other: Transform) -> Self {
+        Self {
+            inner: other.inner * self.inner,
         }
     }
 }
@@ -454,6 +466,39 @@ mod tests {
 
         let p1 = t1.transform_point(0.0, 5.0);
         let p2 = t2.transform_point(0.0, 5.0);
+
+        assert!((p1.0 - p2.0).abs() < 1e-10);
+        assert!((p1.1 - p2.1).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_then_transform() {
+        let t1 = Transform::from_translation(10.0, 0.0);
+        let t2 = Transform::from_scale(2.0, 2.0);
+
+        let combined = Transform::IDENTITY.then_transform(t1).then_transform(t2);
+        let p = combined.transform_point(5.0, 5.0);
+
+        // 等价于 t2 * t1
+        // 先平移(10,0): (5,5) -> (15,5)
+        // 再缩放2倍: (15,5) -> (30,10)
+        assert_eq!(p, (30.0, 10.0));
+    }
+
+    #[test]
+    fn test_then_transform_equivalent() {
+        // then_transform(other) 等价于 other * self
+        let t1 = Transform::from_translation(10.0, 0.0);
+        let t2 = Transform::from_scale(2.0, 2.0);
+
+        // 使用 then_transform
+        let result1 = t1.then_transform(t2);
+
+        // 使用 multiply
+        let result2 = t2 * t1;
+
+        let p1 = result1.transform_point(5.0, 5.0);
+        let p2 = result2.transform_point(5.0, 5.0);
 
         assert!((p1.0 - p2.0).abs() < 1e-10);
         assert!((p1.1 - p2.1).abs() < 1e-10);

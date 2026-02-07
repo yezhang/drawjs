@@ -13,7 +13,7 @@ use vello::util::{RenderContext, RenderSurface};
 use vello::{AaConfig, Renderer, RendererOptions};
 
 use crate::command::RenderCommand;
-use crate::traits::{Renderer as RendererTrait, WindowProxy};
+use crate::traits::{RenderBackend, WindowProxy};
 
 pub mod winit;
 pub use winit::{WinitWindowProxy, WinitWindowProxyInner};
@@ -115,7 +115,8 @@ impl VelloRenderer {
 
             crate::command::RenderCommandKind::ConcatTransform { matrix } => {
                 // 叠加变换
-                let new_transform = self.current_state().transform * *matrix;
+                let new_transform = self.current_state().transform.then_transform(*matrix);
+
                 self.current_state_mut().transform = new_transform;
             }
 
@@ -249,7 +250,7 @@ impl VelloRenderer {
     }
 }
 
-impl RendererTrait for VelloRenderer {
+impl RenderBackend for VelloRenderer {
     type Window = WinitWindowProxy;
 
     fn window(&self) -> &Self::Window {

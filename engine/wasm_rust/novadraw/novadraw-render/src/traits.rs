@@ -18,10 +18,10 @@ pub trait WindowProxy: Send + Sync {
     fn height(&self) -> u32;
 }
 
-/// 渲染器 trait
+/// 渲染后端 trait
 ///
-/// 定义渲染器的通用接口。
-pub trait Renderer {
+/// 定义渲染后端的通用接口。
+pub trait RenderBackend {
     /// 关联的窗口代理类型
     type Window: WindowProxy;
 

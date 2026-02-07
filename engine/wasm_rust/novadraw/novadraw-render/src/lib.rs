@@ -23,4 +23,4 @@ pub mod backend;
 
 pub use command::{RenderCommand, RenderCommandKind};
 pub use context::NdCanvas;
-pub use traits::{Renderer, WindowProxy};
+pub use traits::{RenderBackend, WindowProxy};
