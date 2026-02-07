@@ -90,6 +90,40 @@ fn visit(node: &Node) {
 }
 ```
 
+### 子节点传播
+
+- **所有涉及子节点传播的操作必须在 SceneGraph 中使用迭代实现**
+- RuntimeBlock 和 Figure 只管理单个节点状态，不包含传播逻辑
+- 传播操作（translate、bounds 更新等）统一在 SceneGraph 层处理
+
+```rust
+// 正确：在 SceneGraph 中使用迭代实现传播
+impl SceneGraph {
+    pub fn prim_translate(&mut self, block_id: BlockId, dx: f64, dy: f64) {
+        let mut stack = vec![block_id];
+        while let Some(id) = stack.pop() {
+            // 更新当前节点
+            // ...
+            // 子节点入栈
+            for &child_id in &block.children {
+                stack.push(child_id);
+            }
+        }
+    }
+}
+
+// 禁止：在 Figure 或 RuntimeBlock 中递归传播
+impl Figure {
+    pub fn translate(&mut self, dx: f64, dy: f64) {
+        self.bounds.x += dx;
+        self.bounds.y += dy;
+        for child in &mut self.children {  // 禁止
+            child.translate(dx, dy);
+        }
+    }
+}
+```
+
 ### 性能敏感路径
 
 - 渲染循环中避免内存分配

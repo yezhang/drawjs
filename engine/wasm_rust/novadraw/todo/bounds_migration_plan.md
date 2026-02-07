@@ -21,7 +21,7 @@
 | 方法                            | d2  | 本项目 | 状态         |
 | ------------------------------- | --- | ------ | ------------ |
 | `bounds()`                      | ✅  | ✅     | 已实现       |
-| `setBounds()`                   | ✅  | ⏳     | 进行中       |
+| `setBounds()`                   | ✅  | ✅     | 已实现       |
 | `containsPoint()`               | ✅  | ✅     | 已实现       |
 | `hit_test()`                    | ✅  | ✅     | 已实现       |
 | `useLocalCoordinates()`         | ✅  | ✅     | 已实现       |
@@ -71,7 +71,7 @@
 | --- | --------------------------------------------------- | ------ | ------------ |
 | 1.1 | 修复命中测试坐标转换（当前测试失败）                | P0     | ✅ completed |
 | 1.2 | 实现 `translate()` 坐标传播，统一 bounds 为绝对坐标 | P1     | ✅ completed |
-| 1.3 | 实现 `setBounds()` 方法和 erase/repaint 语义        | P2     | 🔄 in_progress |
+| 1.3 | 实现 `setBounds()` 方法和 erase/repaint 语义        | P2     | ✅ completed |
 
 ### 阶段 2：坐标转换方法（中期）
 
@@ -182,41 +182,31 @@ pub fn prim_translate(&mut self, block_id: BlockId, dx: f64, dy: f64) {
 
 ---
 
-### 1.3 实现 setBounds() 方法
+### 1.3 实现 setBounds() 方法 ✅ 已完成
 
 **目标**：实现完整的 bounds 设置语义
 
-**设计**：
+**实现位置**：
+- `RuntimeBlock::set_bounds()` - `novadraw-scene/src/scene/mod.rs:158-164`
+- `SceneGraph::set_bounds()` - `novadraw-scene/src/scene/mod.rs:698-731`
 
-```rust
-fn set_bounds(&mut self, rect: Rect) {
-    let old_x = self.bounds.x;
-    let old_y = self.bounds.y;
+**最小实现方案**：
+- 计算位置偏移 (dx, dy)
+- 使用栈迭代调用 `prim_translate` 传播偏移到所有子节点
+- 更新自身的宽高
 
-    let resize = rect.width != self.bounds.width || rect.height != self.bounds.height;
-    let translate = rect.x != old_x || rect.y != old_y;
+**未实现（留待后续迭代）**：
+- `erase()` - 擦除旧位置（需渲染系统集成）
+- `repaint()` - 重绘新位置（需渲染系统集成）
+- `fireFigureMoved()` - 事件通知（需事件系统）
+- `fireCoordinateSystemChanged()` - 坐标根变化通知
+- `invalidate()` / `revalidate()` - 布局失效机制
 
-    if (resize || translate) && self.is_visible {
-        self.erase();  // 擦除旧位置
-    }
-
-    if translate {
-        let dx = rect.x - old_x;
-        let dy = rect.y - old_y;
-        self.prim_translate(dx, dy);
-    }
-
-    self.bounds = rect;
-
-    if translate || resize {
-        if resize {
-            self.invalidate();
-        }
-        self.fire_figure_moved();
-        self.repaint();
-    }
-}
-```
+**测试覆盖**：
+- `test_scene_set_bounds_basic` - 基本功能测试
+- `test_scene_set_bounds_position_only` - 仅位置变化测试
+- `test_scene_set_bounds_nested_propagation` - 嵌套传播测试
+- `test_scene_set_bounds_size_only` - 仅尺寸变化测试
 
 ---
 
@@ -235,6 +225,9 @@ fn set_bounds(&mut self, rect: Rect) {
 
 ---
 
+
+---
+
 ## 5. 依赖关系
 
 ```
@@ -244,7 +237,7 @@ fn set_bounds(&mut self, rect: Rect) {
 1.2 primTranslate       ✅ 已完成
     │
     ▼
-1.3 setBounds()         🔄 进行中
+1.3 setBounds()         ✅ 已完成
     │
     ▼
 2.1 translateFromParent ⏳ pending
