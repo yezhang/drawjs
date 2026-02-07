@@ -98,18 +98,11 @@ impl Figure for RectangleFigure {
     }
 
     fn paint_figure(&self, gc: &mut NdCanvas) {
-        if self.use_local_coordinates() {
-            // 本地坐标模式：prepare_context 已 translate，从 (0,0) 绘制
-            gc.fill_rect(0.0, 0.0, self.bounds.width, self.bounds.height, self.fill_color);
-            if let Some(color) = self.stroke_color {
-                gc.stroke_rect(0.0, 0.0, self.bounds.width, self.bounds.height, color, self.stroke_width);
-            }
-        } else {
-            // 绝对坐标模式：直接使用 bounds 的绝对坐标绘制（参考 d2 Figure.paintFigure）
-            gc.fill_rect(self.bounds.x, self.bounds.y, self.bounds.width, self.bounds.height, self.fill_color);
-            if let Some(color) = self.stroke_color {
-                gc.stroke_rect(self.bounds.x, self.bounds.y, self.bounds.width, self.bounds.height, color, self.stroke_width);
-            }
+        // Figure 始终在绝对坐标绘制（参考 d2 Figure.paintFigure）
+        // use_local_coordinates 仅影响子元素的坐标系统，不影响 Figure 自身的绘制位置
+        gc.fill_rect(self.bounds.x, self.bounds.y, self.bounds.width, self.bounds.height, self.fill_color);
+        if let Some(color) = self.stroke_color {
+            gc.stroke_rect(self.bounds.x, self.bounds.y, self.bounds.width, self.bounds.height, color, self.stroke_width);
         }
     }
 
