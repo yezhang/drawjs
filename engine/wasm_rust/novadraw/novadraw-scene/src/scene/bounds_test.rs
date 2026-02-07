@@ -547,3 +547,146 @@ fn test_empty_bounds() {
     let point_rect = Rectangle::new(10.0, 10.0, 1.0, 1.0);
     assert!(!rect.intersects(point_rect), "空矩形与任何矩形都不相交");
 }
+
+// ========== SceneGraph::set_bounds 测试 ==========
+
+/// 测试：SceneGraph::set_bounds 基本功能
+///
+/// 场景：parent(0,0,100,100) + child(10,10,50,50)
+/// 动作：set_bounds(parent, 20, 30, 150, 100)
+/// 期望：
+/// - parent bounds = (20, 30, 150, 100)
+/// - child bounds = (30, 40, 50, 50)（位置传播）
+#[test]
+fn test_scene_set_bounds_basic() {
+    let mut scene = SceneGraph::new();
+
+    let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
+    let parent_id = scene.set_contents(Box::new(parent));
+
+    let child = RectangleFigure::new(10.0, 10.0, 50.0, 50.0);
+    let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+    // 验证初始状态
+    let parent_bounds_before = scene.blocks.get(parent_id).unwrap().figure_bounds();
+    assert_eq!(parent_bounds_before.x, 0.0);
+    assert_eq!(parent_bounds_before.y, 0.0);
+    assert_eq!(parent_bounds_before.width, 100.0);
+    assert_eq!(parent_bounds_before.height, 100.0);
+
+    let child_bounds_before = scene.blocks.get(child_id).unwrap().figure_bounds();
+    assert_eq!(child_bounds_before.x, 10.0);
+    assert_eq!(child_bounds_before.y, 10.0);
+
+    // set_bounds: 新位置 (20, 30)，新尺寸 (150, 100)
+    scene.set_bounds(parent_id, 20.0, 30.0, 150.0, 100.0);
+
+    // 验证 parent
+    let parent_bounds = scene.blocks.get(parent_id).unwrap().figure_bounds();
+    assert_eq!(parent_bounds.x, 20.0, "父节点 x 应为 20");
+    assert_eq!(parent_bounds.y, 30.0, "父节点 y 应为 30");
+    assert_eq!(parent_bounds.width, 150.0, "父节点 width 应为 150");
+    assert_eq!(parent_bounds.height, 100.0, "父节点 height 应为 100");
+
+    // 验证 child 位置被传播（+20, +30）
+    let child_bounds = scene.blocks.get(child_id).unwrap().figure_bounds();
+    assert_eq!(child_bounds.x, 30.0, "子节点 x 应为 30 (10 + 20)");
+    assert_eq!(child_bounds.y, 40.0, "子节点 y 应为 40 (10 + 30)");
+    assert_eq!(child_bounds.width, 50.0, "子节点 width 不变");
+    assert_eq!(child_bounds.height, 50.0, "子节点 height 不变");
+}
+
+/// 测试：SceneGraph::set_bounds 仅位置变化
+///
+/// 场景：parent(0,0,100,100) + child(10,10,50,50)
+/// 动作：set_bounds(parent, 50, 60, 100, 100)（只变位置，不变尺寸）
+/// 期望：只传播位置偏移，尺寸不变
+#[test]
+fn test_scene_set_bounds_position_only() {
+    let mut scene = SceneGraph::new();
+
+    let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
+    let parent_id = scene.set_contents(Box::new(parent));
+
+    let child = RectangleFigure::new(10.0, 10.0, 50.0, 50.0);
+    let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+    // 只改变位置：偏移 (+50, +60)
+    scene.set_bounds(parent_id, 50.0, 60.0, 100.0, 100.0);
+
+    let parent_bounds = scene.blocks.get(parent_id).unwrap().figure_bounds();
+    assert_eq!(parent_bounds.x, 50.0);
+    assert_eq!(parent_bounds.y, 60.0);
+    assert_eq!(parent_bounds.width, 100.0);
+    assert_eq!(parent_bounds.height, 100.0);
+
+    let child_bounds = scene.blocks.get(child_id).unwrap().figure_bounds();
+    assert_eq!(child_bounds.x, 60.0, "子节点 x 应为 60 (10 + 50)");
+    assert_eq!(child_bounds.y, 70.0, "子节点 y 应为 70 (10 + 60)");
+}
+
+/// 测试：SceneGraph::set_bounds 嵌套传播
+///
+/// 场景：root(0,0,200,200) → parent(50,50,100,100) → child(10,10,50,50)
+/// 动作：set_bounds(root, 10, 10, 200, 200)
+/// 期望：所有后代同步平移
+#[test]
+fn test_scene_set_bounds_nested_propagation() {
+    let mut scene = SceneGraph::new();
+
+    let root = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
+    let root_id = scene.set_contents(Box::new(root));
+
+    let parent = RectangleFigure::new(50.0, 50.0, 100.0, 100.0);
+    let parent_id = scene.add_child_to(root_id, Box::new(parent));
+
+    let child = RectangleFigure::new(10.0, 10.0, 50.0, 50.0);
+    let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+    // set_bounds: 偏移 (+10, +10)
+    scene.set_bounds(root_id, 10.0, 10.0, 200.0, 200.0);
+
+    // 验证所有节点都被平移
+    let root_bounds = scene.blocks.get(root_id).unwrap().figure_bounds();
+    assert_eq!(root_bounds.x, 10.0);
+    assert_eq!(root_bounds.y, 10.0);
+
+    let parent_bounds = scene.blocks.get(parent_id).unwrap().figure_bounds();
+    assert_eq!(parent_bounds.x, 60.0, "父节点 x 应为 60 (50 + 10)");
+    assert_eq!(parent_bounds.y, 60.0, "父节点 y 应为 60 (50 + 10)");
+
+    let child_bounds = scene.blocks.get(child_id).unwrap().figure_bounds();
+    assert_eq!(child_bounds.x, 20.0, "子节点 x 应为 20 (10 + 10)");
+    assert_eq!(child_bounds.y, 20.0, "子节点 y 应为 20 (10 + 10)");
+}
+
+/// 测试：SceneGraph::set_bounds 仅尺寸变化
+///
+/// 场景：parent(0,0,100,100) + child(10,10,50,50)
+/// 动作：set_bounds(parent, 0, 0, 200, 150)（只变尺寸，不变位置）
+/// 期望：位置不变，尺寸更新，子节点位置不变
+#[test]
+fn test_scene_set_bounds_size_only() {
+    let mut scene = SceneGraph::new();
+
+    let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
+    let parent_id = scene.set_contents(Box::new(parent));
+
+    let child = RectangleFigure::new(10.0, 10.0, 50.0, 50.0);
+    let child_id = scene.add_child_to(parent_id, Box::new(child));
+
+    // 只改变尺寸：位置不变
+    scene.set_bounds(parent_id, 0.0, 0.0, 200.0, 150.0);
+
+    let parent_bounds = scene.blocks.get(parent_id).unwrap().figure_bounds();
+    assert_eq!(parent_bounds.x, 0.0, "x 不变");
+    assert_eq!(parent_bounds.y, 0.0, "y 不变");
+    assert_eq!(parent_bounds.width, 200.0);
+    assert_eq!(parent_bounds.height, 150.0);
+
+    let child_bounds = scene.blocks.get(child_id).unwrap().figure_bounds();
+    assert_eq!(child_bounds.x, 10.0, "子节点 x 不变");
+    assert_eq!(child_bounds.y, 10.0, "子节点 y 不变");
+    assert_eq!(child_bounds.width, 50.0);
+    assert_eq!(child_bounds.height, 50.0);
+}

@@ -11,8 +11,10 @@ use uuid::Uuid;
 
 use super::layout::LayoutManager;
 
-pub mod figure_paint;
-pub use figure_paint::{FigureRenderer, PaintTask, SceneGraphRenderRef};
+// 渲染模块
+pub mod render_recursive;
+
+pub use render_recursive::{FigureRenderer, SceneGraphRenderRef};
 
 #[cfg(test)]
 pub mod bounds_test;
@@ -154,14 +156,19 @@ impl RuntimeBlock {
     pub fn set_figure(&mut self, figure: Box<dyn super::Figure>) {
         self.figure = figure;
     }
+
+    /// 设置图形边界（仅自身，不传播）
+    ///
+    /// 注意：此方法只更新自身的 bounds，不传播到子节点。
+    /// 需要传播到子节点的操作应在 SceneGraph 级别使用迭代实现。
+    pub fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        self.figure.set_bounds(x, y, width, height);
+    }
 }
 
 #[inline]
 fn rect_intersects(a: &Rectangle, b: &Rectangle) -> bool {
-    a.x < b.x + b.width
-        && a.x + a.width > b.x
-        && a.y < b.y + b.height
-        && a.y + a.height > b.y
+    a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 }
 
 /// 场景图
@@ -457,27 +464,20 @@ impl SceneGraph {
         self.hit_test(point).map(|(target, _)| target)
     }
 
-    /// 渲染场景图（Trampoline 模式）
+    /// 渲染场景图
     ///
-    /// 使用 Trampoline 模式实现 Figure 树的渲染遍历。
-    /// 核心思想：将所有操作转换为任务，放入队列中顺序执行。
-    ///
+    /// 使用递归实现 Figure 树的渲染遍历。
     /// 渲染顺序（参考 d2）：
-    /// 1. paintClientArea() - 客户区域（包含子元素）
-    /// 2. paintBorder() - 绘制边框
-    /// 3. paintHighlight() - 绘制选中高亮
-    ///
-    /// # 优势
-    /// - 避免递归导致的栈溢出
-    /// - 任务在堆上，无深度限制
-    /// - 状态完全由任务队列控制
+    /// 1. paintFigure() - 绘制自身
+    /// 2. paintClientArea() - 绘制子元素
+    /// 3. paintBorder() - 绘制边框
     pub fn render(&self) -> NdCanvas {
         let mut gc = NdCanvas::new();
         self.render_to(&mut gc);
         gc
     }
 
-    /// 使用 Trampoline 模式渲染到上下文
+    /// 渲染到上下文
     fn render_to(&self, gc: &mut NdCanvas) {
         let start_id = self.contents.unwrap_or(self.root);
         let scene_ref = SceneGraphRenderRef {
@@ -687,47 +687,84 @@ impl SceneGraph {
         }
     }
 
-    /// 获取节点的绝对位置
+    /// 设置节点的 bounds
     ///
-    /// 对应 d2: translateToAbsolute
+    /// 对应 d2: setBounds(Rectangle)
+    /// 核心逻辑：
+    /// 1. 计算位置偏移
+    /// 2. 使用栈迭代调用 prim_translate 传播偏移到所有子节点
+    /// 3. 更新自身的宽高
+    ///
+    /// 注意：所有子节点传播操作必须使用迭代实现，禁止递归
+    pub fn set_bounds(&mut self, block_id: BlockId, x: f64, y: f64, width: f64, height: f64) {
+        let (dx, dy, needs_width_height_update) = {
+            if let Some(block) = self.blocks.get(block_id) {
+                let old_bounds = block.figure.bounds();
+                let dx = x - old_bounds.x;
+                let dy = y - old_bounds.y;
+                let needs_width_height_update =
+                    width != old_bounds.width || height != old_bounds.height;
+                (dx, dy, needs_width_height_update)
+            } else {
+                return;
+            }
+        };
+
+        // 1. 传播位置偏移到所有子节点（使用栈迭代）
+        if dx != 0.0 || dy != 0.0 {
+            self.prim_translate(block_id, dx, dy);
+        }
+
+        // 2. 更新自身的宽高（x, y 已由 prim_translate 更新）
+        if needs_width_height_update {
+            if let Some(block) = self.blocks.get_mut(block_id) {
+                block.figure.set_bounds(x, y, width, height);
+            }
+        }
+    }
+
+    /// 将局部坐标转换为绝对坐标
+    ///
+    /// 对应 d2: translateToAbsolute(Translatable)
     ///
     /// # 算法
     ///
-    /// 从当前节点向根遍历：
-    /// - 如果父节点是坐标根（useLocalCoordinates = true），累加当前节点的 bounds
-    /// - 否则继续向上（当前节点的 bounds 已相对于最近坐标根）
-    /// - 到达根时停止
+    /// 使用栈迭代实现：
+    /// 1. 从当前节点向上遍历，记录路径上的坐标根
+    /// 2. 逆向遍历路径，累加每个坐标根的 bounds
     ///
     /// # 注意
     ///
-    /// 此方法返回的是相对于最近坐标根的偏移量。如果节点的父节点不是坐标根，
-    /// 则返回当前节点的 bounds（即相对于最近坐标根的位置）。
-    pub fn translate_to_absolute(&self, block_id: BlockId) -> (f64, f64) {
-        let mut x = 0.0;
-        let mut y = 0.0;
+    /// 绝对坐标是相对于场景根的坐标。
+    /// 此方法将 Translatable 对象从局部坐标（相对于最近坐标根）转换为绝对坐标。
+    ///
+    /// # 示例
+    ///
+    /// 假设：
+    /// - coord_root bounds = (20, 30)
+    /// - 本地坐标 (10, 5)
+    /// - 绝对坐标 = (20 + 10, 30 + 5) = (30, 35)
+    pub fn translate_to_absolute_mut<T: Translatable>(&self, block_id: BlockId, t: &mut T) {
+        // 第一阶段：向上遍历，记录所有"父节点是坐标根"的节点
+        let mut roots: Vec<BlockId> = Vec::new();
+        let mut current = Some(block_id);
 
-        let mut current_id = Some(block_id);
-        while let Some(id) = current_id {
+        while let Some(id) = current {
             if let Some(block) = self.blocks.get(id) {
-                // 检查父节点是否是坐标根
-                if let Some(parent_id) = block.parent {
-                    if let Some(parent) = self.blocks.get(parent_id) {
-                        if parent.figure.use_local_coordinates() {
-                            // 父节点是坐标根，累加当前节点的 bounds
-                            let bounds = block.figure.bounds();
-                            x += bounds.x;
-                            y += bounds.y;
-                        }
-                    }
+                if block.figure.use_local_coordinates() {
+                    roots.push(id);
                 }
-
-                current_id = block.parent;
-            } else {
-                break;
+                current = block.parent;
             }
         }
 
-        (x, y)
+        // 第二阶段：逆向遍历，累加每个坐标根的 bounds
+        for id in roots.iter().rev() {
+            if let Some(block) = self.blocks.get(*id) {
+                let bounds = block.figure.bounds();
+                t.translate(bounds.x, bounds.y);
+            }
+        }
     }
 
     /// 检查节点是否是坐标根
@@ -886,7 +923,7 @@ mod tests {
         let gc = scene.render();
         let cmd_count = gc.commands().len();
 
-        // Trampoline 渲染：每个矩形产生多个命令
+        // 渲染：每个矩形产生多个命令
         // parent + 3 个子矩形 = 4 个图形
         // 新渲染流程（每个图形）：
         //   - save (transform)
@@ -900,7 +937,11 @@ mod tests {
         // parent: save + save + translate + clip + fill + restore + stroke + restore = 8
         // 每个 child: save + save + translate + clip + fill + restore + restore = 7
         // Total: 8 + 3 * 7 = 29
-        assert!(cmd_count >= 20 && cmd_count <= 35, "应有 20-35 个渲染命令，实际为 {}", cmd_count);
+        assert!(
+            cmd_count >= 20 && cmd_count <= 35,
+            "应有 20-35 个渲染命令，实际为 {}",
+            cmd_count
+        );
     }
 
     /// 测试渲染顺序：嵌套层次
@@ -940,11 +981,15 @@ mod tests {
         let gc = scene.render();
         let cmd_count = gc.commands().len();
 
-        // Trampoline 渲染：每个图形产生多个命令
+        // 渲染：每个图形产生多个命令
         // 3 个图形：root + child + grandchild
         // 每个图形的命令数（参见 test_render_order_z_order）
         // Total: 8 (root) + 7 (child) + 7 (grandchild) = 22
-        assert!(cmd_count >= 12 && cmd_count <= 25, "应有 12-25 个渲染命令，实际为 {}", cmd_count);
+        assert!(
+            cmd_count >= 12 && cmd_count <= 25,
+            "应有 12-25 个渲染命令，实际为 {}",
+            cmd_count
+        );
     }
 
     /// 测试可见性过滤
@@ -972,10 +1017,14 @@ mod tests {
         let gc = scene.render();
         let cmd_count = gc.commands().len();
 
-        // Trampoline 渲染：parent + visible_child = 2 个图形
+        // 渲染：parent + visible_child = 2 个图形
         // 每个图形的命令数（参见 test_render_order_z_order）
         // parent: 8, child: 7, Total: 15
-        assert!(cmd_count >= 8 && cmd_count <= 18, "应只渲染可见元素，实际为 {} 个命令", cmd_count);
+        assert!(
+            cmd_count >= 8 && cmd_count <= 18,
+            "应只渲染可见元素，实际为 {} 个命令",
+            cmd_count
+        );
     }
 
     /// 测试变换累加
@@ -995,22 +1044,35 @@ mod tests {
         // 打印场景结构
         {
             eprintln!("\n=== 测试变换累加 ===");
-            eprintln!("Parent bounds: {:?}", scene.blocks.get(parent_id).unwrap().figure_bounds());
-            eprintln!("Child bounds: {:?}", scene.blocks.get(parent_id).unwrap().children);
+            eprintln!(
+                "Parent bounds: {:?}",
+                scene.blocks.get(parent_id).unwrap().figure_bounds()
+            );
+            eprintln!(
+                "Child bounds: {:?}",
+                scene.blocks.get(parent_id).unwrap().children
+            );
         }
 
-        // Trampoline 渲染应能正确处理嵌套层次
+        // 渲染应能正确处理嵌套层次
         let gc = scene.render();
         let commands = gc.commands();
 
         // 验证：parent + child = 2 个图形
         // 每个图形的命令数（参见 test_render_order_z_order）
         // parent: 8, child: 7, Total: 15
-        assert!(commands.len() >= 8, "应有足够的渲染命令，实际为 {}", commands.len());
+        assert!(
+            commands.len() >= 8,
+            "应有足够的渲染命令，实际为 {}",
+            commands.len()
+        );
 
         // 验证有 FillRect 命令
         let has_fill_rect = commands.iter().any(|cmd| {
-            matches!(cmd.kind, novadraw_render::command::RenderCommandKind::FillRect { .. })
+            matches!(
+                cmd.kind,
+                novadraw_render::command::RenderCommandKind::FillRect { .. }
+            )
         });
         assert!(has_fill_rect, "应有 FillRect 命令");
     }
@@ -1079,112 +1141,6 @@ mod tests {
         let child_bounds = scene.blocks.get(child_id).unwrap().figure_bounds();
         assert_eq!(child_bounds.x, 15.0, "子节点 x 应为 15 (10 + 5)");
         assert_eq!(child_bounds.y, 20.0, "子节点 y 应为 20 (10 + 10)");
-    }
-
-    /// 测试 translate_to_absolute 基本功能
-    ///
-    /// 场景：计算节点的绝对位置，当父节点是坐标根时
-    /// 期望：返回相对于父坐标根的 bounds
-    #[test]
-    fn test_translate_to_absolute_basic() {
-        let mut scene = SceneGraph::new();
-
-        // 创建一个使用本地坐标的 Figure 作为坐标根
-        struct CoordinateRootFigure {
-            bounds: Rectangle,
-        }
-        impl Figure for CoordinateRootFigure {
-            fn bounds(&self) -> Rectangle {
-                self.bounds
-            }
-            fn use_local_coordinates(&self) -> bool {
-                true  // 这个 Figure 是坐标根
-            }
-            fn as_rectangle(&self) -> Option<&RectangleFigure> {
-                None
-            }
-            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-                None
-            }
-            fn name(&self) -> &'static str {
-                "CoordinateRootFigure"
-            }
-        }
-
-        // contents (0,0) -> parent (坐标根, 0,0) -> child (30, 40)
-        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
-        let contents_id = scene.set_contents(Box::new(contents));
-
-        // parent 是坐标根
-        let parent_id = scene.add_child_to(
-            contents_id,
-            Box::new(CoordinateRootFigure {
-                bounds: Rectangle::new(0.0, 0.0, 100.0, 100.0),
-            }),
-        );
-
-        // child 相对于 parent
-        let child = RectangleFigure::new(30.0, 40.0, 50.0, 50.0);
-        let child_id = scene.add_child_to(parent_id, Box::new(child));
-
-        // 计算子节点的绝对位置
-        let (x, y) = scene.translate_to_absolute(child_id);
-        assert_eq!(x, 30.0, "子节点相对于父坐标根，x 应为 30");
-        assert_eq!(y, 40.0, "子节点相对于父坐标根，y 应为 40");
-    }
-
-    /// 测试 translate_to_absolute 嵌套场景
-    ///
-    /// 场景：计算深层嵌套节点的绝对位置，当祖父节点是坐标根时
-    /// 期望：返回从坐标根到当前节点路径上所有节点 bounds 的累加
-    #[test]
-    fn test_translate_to_absolute_nested() {
-        let mut scene = SceneGraph::new();
-
-        // 创建一个使用本地坐标的 Figure 作为坐标根
-        struct CoordinateRootFigure {
-            bounds: Rectangle,
-        }
-        impl Figure for CoordinateRootFigure {
-            fn bounds(&self) -> Rectangle {
-                self.bounds
-            }
-            fn use_local_coordinates(&self) -> bool {
-                true  // 这个 Figure 是坐标根
-            }
-            fn as_rectangle(&self) -> Option<&RectangleFigure> {
-                None
-            }
-            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-                None
-            }
-            fn name(&self) -> &'static str {
-                "CoordinateRootFigure"
-            }
-        }
-
-        // contents (0,0) -> coord_root (20,30) -> child (10,5)
-        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
-        let contents_id = scene.set_contents(Box::new(contents));
-
-        // coord_root 是坐标根
-        let coord_root_id = scene.add_child_to(
-            contents_id,
-            Box::new(CoordinateRootFigure {
-                bounds: Rectangle::new(20.0, 30.0, 100.0, 100.0),
-            }),
-        );
-
-        // child 相对于 coord_root
-        let child = RectangleFigure::new(10.0, 5.0, 50.0, 50.0);
-        let child_id = scene.add_child_to(coord_root_id, Box::new(child));
-
-        // 计算子节点的绝对位置
-        let (x, y) = scene.translate_to_absolute(child_id);
-        // coord_root 是坐标根，child 相对于 coord_root
-        // 累加 child.bounds = (10, 5)
-        assert_eq!(x, 10.0, "子节点相对于坐标根，x 应为 10");
-        assert_eq!(y, 5.0, "子节点相对于坐标根，y 应为 5");
     }
 
     /// 测试 is_coordinate_system 功能
@@ -1592,5 +1548,168 @@ mod tests {
         scene.translate_to_relative(child_id, &mut rect);
         assert_eq!(rect.x, 30.0, "x 应为 40 - 10");
         assert_eq!(rect.y, 40.0, "y 应为 60 - 20");
+    }
+
+    // ========== translate_to_absolute_mut 测试 ==========
+
+    /// 测试 translate_to_absolute_mut 基本功能
+    ///
+    /// 场景：父节点是坐标根，bounds = (20, 30)
+    /// 期望：本地坐标 (10, 5) 转换为绝对坐标 (30, 35)
+    #[test]
+    fn test_translate_to_absolute_mut_basic() {
+        let mut scene = SceneGraph::new();
+
+        struct CoordinateRootFigure {
+            bounds: Rectangle,
+        }
+        impl Figure for CoordinateRootFigure {
+            fn bounds(&self) -> Rectangle {
+                self.bounds
+            }
+            fn use_local_coordinates(&self) -> bool {
+                true
+            }
+            fn as_rectangle(&self) -> Option<&RectangleFigure> {
+                None
+            }
+            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+                None
+            }
+            fn name(&self) -> &'static str {
+                "CoordinateRootFigure"
+            }
+        }
+
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        // coord_root (20, 30)
+        let coord_root_id = scene.add_child_to(
+            contents_id,
+            Box::new(CoordinateRootFigure {
+                bounds: Rectangle::new(20.0, 30.0, 100.0, 100.0),
+            }),
+        );
+
+        // child 相对于 coord_root (10, 5)
+        let child = RectangleFigure::new(10.0, 5.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(coord_root_id, Box::new(child));
+
+        // 本地坐标 (10, 5) 转换为绝对坐标 (30, 35)
+        let mut point = (10.0, 5.0);
+        scene.translate_to_absolute_mut(child_id, &mut point);
+        assert_eq!(point.0, 30.0, "x 应为 10 + 20");
+        assert_eq!(point.1, 35.0, "y 应为 5 + 30");
+    }
+
+    /// 测试 translate_to_absolute_mut 嵌套坐标根
+    ///
+    /// 场景：多层坐标根
+    /// 期望：正确累加多个坐标根的 bounds
+    #[test]
+    fn test_translate_to_absolute_mut_nested() {
+        let mut scene = SceneGraph::new();
+
+        struct CoordinateRootFigure {
+            bounds: Rectangle,
+        }
+        impl Figure for CoordinateRootFigure {
+            fn bounds(&self) -> Rectangle {
+                self.bounds
+            }
+            fn use_local_coordinates(&self) -> bool {
+                true
+            }
+            fn as_rectangle(&self) -> Option<&RectangleFigure> {
+                None
+            }
+            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+                None
+            }
+            fn name(&self) -> &'static str {
+                "CoordinateRootFigure"
+            }
+        }
+
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        // coord_root1 (10, 20)
+        let coord_root1_id = scene.add_child_to(
+            contents_id,
+            Box::new(CoordinateRootFigure {
+                bounds: Rectangle::new(10.0, 20.0, 100.0, 100.0),
+            }),
+        );
+
+        // coord_root2 相对于 coord_root1 (5, 10)
+        let coord_root2_id = scene.add_child_to(
+            coord_root1_id,
+            Box::new(CoordinateRootFigure {
+                bounds: Rectangle::new(5.0, 10.0, 50.0, 50.0),
+            }),
+        );
+
+        // child 相对于 coord_root2 (15, 25)
+        let child = RectangleFigure::new(15.0, 25.0, 30.0, 30.0);
+        let child_id = scene.add_child_to(coord_root2_id, Box::new(child));
+
+        // 绝对坐标 = coord_root1 + coord_root2 + child = (10+5+15, 20+10+25) = (30, 55)
+        let mut point = (15.0, 25.0);
+        scene.translate_to_absolute_mut(child_id, &mut point);
+        assert_eq!(point.0, 30.0, "x 应为 15 + 10 + 5");
+        assert_eq!(point.1, 55.0, "y 应为 25 + 20 + 10");
+    }
+
+    /// 测试 translate_to_absolute_mut Rectangle 类型
+    ///
+    /// 场景：使用 Rectangle 类型进行坐标转换
+    /// 期望：Rectangle 的 x, y 被正确转换
+    #[test]
+    fn test_translate_to_absolute_mut_rect() {
+        let mut scene = SceneGraph::new();
+
+        struct CoordinateRootFigure {
+            bounds: Rectangle,
+        }
+        impl Figure for CoordinateRootFigure {
+            fn bounds(&self) -> Rectangle {
+                self.bounds
+            }
+            fn use_local_coordinates(&self) -> bool {
+                true
+            }
+            fn as_rectangle(&self) -> Option<&RectangleFigure> {
+                None
+            }
+            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
+                None
+            }
+            fn name(&self) -> &'static str {
+                "CoordinateRootFigure"
+            }
+        }
+
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        // coord_root (20, 30)
+        let coord_root_id = scene.add_child_to(
+            contents_id,
+            Box::new(CoordinateRootFigure {
+                bounds: Rectangle::new(20.0, 30.0, 100.0, 100.0),
+            }),
+        );
+
+        // child 相对于 coord_root (10, 5)
+        let child = RectangleFigure::new(10.0, 5.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(coord_root_id, Box::new(child));
+
+        // 本地坐标 Rectangle (10, 5, 50, 50) 转换为绝对坐标 (30, 35, 50, 50)
+        let mut rect = Rectangle::new(10.0, 5.0, 50.0, 50.0);
+        scene.translate_to_absolute_mut(child_id, &mut rect);
+        assert_eq!(rect.x, 30.0, "x 应为 10 + 20");
+        assert_eq!(rect.y, 35.0, "y 应为 5 + 30");
     }
 }
