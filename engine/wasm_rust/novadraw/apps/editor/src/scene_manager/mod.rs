@@ -17,9 +17,9 @@ pub enum SceneType {
 }
 
 impl SceneManager {
-    /// 创建默认场景（场景0：基础四个定位点）
+    /// 创建默认场景（场景2：嵌套场景，含透明根节点和相对坐标）
     pub fn new() -> Self {
-        Self::with_scene(SceneType::BasicAnchors)
+        Self::with_scene(SceneType::NestedWithRoot)
     }
 
     /// 根据场景类型创建场景

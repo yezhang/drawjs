@@ -57,6 +57,7 @@ impl VelloDemo {
 
         if let Some(render_context) = self.render_context.as_mut() {
             if let Some(surface) = self.surface.as_mut() {
+                // Only resize the internal targets, not the wgpu surface
                 render_context.resize_surface(surface, new_size.width, new_size.height);
             }
         }
@@ -174,7 +175,8 @@ impl ApplicationHandler for VelloDemo {
                 let scale_factor = self.window.as_ref().unwrap().scale_factor();
                 let width = (new_size.width as f64 * scale_factor) as u32;
                 let height = (new_size.height as f64 * scale_factor) as u32;
-                self.resize(new_size);
+
+                // Recreate surface on resize
                 self.create_surface(width, height);
             }
             WindowEvent::RedrawRequested => {

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::scene_manager::SceneManager;
-use novadraw::traits::{Renderer, WindowProxy};
+use novadraw::traits::{RenderBackend, WindowProxy};
 use winit::dpi::{self, PhysicalSize};
 use winit::event::ElementState;
 use winit::window::WindowAttributes;
