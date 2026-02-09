@@ -19,6 +19,8 @@ pub struct GraphicsApp {
     renderer: Option<VelloRenderer>,
     scene_manager: Option<SceneManager>,
     cached_window: Option<Arc<Window>>,
+    /// 是否使用迭代渲染模式
+    use_iterative_render: bool,
 }
 
 impl GraphicsApp {
@@ -27,6 +29,7 @@ impl GraphicsApp {
             renderer: None,
             scene_manager: None,
             cached_window: None,
+            use_iterative_render: false,
         }
     }
 
@@ -39,7 +42,11 @@ impl GraphicsApp {
             return;
         };
 
-        let render_ctx = scene_manager.scene().render();
+        let render_ctx = if self.use_iterative_render {
+            scene_manager.scene().render_iterative()
+        } else {
+            scene_manager.scene().render()
+        };
         renderer.render(render_ctx.commands());
     }
 }
@@ -55,7 +62,7 @@ impl ApplicationHandler<()> for GraphicsApp {
                 event_loop
                     .create_window(
                         WindowAttributes::default()
-                            .with_title("Novadraw - 渲染验证 (按 0-5 切换场景)")
+                            .with_title("Novadraw - 渲染验证 (按 0-5 切换场景, I 切换渲染模式)")
                             .with_inner_size(dpi::LogicalSize::new(800, 600))
                             .with_resizable(true),
                     )
@@ -169,6 +176,19 @@ impl ApplicationHandler<()> for GraphicsApp {
                             }
                         }
                     }
+                    PhysicalKey::Code(KeyCode::KeyI) => {
+                        // 按 I 键：切换递归/迭代渲染模式
+                        self.use_iterative_render = !self.use_iterative_render;
+                        println!(
+                            "渲染模式: {}",
+                            if self.use_iterative_render {
+                                "迭代渲染"
+                            } else {
+                                "递归渲染"
+                            }
+                        );
+                        self.redraw();
+                    }
                     _ => {}
                 }
             }
@@ -199,6 +219,7 @@ pub fn start_app() -> Result<(), Box<dyn std::error::Error>> {
     println!("  按 0-5 切换场景：");
     println!("    0=基础定位点 1=嵌套父子 2=嵌套(含根) 3=Z-order 4=不可见 5=平移验证");
     println!("  按 T 键：在场景 5 中平移父节点");
+    println!("  按 I 键：切换递归/迭代渲染模式");
     println!("  按 ESC 退出");
     event_loop.run_app(&mut app)?;
 

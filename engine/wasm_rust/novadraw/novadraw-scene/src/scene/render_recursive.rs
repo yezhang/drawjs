@@ -148,7 +148,7 @@ impl<'a> FigureRenderer<'a> {
                 Some(b) if b.is_visible => b,
                 _ => return,
             };
-            block.children.iter().copied().collect()
+            block.children.to_vec()
         };
 
         // 正序遍历（与 d2 一致）

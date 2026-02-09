@@ -13,8 +13,10 @@ use super::layout::LayoutManager;
 
 // 渲染模块
 pub mod render_recursive;
+pub mod render_iterative;
 
 pub use render_recursive::{FigureRenderer, SceneGraphRenderRef};
+pub use render_iterative::FigureRendererIter;
 
 #[cfg(test)]
 pub mod bounds_test;
@@ -477,13 +479,36 @@ impl SceneGraph {
         gc
     }
 
-    /// 渲染到上下文
+    /// 渲染到上下文（递归实现）
     fn render_to(&self, gc: &mut NdCanvas) {
         let start_id = self.contents.unwrap_or(self.root);
         let scene_ref = SceneGraphRenderRef {
             blocks: &self.blocks,
         };
         let mut renderer = FigureRenderer::new(&scene_ref, gc);
+        renderer.render(start_id);
+    }
+
+    /// 迭代渲染场景图
+    ///
+    /// 使用显式栈实现 Figure 树的渲染遍历，避免递归栈溢出。
+    /// 渲染顺序与 `render()` 相同：
+    /// 1. paintFigure() - 绘制自身
+    /// 2. paintClientArea() - 绘制子元素
+    /// 3. paintBorder() - 绘制边框
+    pub fn render_iterative(&self) -> NdCanvas {
+        let mut gc = NdCanvas::new();
+        self.render_to_iterative(&mut gc);
+        gc
+    }
+
+    /// 渲染到上下文（迭代实现）
+    fn render_to_iterative(&self, gc: &mut NdCanvas) {
+        let start_id = self.contents.unwrap_or(self.root);
+        let scene_ref = SceneGraphRenderRef {
+            blocks: &self.blocks,
+        };
+        let mut renderer = FigureRendererIter::new(&scene_ref, gc);
         renderer.render(start_id);
     }
 
@@ -880,6 +905,7 @@ impl Default for SceneGraph {
 mod tests {
     use super::super::figure::{Figure, RectangleFigure};
     use crate::{Rectangle, SceneGraph};
+    use crate::scene::SceneGraphRenderRef;
 
     /// 测试渲染顺序：Z-order 验证
     ///
@@ -1711,5 +1737,178 @@ mod tests {
         scene.translate_to_absolute_mut(child_id, &mut rect);
         assert_eq!(rect.x, 30.0, "x 应为 10 + 20");
         assert_eq!(rect.y, 35.0, "y 应为 5 + 30");
+    }
+
+    // ========== 迭代渲染测试 ==========
+
+    /// 测试迭代渲染：嵌套层次
+    ///
+    /// 场景：父 → 子1 → 孙1
+    /// 期望：迭代渲染与递归渲染产生相同数量的命令
+    #[test]
+    fn test_iterative_render_nested() {
+        use super::render_iterative::FigureRendererIter;
+
+        let mut scene = SceneGraph::new();
+
+        // 根
+        let root = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
+        let root_id = scene.set_contents(Box::new(root));
+
+        // 子
+        let child = RectangleFigure::new(50.0, 50.0, 100.0, 100.0);
+        let child_id = scene.add_child_to(root_id, Box::new(child));
+
+        // 孙
+        let grandchild = RectangleFigure::new(60.0, 60.0, 30.0, 30.0);
+        let _gc_id = scene.add_child_to(child_id, Box::new(grandchild));
+
+        // 递归渲染
+        let gc_recursive = scene.render();
+        let cmd_recursive = gc_recursive.commands().len();
+
+        // 迭代渲染
+        let mut gc_iterative = novadraw_render::NdCanvas::new();
+        let scene_ref = SceneGraphRenderRef {
+            blocks: &scene.blocks,
+        };
+        let mut renderer = FigureRendererIter::new(&scene_ref, &mut gc_iterative);
+        renderer.render(root_id);
+        let cmd_iterative = gc_iterative.commands().len();
+
+        // 验证：两种渲染方式产生相同数量的命令
+        assert_eq!(
+            cmd_recursive, cmd_iterative,
+            "迭代渲染应产生 {} 个命令，实际为 {}",
+            cmd_recursive, cmd_iterative
+        );
+    }
+
+    /// 测试迭代渲染：Z-order
+    ///
+    /// 场景：父容器包含三个子矩形
+    /// 期望：迭代渲染与递归渲染产生相同数量的命令
+    #[test]
+    fn test_iterative_render_z_order() {
+        use super::render_iterative::FigureRendererIter;
+
+        let mut scene = SceneGraph::new();
+
+        // 创建父容器（100x100）
+        let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
+        let parent_id = scene.set_contents(Box::new(parent));
+
+        // 添加三个子矩形
+        let child1 = RectangleFigure::new(10.0, 10.0, 20.0, 20.0);
+        let _c1 = scene.add_child_to(parent_id, Box::new(child1));
+
+        let child2 = RectangleFigure::new(30.0, 30.0, 20.0, 20.0);
+        let _c2 = scene.add_child_to(parent_id, Box::new(child2));
+
+        let child3 = RectangleFigure::new(50.0, 50.0, 20.0, 20.0);
+        let _c3 = scene.add_child_to(parent_id, Box::new(child3));
+
+        // 递归渲染
+        let gc_recursive = scene.render();
+        let cmd_recursive = gc_recursive.commands().len();
+
+        // 迭代渲染
+        let mut gc_iterative = novadraw_render::NdCanvas::new();
+        let scene_ref = SceneGraphRenderRef {
+            blocks: &scene.blocks,
+        };
+        let mut renderer = FigureRendererIter::new(&scene_ref, &mut gc_iterative);
+        renderer.render(parent_id);
+        let cmd_iterative = gc_iterative.commands().len();
+
+        // 验证：两种渲染方式产生相同数量的命令
+        assert_eq!(
+            cmd_recursive, cmd_iterative,
+            "迭代渲染应产生 {} 个命令，实际为 {}",
+            cmd_recursive, cmd_iterative
+        );
+    }
+
+    /// 测试迭代渲染：可见性过滤
+    ///
+    /// 场景：父容器包含可见和不可见子元素
+    /// 期望：迭代渲染只渲染可见元素
+    #[test]
+    fn test_iterative_render_visibility_filter() {
+        use super::render_iterative::FigureRendererIter;
+
+        let mut scene = SceneGraph::new();
+
+        let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
+        let parent_id = scene.set_contents(Box::new(parent));
+
+        // 可见子元素
+        let visible_child = RectangleFigure::new(10.0, 10.0, 20.0, 20.0);
+        let _ = scene.add_child_to(parent_id, Box::new(visible_child));
+
+        // 不可见子元素
+        let invisible_child = RectangleFigure::new(50.0, 50.0, 20.0, 20.0);
+        let invisible_id = scene.add_child_to(parent_id, Box::new(invisible_child));
+
+        // 设置不可见
+        scene.blocks.get_mut(invisible_id).unwrap().is_visible = false;
+
+        // 迭代渲染
+        let mut gc_iterative = novadraw_render::NdCanvas::new();
+        let scene_ref = SceneGraphRenderRef {
+            blocks: &scene.blocks,
+        };
+        let mut renderer = FigureRendererIter::new(&scene_ref, &mut gc_iterative);
+        renderer.render(parent_id);
+        let cmd_iterative = gc_iterative.commands().len();
+
+        // 验证：有 2 个图形（parent + visible_child），每个产生多个命令
+        assert!(
+            cmd_iterative >= 8 && cmd_iterative <= 18,
+            "应只渲染可见元素，实际为 {} 个命令",
+            cmd_iterative
+        );
+    }
+
+    /// 测试迭代渲染：深度嵌套
+    ///
+    /// 场景：创建 10 层深度的嵌套结构
+    /// 期望：迭代渲染能正确处理深度嵌套，不产生栈溢出
+    #[test]
+    fn test_iterative_render_deep_nesting() {
+        use super::render_iterative::FigureRendererIter;
+
+        let mut scene = SceneGraph::new();
+
+        // 创建根
+        let root = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
+        let mut parent_id = scene.set_contents(Box::new(root));
+
+        // 创建 10 层嵌套
+        for i in 0..10 {
+            let child = RectangleFigure::new(
+                (i as f64 + 1.0) * 10.0,
+                (i as f64 + 1.0) * 10.0,
+                50.0,
+                50.0,
+            );
+            parent_id = scene.add_child_to(parent_id, Box::new(child));
+        }
+
+        // 迭代渲染（不应栈溢出）
+        let mut gc_iterative = novadraw_render::NdCanvas::new();
+        let scene_ref = SceneGraphRenderRef {
+            blocks: &scene.blocks,
+        };
+        let mut renderer = FigureRendererIter::new(&scene_ref, &mut gc_iterative);
+        renderer.render(scene.get_contents().unwrap());
+
+        // 验证：有 11 个图形（1 个根 + 10 个子）
+        let cmd_iterative = gc_iterative.commands().len();
+        assert!(
+            cmd_iterative >= 50,
+            "应有足够的渲染命令，实际为 {}",
+            cmd_iterative
+        );
     }
 }
