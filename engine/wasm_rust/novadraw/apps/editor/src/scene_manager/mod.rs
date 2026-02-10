@@ -14,6 +14,7 @@ pub enum SceneType {
     ZOrder,            // 场景3：Z-order 叠加
     Visibility,        // 场景4：不可见节点过滤
     BoundsTranslate,   // 场景5：prim_translate 平移传播
+    ClipTest,          // 场景6：裁剪测试（子元素超出父边界）
 }
 
 impl SceneManager {
@@ -33,6 +34,7 @@ impl SceneManager {
             SceneType::ZOrder => Self::create_zorder_scene(&mut scene),
             SceneType::Visibility => Self::create_visibility_scene(&mut scene),
             SceneType::BoundsTranslate => Self::create_bounds_translate_scene(&mut scene),
+            SceneType::ClipTest => Self::create_clip_test_scene(&mut scene),
         }
 
         Self {
@@ -289,6 +291,50 @@ impl SceneManager {
         scene.blocks.get_mut(gc_id).unwrap().is_selected = true;
     }
 
+    /// 场景 6：裁剪测试
+    ///
+    /// 验证：子元素超出父边界时被正确裁剪
+    fn create_clip_test_scene(scene: &mut SceneGraph) {
+        // 创建透明背景作为根容器
+        let root = RectangleFigure::new_with_color(
+            0.0, 0.0, 800.0, 600.0,
+            Color::rgba(0.0, 0.0, 0.0, 0.0),
+        );
+        let root_id = scene.set_contents(Box::new(root));
+
+        // Parent - 半透明蓝色容器 (100x100)
+        let parent = RectangleFigure::new_with_color(
+            350.0, 250.0, 100.0, 100.0,
+            Color::rgba(0.2, 0.4, 0.8, 0.5),
+        );
+        let parent_id = scene.add_child_to(root_id, Box::new(parent));
+
+        // Child 1 - 完全在父容器内 (绿色)
+        let child1 = RectangleFigure::new_with_color(
+            360.0, 260.0, 30.0, 30.0,
+            Color::rgba(0.2, 0.8, 0.3, 1.0),
+        );
+        scene.add_child_to(parent_id, Box::new(child1));
+
+        // Child 2 - 超出父容器右边界 (红色)
+        // 父容器 (350, 250, 100, 100)，右边界是 450
+        // 子元素从 430 开始，宽度 50，所以超出 450 的部分应该被裁剪
+        let child2 = RectangleFigure::new_with_color(
+            430.0, 280.0, 50.0, 40.0,
+            Color::rgba(0.9, 0.2, 0.2, 1.0),
+        );
+        scene.add_child_to(parent_id, Box::new(child2));
+
+        // Child 3 - 超出父容器下边界 (黄色)
+        // 父容器下边界是 350
+        // 子元素从 340 开始，高度 40，所以超出 350 的部分应该被裁剪
+        let child3 = RectangleFigure::new_with_color(
+            380.0, 340.0, 40.0, 40.0,
+            Color::rgba(0.9, 0.8, 0.2, 1.0),
+        );
+        scene.add_child_to(parent_id, Box::new(child3));
+    }
+
     /// 切换场景
     pub fn switch_scene(&mut self, scene_type: SceneType) {
         self.scene = SceneGraph::new();
@@ -299,6 +345,7 @@ impl SceneManager {
             SceneType::ZOrder => Self::create_zorder_scene(&mut self.scene),
             SceneType::Visibility => Self::create_visibility_scene(&mut self.scene),
             SceneType::BoundsTranslate => Self::create_bounds_translate_scene(&mut self.scene),
+            SceneType::ClipTest => Self::create_clip_test_scene(&mut self.scene),
         }
         self.current_scene = scene_type;
         println!("[SceneManager] 切换到场景 {:?}", scene_type);

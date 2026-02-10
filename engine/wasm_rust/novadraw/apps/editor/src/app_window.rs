@@ -62,7 +62,7 @@ impl ApplicationHandler<()> for GraphicsApp {
                 event_loop
                     .create_window(
                         WindowAttributes::default()
-                            .with_title("Novadraw - 渲染验证 (按 0-5 切换场景, I 切换渲染模式)")
+                            .with_title("Novadraw - 渲染验证 (按 0-6 切换场景, I 切换渲染模式)")
                             .with_inner_size(dpi::LogicalSize::new(800, 600))
                             .with_resizable(true),
                     )
@@ -164,6 +164,14 @@ impl ApplicationHandler<()> for GraphicsApp {
                             self.redraw();
                         }
                     }
+                    PhysicalKey::Code(KeyCode::Digit6) => {
+                        // 切换到场景 6：裁剪测试
+                        if let Some(manager) = &mut self.scene_manager {
+                            use crate::scene_manager::SceneType;
+                            manager.switch_scene(SceneType::ClipTest);
+                            self.redraw();
+                        }
+                    }
                     PhysicalKey::Code(KeyCode::KeyT) => {
                         // 按 T 键：在 BoundsTranslate 场景中平移父节点
                         if let Some(manager) = &mut self.scene_manager {
@@ -216,8 +224,8 @@ pub fn start_app() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = GraphicsApp::new();
 
     println!("启动事件循环...");
-    println!("  按 0-5 切换场景：");
-    println!("    0=基础定位点 1=嵌套父子 2=嵌套(含根) 3=Z-order 4=不可见 5=平移验证");
+    println!("  按 0-6 切换场景：");
+    println!("    0=基础定位点 1=嵌套父子 2=嵌套(含根) 3=Z-order 4=不可见 5=平移验证 6=裁剪测试");
     println!("  按 T 键：在场景 5 中平移父节点");
     println!("  按 I 键：切换递归/迭代渲染模式");
     println!("  按 ESC 退出");

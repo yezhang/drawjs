@@ -17,7 +17,7 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace.dependencies]
-vello = "0.5.1"
+vello = "0.7.0"
 glam = "0.30.9"
 slotmap = "1.0.7"
 uuid = { version = "1.18.1", features = ["v4", "serde"] }

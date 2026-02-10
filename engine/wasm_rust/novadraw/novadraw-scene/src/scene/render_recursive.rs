@@ -64,7 +64,7 @@ impl<'a> FigureRenderer<'a> {
     ///         ├─> paintFigure()
     ///         ├─> restoreState()
     ///         ├─> paintClientArea()
-    ///         │     └─> paintChildren()
+    ///         │     └─> paintChildren() + restoreState()
     ///         ├─> paintBorder()
     ///         └─> popState()
     /// ```
@@ -136,12 +136,18 @@ impl<'a> FigureRenderer<'a> {
             );
         }
 
+        self.gc.push_state();
         self.paint_children(block_id);
+        self.gc.pop_state();
+
+        // 恢复 paintClientArea 设置的裁剪区域
+        self.gc.restore_state();
     }
 
     /// 绘制子元素
     ///
     /// 对应 d2 Figure.paintChildren()。
+    /// 为每个子节点设置裁剪 + 绘制 + 恢复
     fn paint_children(&mut self, block_id: BlockId) {
         let children: Vec<BlockId> = {
             let block = match self.scene.get(block_id) {
@@ -153,7 +159,22 @@ impl<'a> FigureRenderer<'a> {
 
         // 正序遍历（与 d2 一致）
         for &child_id in &children {
+            // 获取子节点 bounds
+            let child_block = match self.scene.get(child_id) {
+                Some(b) if b.is_visible => b,
+                _ => continue,
+            };
+            let child_bounds = child_block.figure.bounds();
+
+            // clipRect(child_bounds) + paint(child) + restoreState()
+            self.gc.clip_rect(
+                child_bounds.x,
+                child_bounds.y,
+                child_bounds.width,
+                child_bounds.height,
+            );
             self.paint(child_id);
+            self.gc.restore_state();
         }
     }
 }
