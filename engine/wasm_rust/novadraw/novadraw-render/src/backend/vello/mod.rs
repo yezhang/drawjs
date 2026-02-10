@@ -19,21 +19,12 @@ pub mod winit;
 pub use winit::{WinitWindowProxy, WinitWindowProxyInner};
 
 /// 渲染状态
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 struct RenderState {
     /// 当前变换矩阵
     transform: Transform,
     /// 当前裁剪区域
     clip: Option<[DVec2; 2]>,
-}
-
-impl Default for RenderState {
-    fn default() -> Self {
-        Self {
-            transform: Transform::IDENTITY,
-            clip: None,
-        }
-    }
 }
 
 pub struct VelloRenderer {
@@ -94,6 +85,11 @@ impl VelloRenderer {
             crate::command::RenderCommandKind::PushState => {
                 // 保存当前状态到栈
                 self.state_stack.push(self.current_state().clone());
+
+                // 应用裁剪区域
+                if let Some(clip) = self.current_state().clip {
+                    self.push_clip_layer(&clip);
+                }
             }
 
             crate::command::RenderCommandKind::RestoreState => {
@@ -102,6 +98,12 @@ impl VelloRenderer {
                 if self.state_stack.len() >= 2 {
                     let last_idx = self.state_stack.len() - 1;
                     let saved_idx = self.state_stack.len() - 2;
+                    // 检查当前状态是否有 clip（需要弹出）
+                    let current_has_clip = self.state_stack[last_idx].clip.is_some();
+                    // 只有当当前状态有 clip 时，才弹出层
+                    if current_has_clip {
+                        self.scene.pop_layer();
+                    }
                     self.state_stack[last_idx] = self.state_stack[saved_idx].clone();
                 }
             }
@@ -109,6 +111,10 @@ impl VelloRenderer {
             crate::command::RenderCommandKind::PopState => {
                 // 弹出并恢复状态
                 if self.state_stack.len() > 1 {
+                    if self.current_state().clip.is_some() {
+                        // 弹出裁剪层
+                        self.scene.pop_layer();
+                    }
                     self.state_stack.pop();
                 }
             }
@@ -121,8 +127,8 @@ impl VelloRenderer {
             }
 
             crate::command::RenderCommandKind::Clip { rect } => {
-                // 设置裁剪区域
                 self.current_state_mut().clip = Some(*rect);
+                self.push_clip_layer(rect);
             }
 
             // ===== 绘制命令 =====
@@ -247,6 +253,19 @@ impl VelloRenderer {
             coeffs[4] * scale_factor,
             coeffs[5] * scale_factor,
         ])
+    }
+
+    /// 推送裁剪层到场景
+    fn push_clip_layer(&mut self, rect: &[DVec2; 2]) {
+        let affine =
+            Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
+        let x0 = rect[0].x * self.scale_factor;
+        let y0 = rect[0].y * self.scale_factor;
+        let x1 = rect[1].x * self.scale_factor;
+        let y1 = rect[1].y * self.scale_factor;
+        let kurbo_rect = vello::kurbo::Rect::new(x0, y0, x1, y1);
+        self.scene
+            .push_clip_layer(vello::peniko::Fill::NonZero, affine, &kurbo_rect);
     }
 }
 
