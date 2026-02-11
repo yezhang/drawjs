@@ -4,8 +4,9 @@
 //! Figure 只负责渲染，不包含状态（状态在 RuntimeBlock 中）。
 
 mod basic;
-pub use basic::RectangleFigure;
 pub use basic::EllipseFigure;
+pub use basic::LineFigure;
+pub use basic::RectangleFigure;
 
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;

@@ -118,6 +118,20 @@ impl NdCanvas {
         });
     }
 
+    /// 绘制直线
+    ///
+    /// 从 p1 到 p2 的直线
+    pub fn line(&mut self, p1: DVec2, p2: DVec2, color: Color, width: f64, cap: crate::command::LineCap, join: crate::command::LineJoin) {
+        self.create_command(RenderCommandKind::Line {
+            p1,
+            p2,
+            color,
+            width,
+            cap,
+            join,
+        });
+    }
+
     pub fn begin_path(&mut self) {}
 
     pub fn close_path(&mut self) {}

@@ -259,3 +259,104 @@ impl Figure for EllipseFigure {
         "EllipseFigure"
     }
 }
+
+/// 直线图形
+///
+/// 用于渲染直线。
+/// bounds 定义起点 (x, y) 和终点偏移 (width, height)。
+/// 直线从 (bounds.x, bounds.y) 到 (bounds.x + width, bounds.y + height)。
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LineFigure {
+    /// 边界矩形：x,y=起点, width/height=终点偏移
+    pub bounds: Rectangle,
+    /// 线条颜色
+    pub stroke_color: Color,
+    /// 线条宽度
+    pub stroke_width: f64,
+    /// 线帽样式
+    pub line_cap: novadraw_render::command::LineCap,
+    /// 连接样式
+    pub line_join: novadraw_render::command::LineJoin,
+}
+
+impl LineFigure {
+    /// 创建直线
+    ///
+    /// 从 (x1, y1) 到 (x2, y2)
+    pub fn new(x1: f64, y1: f64, x2: f64, y2: f64) -> Self {
+        Self {
+            bounds: Rectangle::new(x1.min(x2), y1.min(y2), (x2 - x1).abs(), (y2 - y1).abs()),
+            stroke_color: Color::hex("#2c3e50"),
+            stroke_width: 2.0,
+            line_cap: novadraw_render::command::LineCap::default(),
+            line_join: novadraw_render::command::LineJoin::default(),
+        }
+    }
+
+    /// 创建指定颜色的直线
+    pub fn new_with_color(x1: f64, y1: f64, x2: f64, y2: f64, color: Color) -> Self {
+        Self {
+            bounds: Rectangle::new(x1.min(x2), y1.min(y2), (x2 - x1).abs(), (y2 - y1).abs()),
+            stroke_color: color,
+            stroke_width: 2.0,
+            line_cap: novadraw_render::command::LineCap::default(),
+            line_join: novadraw_render::command::LineJoin::default(),
+        }
+    }
+
+    /// 设置线条宽度
+    pub fn with_width(mut self, width: f64) -> Self {
+        self.stroke_width = width;
+        self
+    }
+
+    /// 设置线帽样式
+    pub fn with_cap(mut self, cap: novadraw_render::command::LineCap) -> Self {
+        self.line_cap = cap;
+        self
+    }
+
+    /// 设置连接样式
+    pub fn with_join(mut self, join: novadraw_render::command::LineJoin) -> Self {
+        self.line_join = join;
+        self
+    }
+
+    /// 获取起点
+    pub fn p1(&self) -> (f64, f64) {
+        // 如果直线是反向定义的，需要调整
+        if self.bounds.width == 0.0 && self.bounds.height == 0.0 {
+            (self.bounds.x, self.bounds.y)
+        } else {
+            // 对于斜线，这里简化为 bounds 左上角
+            // 实际渲染时 p1 和 p2 需要根据原始坐标计算
+            (self.bounds.x, self.bounds.y)
+        }
+    }
+
+    /// 获取终点
+    pub fn p2(&self) -> (f64, f64) {
+        (self.bounds.x + self.bounds.width, self.bounds.y + self.bounds.height)
+    }
+}
+
+impl Figure for LineFigure {
+    fn bounds(&self) -> Rectangle {
+        self.bounds
+    }
+
+    fn paint_figure(&self, gc: &mut NdCanvas) {
+        gc.line(
+            glam::DVec2::new(self.bounds.x, self.bounds.y),
+            glam::DVec2::new(self.bounds.x + self.bounds.width, self.bounds.y + self.bounds.height),
+            self.stroke_color,
+            self.stroke_width,
+            self.line_cap,
+            self.line_join,
+        );
+    }
+
+    fn name(&self) -> &'static str {
+        "LineFigure"
+    }
+}

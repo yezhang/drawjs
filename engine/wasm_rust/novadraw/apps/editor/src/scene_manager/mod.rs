@@ -1,4 +1,4 @@
-use novadraw::{Color, EllipseFigure, RectangleFigure, SceneGraph};
+use novadraw::{Color, EllipseFigure, LineFigure, RectangleFigure, SceneGraph};
 
 pub struct SceneManager {
     pub scene: SceneGraph,
@@ -16,6 +16,7 @@ pub enum SceneType {
     BoundsTranslate,   // 场景5：prim_translate 平移传播
     ClipTest,          // 场景6：裁剪测试（子元素超出父边界）
     EllipseTest,       // 场景7：椭圆图形测试
+    LineTest,          // 场景8：直线图形测试
 }
 
 impl SceneManager {
@@ -37,6 +38,7 @@ impl SceneManager {
             SceneType::BoundsTranslate => Self::create_bounds_translate_scene(&mut scene),
             SceneType::ClipTest => Self::create_clip_test_scene(&mut scene),
             SceneType::EllipseTest => Self::create_ellipse_test_scene(&mut scene),
+            SceneType::LineTest => Self::create_line_test_scene(&mut scene),
         }
 
         Self {
@@ -368,6 +370,48 @@ impl SceneManager {
         scene.add_child_to(root_id, Box::new(circle));
     }
 
+    /// 场景 8：直线图形测试
+    ///
+    /// 验证 LineFigure 渲染正确
+    fn create_line_test_scene(scene: &mut SceneGraph) {
+        // 创建透明背景
+        let root = RectangleFigure::new_with_color(
+            0.0, 0.0, 800.0, 600.0,
+            Color::rgba(0.1, 0.1, 0.1, 1.0),
+        );
+        let root_id = scene.set_contents(Box::new(root));
+
+        // 水平线 - 红色
+        let h_line = LineFigure::new_with_color(100.0, 100.0, 300.0, 100.0, Color::rgba(0.9, 0.3, 0.3, 1.0))
+            .with_width(3.0);
+        scene.add_child_to(root_id, Box::new(h_line));
+
+        // 垂直线 - 蓝色
+        let v_line = LineFigure::new_with_color(400.0, 50.0, 400.0, 250.0, Color::rgba(0.3, 0.3, 0.9, 1.0))
+            .with_width(3.0);
+        scene.add_child_to(root_id, Box::new(v_line));
+
+        // 斜线 - 绿色
+        let diag_line = LineFigure::new_with_color(100.0, 200.0, 300.0, 400.0, Color::rgba(0.3, 0.9, 0.3, 1.0))
+            .with_width(3.0);
+        scene.add_child_to(root_id, Box::new(diag_line));
+
+        // 反向斜线 - 橙色（测试反向坐标）
+        let diag_line2 = LineFigure::new_with_color(400.0, 200.0, 300.0, 400.0, Color::rgba(0.9, 0.6, 0.2, 1.0))
+            .with_width(3.0);
+        scene.add_child_to(root_id, Box::new(diag_line2));
+
+        // 粗线 - 紫色
+        let thick_line = LineFigure::new_with_color(100.0, 450.0, 700.0, 450.0, Color::rgba(0.6, 0.3, 0.9, 1.0))
+            .with_width(8.0);
+        scene.add_child_to(root_id, Box::new(thick_line));
+
+        // 加粗白色细线
+        let white_line = LineFigure::new_with_color(500.0, 300.0, 750.0, 550.0, Color::WHITE)
+            .with_width(2.0);
+        scene.add_child_to(root_id, Box::new(white_line));
+    }
+
     /// 切换场景
     pub fn switch_scene(&mut self, scene_type: SceneType) {
         self.scene = SceneGraph::new();
@@ -380,6 +424,7 @@ impl SceneManager {
             SceneType::BoundsTranslate => Self::create_bounds_translate_scene(&mut self.scene),
             SceneType::ClipTest => Self::create_clip_test_scene(&mut self.scene),
             SceneType::EllipseTest => Self::create_ellipse_test_scene(&mut self.scene),
+            SceneType::LineTest => Self::create_line_test_scene(&mut self.scene),
         }
         self.current_scene = scene_type;
         println!("[SceneManager] 切换到场景 {:?}", scene_type);

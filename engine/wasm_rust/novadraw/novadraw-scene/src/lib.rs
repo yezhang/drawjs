@@ -15,7 +15,7 @@ pub mod layout;
 pub mod scene;
 pub mod viewport;
 
-pub use figure::{BaseFigure, EllipseFigure, Figure, RectangleFigure};
+pub use figure::{BaseFigure, EllipseFigure, Figure, LineFigure, RectangleFigure};
 pub use layout::{FillLayout, LayoutManager, XYLayout};
 pub use novadraw_geometry::{Point, Rectangle};
 pub use scene::{BlockId, FigureRenderer, RuntimeBlock, SceneGraph};
