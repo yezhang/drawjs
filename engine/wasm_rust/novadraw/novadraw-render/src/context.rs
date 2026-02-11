@@ -103,6 +103,21 @@ impl NdCanvas {
         self.create_command(RenderCommandKind::StrokeRect { rect, color, width: stroke_width });
     }
 
+    /// 绘制椭圆
+    ///
+    /// 椭圆中心为 (cx, cy)，x 轴半径 rx，y 轴半径 ry
+    pub fn ellipse(&mut self, cx: f64, cy: f64, rx: f64, ry: f64, fill_color: Option<Color>, stroke_color: Option<Color>, stroke_width: f64) {
+        self.create_command(RenderCommandKind::Ellipse {
+            cx,
+            cy,
+            rx,
+            ry,
+            fill_color,
+            stroke_color,
+            stroke_width,
+        });
+    }
+
     pub fn begin_path(&mut self) {}
 
     pub fn close_path(&mut self) {}

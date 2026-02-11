@@ -59,6 +59,24 @@ pub enum RenderCommandKind {
         width: f64,
     },
 
+    /// 绘制椭圆
+    Ellipse {
+        /// 椭圆中心 x
+        cx: f64,
+        /// 椭圆中心 y
+        cy: f64,
+        /// x 轴半径
+        rx: f64,
+        /// y 轴半径
+        ry: f64,
+        /// 填充颜色
+        fill_color: Option<Color>,
+        /// 描边颜色
+        stroke_color: Option<Color>,
+        /// 描边宽度
+        stroke_width: f64,
+    },
+
     /// 清除屏幕
     ///
     /// 使用指定颜色填充整个视口。

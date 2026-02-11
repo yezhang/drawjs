@@ -1,4 +1,4 @@
-use novadraw::{Color, RectangleFigure, SceneGraph};
+use novadraw::{Color, EllipseFigure, RectangleFigure, SceneGraph};
 
 pub struct SceneManager {
     pub scene: SceneGraph,
@@ -15,6 +15,7 @@ pub enum SceneType {
     Visibility,        // 场景4：不可见节点过滤
     BoundsTranslate,   // 场景5：prim_translate 平移传播
     ClipTest,          // 场景6：裁剪测试（子元素超出父边界）
+    EllipseTest,       // 场景7：椭圆图形测试
 }
 
 impl SceneManager {
@@ -35,6 +36,7 @@ impl SceneManager {
             SceneType::Visibility => Self::create_visibility_scene(&mut scene),
             SceneType::BoundsTranslate => Self::create_bounds_translate_scene(&mut scene),
             SceneType::ClipTest => Self::create_clip_test_scene(&mut scene),
+            SceneType::EllipseTest => Self::create_ellipse_test_scene(&mut scene),
         }
 
         Self {
@@ -335,6 +337,37 @@ impl SceneManager {
         scene.add_child_to(parent_id, Box::new(child3));
     }
 
+    /// 场景 7：椭圆图形测试
+    ///
+    /// 验证 EllipseFigure 渲染正确
+    fn create_ellipse_test_scene(scene: &mut SceneGraph) {
+        // 创建透明背景
+        let root = RectangleFigure::new_with_color(
+            0.0, 0.0, 800.0, 600.0,
+            Color::rgba(0.1, 0.1, 0.1, 1.0),
+        );
+        let root_id = scene.set_contents(Box::new(root));
+
+        // 椭圆 1 - 红色填充，带白色边框
+        let ellipse1 = EllipseFigure::new(150.0, 150.0, 100.0, 80.0)
+            .with_stroke(Color::WHITE, 2.0);
+        scene.add_child_to(root_id, Box::new(ellipse1));
+
+        // 椭圆 2 - 蓝色填充，无边框
+        let ellipse2 = EllipseFigure::new_with_color(350.0, 200.0, 120.0, 120.0, Color::rgba(0.2, 0.6, 0.9, 1.0));
+        scene.add_child_to(root_id, Box::new(ellipse2));
+
+        // 椭圆 3 - 绿色描边，无填充
+        let ellipse3 = EllipseFigure::new_with_color(550.0, 150.0, 80.0, 150.0, Color::rgba(0.0, 0.0, 0.0, 0.0))
+            .with_stroke(Color::rgba(0.2, 0.8, 0.3, 1.0), 3.0);
+        scene.add_child_to(root_id, Box::new(ellipse3));
+
+        // 圆形 - 正椭圆
+        let circle = EllipseFigure::new_with_color(400.0, 400.0, 100.0, 100.0, Color::rgba(0.9, 0.6, 0.2, 1.0))
+            .with_stroke(Color::WHITE, 2.0);
+        scene.add_child_to(root_id, Box::new(circle));
+    }
+
     /// 切换场景
     pub fn switch_scene(&mut self, scene_type: SceneType) {
         self.scene = SceneGraph::new();
@@ -346,6 +379,7 @@ impl SceneManager {
             SceneType::Visibility => Self::create_visibility_scene(&mut self.scene),
             SceneType::BoundsTranslate => Self::create_bounds_translate_scene(&mut self.scene),
             SceneType::ClipTest => Self::create_clip_test_scene(&mut self.scene),
+            SceneType::EllipseTest => Self::create_ellipse_test_scene(&mut self.scene),
         }
         self.current_scene = scene_type;
         println!("[SceneManager] 切换到场景 {:?}", scene_type);

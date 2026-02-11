@@ -235,6 +235,56 @@ impl VelloRenderer {
                 );
             }
 
+            crate::command::RenderCommandKind::Ellipse {
+                cx,
+                cy,
+                rx,
+                ry,
+                fill_color,
+                stroke_color,
+                stroke_width,
+            } => {
+                let affine =
+                    Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
+                let center = vello::kurbo::Point::new(cx * self.scale_factor, cy * self.scale_factor);
+                let radii = vello::kurbo::Vec2::new(*rx * self.scale_factor, *ry * self.scale_factor);
+                let ellipse = vello::kurbo::Ellipse::new(center, radii, 0.0);
+
+                // 填充椭圆
+                if let Some(color) = fill_color {
+                    let vello_color = VelloColor::new([
+                        color.r as f32,
+                        color.g as f32,
+                        color.b as f32,
+                        color.a as f32,
+                    ]);
+                    self.scene.fill(
+                        vello::peniko::Fill::NonZero,
+                        affine,
+                        vello_color,
+                        None,
+                        &ellipse,
+                    );
+                }
+
+                // 描边椭圆
+                if let Some(color) = stroke_color {
+                    let vello_color = VelloColor::new([
+                        color.r as f32,
+                        color.g as f32,
+                        color.b as f32,
+                        color.a as f32,
+                    ]);
+                    self.scene.stroke(
+                        &Stroke::new(*stroke_width * self.scale_factor),
+                        affine,
+                        vello_color,
+                        None,
+                        &ellipse,
+                    );
+                }
+            }
+
             // 其他命令暂未实现
             _ => {}
         }

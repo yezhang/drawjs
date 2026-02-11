@@ -5,6 +5,7 @@
 
 mod basic;
 pub use basic::RectangleFigure;
+pub use basic::EllipseFigure;
 
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
