@@ -690,3 +690,181 @@ fn test_scene_set_bounds_size_only() {
     assert_eq!(child_bounds.width, 50.0);
     assert_eq!(child_bounds.height, 50.0);
 }
+
+/// 测试：场景6 - 裁剪测试的详细命令分析
+///
+/// 场景：Parent(350, 250, 100, 100) + 三个子元素
+/// 验证：子元素超出父边界的部分被裁剪
+#[test]
+fn test_clip_test_scene_commands() {
+    use novadraw_render::command::RenderCommandKind;
+    
+    let mut scene = SceneGraph::new();
+    
+    // Root
+    let root = RectangleFigure::new_with_color(
+        0.0, 0.0, 800.0, 600.0,
+        Color::rgba(0.0, 0.0, 0.0, 0.0),
+    );
+    let root_id = scene.set_contents(Box::new(root));
+
+    // Parent - 半透明蓝色容器 (350, 250, 100, 100)
+    let parent = RectangleFigure::new_with_color(
+        350.0, 250.0, 100.0, 100.0,
+        Color::rgba(0.2, 0.4, 0.8, 0.5),
+    );
+    let parent_id = scene.add_child_to(root_id, Box::new(parent));
+
+    // Child 1 - 完全在父容器内 (360, 260, 30, 30) - 绿色
+    let child1 = RectangleFigure::new_with_color(
+        360.0, 260.0, 30.0, 30.0,
+        Color::rgba(0.2, 0.8, 0.3, 1.0),
+    );
+    let _child1_id = scene.add_child_to(parent_id, Box::new(child1));
+
+    // Child 2 - 超出父容器右边界 (430, 280, 50, 40) - 红色
+    // 父容器右边界是 450，子元素从 430 开始，宽度 50，应该超出到 480
+    let child2 = RectangleFigure::new_with_color(
+        430.0, 280.0, 50.0, 40.0,
+        Color::rgba(0.9, 0.2, 0.2, 1.0),
+    );
+    let _child2_id = scene.add_child_to(parent_id, Box::new(child2));
+
+    // Child 3 - 超出父容器下边界 (380, 340, 40, 40) - 黄色
+    // 父容器下边界是 350，子元素从 340 开始，高度 40，应该超出到 380
+    let child3 = RectangleFigure::new_with_color(
+        380.0, 340.0, 40.0, 40.0,
+        Color::rgba(0.9, 0.8, 0.2, 1.0),
+    );
+    let _child3_id = scene.add_child_to(parent_id, Box::new(child3));
+
+    // 渲染并分析命令
+    let gc = scene.render();
+    let commands = gc.commands();
+    
+    println!("\n=== 场景6：裁剪测试命令分析 ===");
+    println!("Parent bounds: (350, 250, 100, 100)");
+    println!("  Child 1 (绿色): (360, 260, 30, 30) - 完全在内");
+    println!("  Child 2 (红色): (430, 280, 50, 40) - 超出右边界 (480 > 450)");
+    println!("  Child 3 (黄色): (380, 340, 40, 40) - 超出下边界 (380 > 350)");
+    println!();
+    
+    for (i, cmd) in commands.iter().enumerate() {
+        match &cmd.kind {
+            RenderCommandKind::PushState => {
+                println!("[{:2}] PushState", i);
+            }
+            RenderCommandKind::PopState => {
+                println!("[{:2}] PopState", i);
+            }
+            RenderCommandKind::RestoreState => {
+                println!("[{:2}] RestoreState", i);
+            }
+            RenderCommandKind::Clip { rect } => {
+                let x = rect[0].x;
+                let y = rect[0].y;
+                let w = rect[1].x - rect[0].x;
+                let h = rect[1].y - rect[0].y;
+                
+                // 判断是哪个 clip
+                let desc = if (x - 350.0).abs() < 0.1 && (y - 250.0).abs() < 0.1 {
+                    "Parent (350, 250, 100, 100)"
+                } else if (x - 360.0).abs() < 0.1 && (y - 260.0).abs() < 0.1 {
+                    "Child 1 (360, 260, 30, 30)"
+                } else if (x - 430.0).abs() < 0.1 && (y - 280.0).abs() < 0.1 {
+                    "Child 2 (430, 280, 50, 40) - 超出部分应被裁剪"
+                } else if (x - 380.0).abs() < 0.1 && (y - 340.0).abs() < 0.1 {
+                    "Child 3 (380, 340, 40, 40) - 超出部分应被裁剪"
+                } else if x == 0.0 && y == 0.0 {
+                    "Root (0, 0, 800, 600)"
+                } else {
+                    "Unknown"
+                };
+                
+                println!("[{:2}] Clip: ({:.0}, {:.0}, {:.0}, {:.0}) <- {}", 
+                    i, x, y, w, h, desc);
+            }
+            RenderCommandKind::FillRect { rect, color } => {
+                let x = rect[0].x;
+                let y = rect[0].y;
+                let w = rect[1].x - rect[0].x;
+                let h = rect[1].y - rect[0].y;
+                let (r, g, b) = (color.r, color.g, color.b);
+                
+                let desc = if r < 0.3 && g > 0.7 && b < 0.3 {
+                    "Child 1 - 绿色"
+                } else if r > 0.8 && g < 0.3 && b < 0.3 {
+                    "Child 2 - 红色"
+                } else if r > 0.8 && g > 0.7 && b < 0.3 {
+                    "Child 3 - 黄色"
+                } else if r < 0.3 && g < 0.5 && b > 0.7 {
+                    "Parent - 蓝色"
+                } else {
+                    "Unknown"
+                };
+                
+                println!("[{:2}] FillRect: ({:.0}, {:.0}, {:.0}, {:.0}) - {}", 
+                    i, x, y, w, h, desc);
+            }
+            RenderCommandKind::StrokeRect { rect, width, .. } => {
+                let x = rect[0].x;
+                let y = rect[0].y;
+                let w = rect[1].x - rect[0].x;
+                let h = rect[1].y - rect[0].y;
+                println!("[{:2}] StrokeRect: ({:.0}, {:.0}, {:.0}, {:.0}) w={:.0}", 
+                    i, x, y, w, h, width);
+            }
+            RenderCommandKind::ConcatTransform { matrix } => {
+                let c = matrix.coeffs();
+                if c[4] != 0.0 || c[5] != 0.0 {
+                    println!("[{:2}] Translate: ({:.0}, {:.0})", i, c[4], c[5]);
+                }
+            }
+            _ => {}
+        }
+    }
+    
+    // 验证 clip 的数量和位置
+    let clip_rects: Vec<_> = commands.iter()
+        .filter_map(|cmd| match &cmd.kind {
+            RenderCommandKind::Clip { rect } => Some(*rect),
+            _ => None,
+        })
+        .collect();
+    
+    println!("\n=== Clip 统计 ===");
+    println!("共 {} 个 Clip 命令", clip_rects.len());
+    
+    // 期望的 clip 序列：
+    // 1. Parent clip: (350, 250, 100, 100) - paint_client_area 设置
+    // 2. Child 1 clip: (360, 260, 30, 30) - paint_children 为 child1 设置
+    // 3. Parent clip restored - paint_children 中 restoreState
+    // 4. Child 2 clip: (430, 280, 50, 40) - paint_children 为 child2 设置
+    // 5. Parent clip restored
+    // 6. Child 3 clip: (380, 340, 40, 40) - paint_children 为 child3 设置
+    // 7. Parent clip restored
+    
+    // 验证关键 clip 存在
+    let has_parent_clip = clip_rects.iter().any(|r| {
+        (r[0].x - 350.0).abs() < 0.1 && (r[0].y - 250.0).abs() < 0.1
+    });
+    let has_child1_clip = clip_rects.iter().any(|r| {
+        (r[0].x - 360.0).abs() < 0.1 && (r[0].y - 260.0).abs() < 0.1
+    });
+    let has_child2_clip = clip_rects.iter().any(|r| {
+        (r[0].x - 430.0).abs() < 0.1 && (r[0].y - 280.0).abs() < 0.1
+    });
+    let has_child3_clip = clip_rects.iter().any(|r| {
+        (r[0].x - 380.0).abs() < 0.1 && (r[0].y - 340.0).abs() < 0.1
+    });
+    
+    println!("Parent clip (350, 250): {}", has_parent_clip);
+    println!("Child 1 clip (360, 260): {}", has_child1_clip);
+    println!("Child 2 clip (430, 280): {}", has_child2_clip);
+    println!("Child 3 clip (380, 340): {}", has_child3_clip);
+    
+    assert!(has_parent_clip, "应有 Parent clip");
+    assert!(has_child1_clip, "应有 Child 1 clip");
+    assert!(has_child2_clip, "应有 Child 2 clip");
+    assert!(has_child3_clip, "应有 Child 3 clip");
+}
