@@ -7,9 +7,16 @@ members = [
   "novadraw-core",
   "novadraw-render",
   "novadraw-scene",
+  "novadraw-apps",
 
   "apps/editor",
   "apps/vello-demo",
+  "apps/shape-app",
+  "apps/transform-app",
+  "apps/clip-app",
+  "apps/layout-app",
+  "apps/event-app",
+  "apps/border-app",
 ]
 
 [workspace.package]
@@ -28,3 +35,4 @@ wgpu = { version = "26.0.1", default-features = false, features = ["std", "wgsl"
 winit = "0.30.12"
 log = "0.4.27"
 env_logger = "0.11.8"
+pollster = "0.4.0"

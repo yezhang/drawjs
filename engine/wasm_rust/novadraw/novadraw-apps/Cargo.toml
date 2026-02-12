@@ -1,0 +1,22 @@
+[package]
+name = "novadraw-apps"
+version.workspace = true
+edition.workspace = true
+description = "Novadraw 演示应用公共库"
+
+[dependencies]
+# novadraw 核心库
+novadraw = { path = "../novadraw" }
+
+# winit 窗口管理
+winit.workspace = true
+
+# 渲染后端
+novadraw-render = { path = "../novadraw-render" }
+vello.workspace = true
+
+# 工具库
+env_logger.workspace = true
+log.workspace = true
+glam.workspace = true
+pollster.workspace = true
