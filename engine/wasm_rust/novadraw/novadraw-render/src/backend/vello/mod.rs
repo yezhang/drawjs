@@ -6,6 +6,7 @@
 use std::sync::Arc;
 
 use glam::DVec2;
+use image::ImageBuffer;
 use novadraw_geometry::Transform;
 use vello::kurbo::Stroke;
 use vello::peniko::Color as VelloColor;
@@ -36,6 +37,8 @@ pub struct VelloRenderer {
     scale_factor: f64,
     /// 状态栈
     state_stack: Vec<RenderState>,
+    /// 截图纹理（带 COPY_SRC 权限）
+    screenshot_texture: Option<(vello::wgpu::Texture, vello::wgpu::TextureView, u32, u32)>,
 }
 
 impl VelloRenderer {
@@ -65,7 +68,52 @@ impl VelloRenderer {
             window,
             scale_factor,
             state_stack: vec![RenderState::default()],
+            screenshot_texture: None,
         }
+    }
+
+    /// 确保截图纹理存在
+    fn ensure_screenshot_texture(&mut self) {
+        let width = self.surface.config.width;
+        let height = self.surface.config.height;
+
+        // 检查是否需要重新创建
+        if let Some((_, _, old_width, old_height)) = &self.screenshot_texture {
+            if *old_width == width && *old_height == height {
+                return;
+            }
+        }
+
+        // 创建设备句柄引用
+        let device_handle = &self.render_context.devices[self.surface.dev_id];
+        let device = &device_handle.device;
+
+        // 创建带 COPY_SRC 权限的纹理
+        // 注意：必须使用 Rgba8Unorm 格式，因为 Vello 内部期望此格式
+        // macOS surface 默认是 Bgra8Unorm，需要显式转换
+        let texture = device.create_texture(
+            &vello::wgpu::TextureDescriptor {
+                label: Some("Screenshot Texture"),
+                size: vello::wgpu::Extent3d {
+                    width,
+                    height,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: vello::wgpu::TextureDimension::D2,
+                format: vello::wgpu::TextureFormat::Rgba8Unorm,
+                usage: vello::wgpu::TextureUsages::COPY_SRC
+                    | vello::wgpu::TextureUsages::RENDER_ATTACHMENT
+                    | vello::wgpu::TextureUsages::TEXTURE_BINDING
+                    | vello::wgpu::TextureUsages::STORAGE_BINDING,
+                view_formats: &[vello::wgpu::TextureFormat::Rgba8Unorm],
+            },
+        );
+
+        let view = texture.create_view(&vello::wgpu::TextureViewDescriptor::default());
+
+        self.screenshot_texture = Some((texture, view, width, height));
     }
 
     /// 获取当前状态
@@ -339,10 +387,38 @@ impl RenderBackend for VelloRenderer {
             self.render_command(cmd);
         }
 
+        // 确保截图纹理存在（带 COPY_SRC 权限）
+        self.ensure_screenshot_texture();
+
+        // 获取截图纹理和 device_handle（先完成 ensure_screenshot_texture）
+        let screenshot_texture = {
+            let (_, view, _, _) = self.screenshot_texture.as_ref().expect("Screenshot texture not created");
+            view.clone()
+        };
+
         let device_handle = &self.render_context.devices[self.surface.dev_id];
         let width = self.surface.config.width;
         let height = self.surface.config.height;
 
+        // 渲染到截图纹理（带 COPY_SRC）
+        self.renderers[self.surface.dev_id]
+            .as_mut()
+            .unwrap()
+            .render_to_texture(
+                &device_handle.device,
+                &device_handle.queue,
+                &self.scene,
+                &screenshot_texture,
+                &vello::RenderParams {
+                    base_color: VelloColor::new([1.0, 1.0, 1.0, 1.0]),
+                    width,
+                    height,
+                    antialiasing_method: AaConfig::Msaa16,
+                },
+            )
+            .expect("Failed to render to screenshot texture");
+
+        // 渲染到 surface 目标视图
         self.renderers[self.surface.dev_id]
             .as_mut()
             .unwrap()
@@ -358,7 +434,7 @@ impl RenderBackend for VelloRenderer {
                     antialiasing_method: AaConfig::Msaa16,
                 },
             )
-            .expect("Failed to render to texture");
+            .expect("Failed to render to surface texture");
 
         let surface_texture = self
             .surface
@@ -403,6 +479,99 @@ impl VelloRenderer {
             vello::wgpu::PresentMode::AutoVsync,
         );
         self.surface = pollster::block_on(surface_future).expect("Failed to recreate surface");
+    }
+
+    /// 截图并保存为 PNG 文件
+    ///
+    /// 返回保存的文件路径
+    pub fn screenshot(&self, path: &std::path::Path) -> std::io::Result<()> {
+        let device_handle = &self.render_context.devices[self.surface.dev_id];
+        let width = self.surface.config.width;
+        let height = self.surface.config.height;
+
+        // 从截图纹理获取底层纹理（带 COPY_SRC 权限）
+        let (texture, _, _, _) =
+            self.screenshot_texture.as_ref().expect("Screenshot texture not created");
+
+        // 创建输出缓冲区
+        let buffer_size = (width * height * 4) as u64;
+        let buffer = device_handle.device.create_buffer(
+            &vello::wgpu::BufferDescriptor {
+                label: Some("Screenshot Buffer"),
+                size: buffer_size,
+                usage: vello::wgpu::BufferUsages::COPY_DST | vello::wgpu::BufferUsages::MAP_READ,
+                mapped_at_creation: false,
+            },
+        );
+
+        // 创建命令编码器
+        let mut encoder = device_handle.device.create_command_encoder(
+            &vello::wgpu::CommandEncoderDescriptor {
+                label: Some("Screenshot Encoder"),
+            },
+        );
+
+        // 使用 wgpu 26.x API 构建复制信息
+        let copy_texture = vello::wgpu::TexelCopyTextureInfo {
+            texture,
+            mip_level: 0,
+            origin: vello::wgpu::Origin3d::ZERO,
+            aspect: vello::wgpu::TextureAspect::All,
+        };
+
+        let copy_buffer = vello::wgpu::TexelCopyBufferInfo {
+            buffer: &buffer,
+            layout: vello::wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(width * 4),
+                rows_per_image: Some(height),
+            },
+        };
+
+        encoder.copy_texture_to_buffer(
+            copy_texture,
+            copy_buffer,
+            vello::wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+
+        // 提交命令
+        device_handle.queue.submit([encoder.finish()]);
+
+        // 映射缓冲区并读取数据
+        let buffer_slice = buffer.slice(..);
+        let (sender, receiver) = std::sync::mpsc::channel();
+        buffer_slice.map_async(vello::wgpu::MapMode::Read, move |result| {
+            sender.send(result).unwrap();
+        });
+
+        // 等待映射完成
+        let _ = device_handle.device.poll(vello::wgpu::PollType::wait_indefinitely());
+
+        // 检查映射结果
+        receiver.recv().unwrap().unwrap();
+
+        // 获取像素数据
+        let data = buffer_slice.get_mapped_range();
+        let data: Vec<u8> = data.to_vec();
+
+        // 创建 RGBA8 图片并保存为 PNG
+        let buffer = ImageBuffer::<image::Rgba<u8>, _>::from_raw(width, height, data)
+            .expect("Failed to create image buffer");
+
+        // 保存为 PNG
+        buffer.save_with_format(
+            path,
+            image::ImageFormat::Png,
+        ).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+    }
+
+    /// 获取窗口尺寸（像素）
+    pub fn size(&self) -> (u32, u32) {
+        (self.surface.config.width, self.surface.config.height)
     }
 }
 
