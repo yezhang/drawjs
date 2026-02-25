@@ -57,6 +57,10 @@ pub enum RenderCommandKind {
         rect: [glam::DVec2; 2],
         color: Color,
         width: f64,
+        /// 线帽样式
+        cap: LineCap,
+        /// 连接样式
+        join: LineJoin,
     },
 
     /// 绘制椭圆
@@ -75,6 +79,10 @@ pub enum RenderCommandKind {
         stroke_color: Option<Color>,
         /// 描边宽度
         stroke_width: f64,
+        /// 线帽样式
+        cap: LineCap,
+        /// 连接样式
+        join: LineJoin,
     },
 
     /// 清除屏幕
@@ -91,6 +99,20 @@ pub enum RenderCommandKind {
         p1: glam::DVec2,
         /// 终点
         p2: glam::DVec2,
+        /// 线条颜色
+        color: Color,
+        /// 线条宽度
+        width: f64,
+        /// 线帽样式
+        cap: LineCap,
+        /// 连接样式
+        join: LineJoin,
+    },
+
+    /// 绘制折线
+    Polyline {
+        /// 点列表
+        points: Vec<glam::DVec2>,
         /// 线条颜色
         color: Color,
         /// 线条宽度

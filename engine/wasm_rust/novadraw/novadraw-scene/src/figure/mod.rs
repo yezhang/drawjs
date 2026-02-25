@@ -6,6 +6,7 @@
 mod basic;
 pub use basic::EllipseFigure;
 pub use basic::LineFigure;
+pub use basic::PolylineFigure;
 pub use basic::RectangleFigure;
 
 use novadraw_geometry::Rectangle;

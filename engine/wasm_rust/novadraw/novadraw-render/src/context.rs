@@ -98,15 +98,15 @@ impl NdCanvas {
         self.create_command(RenderCommandKind::FillRect { rect, color });
     }
 
-    pub fn stroke_rect(&mut self, x: f64, y: f64, width: f64, height: f64, color: Color, stroke_width: f64) {
+    pub fn stroke_rect(&mut self, x: f64, y: f64, width: f64, height: f64, color: Color, stroke_width: f64, cap: crate::command::LineCap, join: crate::command::LineJoin) {
         let rect = [DVec2::new(x, y), DVec2::new(x + width, y + height)];
-        self.create_command(RenderCommandKind::StrokeRect { rect, color, width: stroke_width });
+        self.create_command(RenderCommandKind::StrokeRect { rect, color, width: stroke_width, cap, join });
     }
 
     /// 绘制椭圆
     ///
     /// 椭圆中心为 (cx, cy)，x 轴半径 rx，y 轴半径 ry
-    pub fn ellipse(&mut self, cx: f64, cy: f64, rx: f64, ry: f64, fill_color: Option<Color>, stroke_color: Option<Color>, stroke_width: f64) {
+    pub fn ellipse(&mut self, cx: f64, cy: f64, rx: f64, ry: f64, fill_color: Option<Color>, stroke_color: Option<Color>, stroke_width: f64, cap: crate::command::LineCap, join: crate::command::LineJoin) {
         self.create_command(RenderCommandKind::Ellipse {
             cx,
             cy,
@@ -115,6 +115,8 @@ impl NdCanvas {
             fill_color,
             stroke_color,
             stroke_width,
+            cap,
+            join,
         });
     }
 
@@ -125,6 +127,22 @@ impl NdCanvas {
         self.create_command(RenderCommandKind::Line {
             p1,
             p2,
+            color,
+            width,
+            cap,
+            join,
+        });
+    }
+
+    /// 绘制折线
+    ///
+    /// 从 points[0] 到 points[1] ... 到 points[n] 的折线
+    pub fn polyline(&mut self, points: &[DVec2], color: Color, width: f64, cap: crate::command::LineCap, join: crate::command::LineJoin) {
+        if points.len() < 2 {
+            return;
+        }
+        self.create_command(RenderCommandKind::Polyline {
+            points: points.to_vec(),
             color,
             width,
             cap,

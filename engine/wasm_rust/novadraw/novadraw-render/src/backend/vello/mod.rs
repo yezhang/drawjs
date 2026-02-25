@@ -8,7 +8,7 @@ use std::sync::Arc;
 use glam::DVec2;
 use image::ImageBuffer;
 use novadraw_geometry::Transform;
-use vello::kurbo::Stroke;
+use vello::kurbo::{Cap, Join, Stroke};
 use vello::peniko::Color as VelloColor;
 use vello::util::{RenderContext, RenderSurface};
 use vello::{AaConfig, Renderer, RendererOptions};
@@ -226,7 +226,7 @@ impl VelloRenderer {
                 );
             }
 
-            crate::command::RenderCommandKind::StrokeRect { rect, color, width } => {
+            crate::command::RenderCommandKind::StrokeRect { rect, color, width, cap, join } => {
                 let affine =
                     Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
                 let x0 = rect[0].x * self.scale_factor;
@@ -240,8 +240,19 @@ impl VelloRenderer {
                     color.b as f32,
                     color.a as f32,
                 ]);
+                let stroke = Stroke::new(*width * self.scale_factor)
+                    .with_caps(match cap {
+                        crate::command::LineCap::Butt => Cap::Butt,
+                        crate::command::LineCap::Round => Cap::Round,
+                        crate::command::LineCap::Square => Cap::Square,
+                    })
+                    .with_join(match join {
+                        crate::command::LineJoin::Miter => Join::Miter,
+                        crate::command::LineJoin::Round => Join::Round,
+                        crate::command::LineJoin::Bevel => Join::Bevel,
+                    });
                 self.scene.stroke(
-                    &Stroke::new(*width * self.scale_factor),
+                    &stroke,
                     affine,
                     vello_color,
                     None,
@@ -258,8 +269,8 @@ impl VelloRenderer {
                 p2,
                 color,
                 width,
-                cap: _,
-                join: _,
+                cap,
+                join,
             } => {
                 let affine =
                     Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
@@ -274,13 +285,73 @@ impl VelloRenderer {
                     color.a as f32,
                 ]);
 
+                let stroke = Stroke::new(*width * self.scale_factor)
+                    .with_caps(match cap {
+                        crate::command::LineCap::Butt => Cap::Butt,
+                        crate::command::LineCap::Round => Cap::Round,
+                        crate::command::LineCap::Square => Cap::Square,
+                    })
+                    .with_join(match join {
+                        crate::command::LineJoin::Miter => Join::Miter,
+                        crate::command::LineJoin::Round => Join::Round,
+                        crate::command::LineJoin::Bevel => Join::Bevel,
+                    });
+
                 self.scene.stroke(
-                    &Stroke::new(*width * self.scale_factor),
+                    &stroke,
                     affine,
                     vello_color,
                     None,
                     &vello::kurbo::Line::new(v1, v2),
                 );
+            }
+
+            crate::command::RenderCommandKind::Polyline {
+                points,
+                color,
+                width,
+                cap,
+                join,
+            } => {
+                if points.len() < 2 {
+                    return;
+                }
+                let affine =
+                    Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
+                let vello_color = VelloColor::new([
+                    color.r as f32,
+                    color.g as f32,
+                    color.b as f32,
+                    color.a as f32,
+                ]);
+
+                let stroke = Stroke::new(*width * self.scale_factor)
+                    .with_caps(match cap {
+                        crate::command::LineCap::Butt => Cap::Butt,
+                        crate::command::LineCap::Round => Cap::Round,
+                        crate::command::LineCap::Square => Cap::Square,
+                    })
+                    .with_join(match join {
+                        crate::command::LineJoin::Miter => Join::Miter,
+                        crate::command::LineJoin::Round => Join::Round,
+                        crate::command::LineJoin::Bevel => Join::Bevel,
+                    });
+
+                // 构建折线路径
+                let mut path = vello::kurbo::BezPath::new();
+                let first_point = points[0];
+                path.move_to((
+                    first_point.x * self.scale_factor,
+                    first_point.y * self.scale_factor,
+                ));
+                for point in &points[1..] {
+                    path.line_to((
+                        point.x * self.scale_factor,
+                        point.y * self.scale_factor,
+                    ));
+                }
+
+                self.scene.stroke(&stroke, affine, vello_color, None, &path);
             }
 
             crate::command::RenderCommandKind::Ellipse {
@@ -291,6 +362,8 @@ impl VelloRenderer {
                 fill_color,
                 stroke_color,
                 stroke_width,
+                cap,
+                join,
             } => {
                 let affine =
                     Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
@@ -323,8 +396,19 @@ impl VelloRenderer {
                         color.b as f32,
                         color.a as f32,
                     ]);
+                    let stroke = Stroke::new(*stroke_width * self.scale_factor)
+                        .with_caps(match cap {
+                            crate::command::LineCap::Butt => Cap::Butt,
+                            crate::command::LineCap::Round => Cap::Round,
+                            crate::command::LineCap::Square => Cap::Square,
+                        })
+                        .with_join(match join {
+                            crate::command::LineJoin::Miter => Join::Miter,
+                            crate::command::LineJoin::Round => Join::Round,
+                            crate::command::LineJoin::Bevel => Join::Bevel,
+                        });
                     self.scene.stroke(
-                        &Stroke::new(*stroke_width * self.scale_factor),
+                        &stroke,
                         affine,
                         vello_color,
                         None,
@@ -375,8 +459,8 @@ impl RenderBackend for VelloRenderer {
     }
 
     fn render(&mut self, commands: &[RenderCommand]) {
-        self.scene.reset();
-        // self.scene = vello::Scene::new();
+        // self.scene.reset();
+        self.scene = vello::Scene::new();
 
         // 重置状态栈
         self.state_stack.clear();
@@ -482,16 +566,21 @@ impl VelloRenderer {
     }
 
     /// 截图并保存为 PNG 文件
-    ///
-    /// 返回保存的文件路径
     pub fn screenshot(&self, path: &std::path::Path) -> std::io::Result<()> {
         let device_handle = &self.render_context.devices[self.surface.dev_id];
         let width = self.surface.config.width;
         let height = self.surface.config.height;
 
-        // 从截图纹理获取底层纹理（带 COPY_SRC 权限）
-        let (texture, _, _, _) =
-            self.screenshot_texture.as_ref().expect("Screenshot texture not created");
+        // 从 screenshot_texture 获取底层纹理
+        let texture = match &self.screenshot_texture {
+            Some((tex, _, _, _)) => tex,
+            None => {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "Screenshot texture not created. Call render() first.",
+                ));
+            }
+        };
 
         // 创建输出缓冲区
         let buffer_size = (width * height * 4) as u64;
@@ -511,26 +600,22 @@ impl VelloRenderer {
             },
         );
 
-        // 使用 wgpu 26.x API 构建复制信息
-        let copy_texture = vello::wgpu::TexelCopyTextureInfo {
-            texture,
-            mip_level: 0,
-            origin: vello::wgpu::Origin3d::ZERO,
-            aspect: vello::wgpu::TextureAspect::All,
-        };
-
-        let copy_buffer = vello::wgpu::TexelCopyBufferInfo {
-            buffer: &buffer,
-            layout: vello::wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(width * 4),
-                rows_per_image: Some(height),
-            },
-        };
-
+        // 从 screenshot_texture 复制到 buffer
         encoder.copy_texture_to_buffer(
-            copy_texture,
-            copy_buffer,
+            vello::wgpu::TexelCopyTextureInfo {
+                texture,
+                mip_level: 0,
+                origin: vello::wgpu::Origin3d::ZERO,
+                aspect: vello::wgpu::TextureAspect::All,
+            },
+            vello::wgpu::TexelCopyBufferInfo {
+                buffer: &buffer,
+                layout: vello::wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(width * 4),
+                    rows_per_image: Some(height),
+                },
+            },
             vello::wgpu::Extent3d {
                 width,
                 height,
@@ -563,10 +648,8 @@ impl VelloRenderer {
             .expect("Failed to create image buffer");
 
         // 保存为 PNG
-        buffer.save_with_format(
-            path,
-            image::ImageFormat::Png,
-        ).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        buffer.save_with_format(path, image::ImageFormat::Png)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 
     /// 获取窗口尺寸（像素）

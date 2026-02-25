@@ -22,6 +22,10 @@ pub struct RectangleFigure {
     pub stroke_color: Option<Color>,
     /// 边框宽度
     pub stroke_width: f64,
+    /// 线帽样式
+    pub line_cap: novadraw_render::command::LineCap,
+    /// 连接样式
+    pub line_join: novadraw_render::command::LineJoin,
     /// 是否使用本地坐标模式
     use_local_coordinates: bool,
 }
@@ -34,6 +38,8 @@ impl RectangleFigure {
             fill_color: Color::hex("#3498db"),
             stroke_color: None,
             stroke_width: 0.0,
+            line_cap: novadraw_render::command::LineCap::default(),
+            line_join: novadraw_render::command::LineJoin::default(),
             use_local_coordinates: false,
         }
     }
@@ -45,6 +51,8 @@ impl RectangleFigure {
             fill_color: Color::hex("#3498db"),
             stroke_color: None,
             stroke_width: 0.0,
+            line_cap: novadraw_render::command::LineCap::default(),
+            line_join: novadraw_render::command::LineJoin::default(),
             use_local_coordinates: false,
         }
     }
@@ -56,6 +64,8 @@ impl RectangleFigure {
             fill_color: color,
             stroke_color: None,
             stroke_width: 0.0,
+            line_cap: novadraw_render::command::LineCap::default(),
+            line_join: novadraw_render::command::LineJoin::default(),
             use_local_coordinates: false,
         }
     }
@@ -115,6 +125,8 @@ impl Figure for RectangleFigure {
                 self.bounds.height,
                 color,
                 self.stroke_width,
+                self.line_cap,
+                self.line_join,
             );
         }
     }
@@ -125,6 +137,10 @@ impl Figure for RectangleFigure {
 
     fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
         Some(self)
+    }
+
+    fn name(&self) -> &'static str {
+        "RectangleFigure"
     }
 }
 
@@ -142,6 +158,10 @@ pub struct EllipseFigure {
     pub stroke_color: Option<Color>,
     /// 边框宽度
     pub stroke_width: f64,
+    /// 线帽样式
+    pub line_cap: novadraw_render::command::LineCap,
+    /// 连接样式
+    pub line_join: novadraw_render::command::LineJoin,
     /// 是否使用本地坐标模式
     use_local_coordinates: bool,
 }
@@ -156,6 +176,8 @@ impl EllipseFigure {
             fill_color: Color::hex("#e74c3c"),
             stroke_color: None,
             stroke_width: 0.0,
+            line_cap: novadraw_render::command::LineCap::default(),
+            line_join: novadraw_render::command::LineJoin::default(),
             use_local_coordinates: false,
         }
     }
@@ -167,6 +189,8 @@ impl EllipseFigure {
             fill_color: Color::hex("#e74c3c"),
             stroke_color: None,
             stroke_width: 0.0,
+            line_cap: novadraw_render::command::LineCap::default(),
+            line_join: novadraw_render::command::LineJoin::default(),
             use_local_coordinates: false,
         }
     }
@@ -178,6 +202,8 @@ impl EllipseFigure {
             fill_color: color,
             stroke_color: None,
             stroke_width: 0.0,
+            line_cap: novadraw_render::command::LineCap::default(),
+            line_join: novadraw_render::command::LineJoin::default(),
             use_local_coordinates: false,
         }
     }
@@ -252,6 +278,8 @@ impl Figure for EllipseFigure {
             Some(self.fill_color),
             self.stroke_color,
             self.stroke_width,
+            self.line_cap,
+            self.line_join,
         );
     }
 
@@ -260,15 +288,17 @@ impl Figure for EllipseFigure {
     }
 }
 
-/// 直线图形
+/// 折线图形
 ///
-/// 用于渲染直线。
-/// bounds 定义起点 (x, y) 和终点偏移 (width, height)。
-/// 直线从 (bounds.x, bounds.y) 到 (bounds.x + width, bounds.y + height)。
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct LineFigure {
-    /// 边界矩形：x,y=起点, width/height=终点偏移
-    pub bounds: Rectangle,
+/// 参考 Eclipse Draw2D 的 Polyline 设计。
+/// 使用点列表存储多个顶点，可以绘制任意折线。
+/// bounds 是自动计算的，基于点列表并扩展线宽。
+///
+/// 注意：不能通过 set_bounds 定位，应该通过 add_point/set_points 操作点。
+#[derive(Clone, Debug, PartialEq)]
+pub struct PolylineFigure {
+    /// 点列表
+    points: Vec<novadraw_geometry::Vec2>,
     /// 线条颜色
     pub stroke_color: Color,
     /// 线条宽度
@@ -277,31 +307,83 @@ pub struct LineFigure {
     pub line_cap: novadraw_render::command::LineCap,
     /// 连接样式
     pub line_join: novadraw_render::command::LineJoin,
+    /// 是否使用本地坐标模式
+    use_local_coordinates: bool,
 }
 
-impl LineFigure {
-    /// 创建直线
+impl PolylineFigure {
+    /// 创建两点折线（直线）
     ///
     /// 从 (x1, y1) 到 (x2, y2)
     pub fn new(x1: f64, y1: f64, x2: f64, y2: f64) -> Self {
         Self {
-            bounds: Rectangle::new(x1.min(x2), y1.min(y2), (x2 - x1).abs(), (y2 - y1).abs()),
+            points: vec![
+                novadraw_geometry::Vec2::new(x1, y1),
+                novadraw_geometry::Vec2::new(x2, y2),
+            ],
             stroke_color: Color::hex("#2c3e50"),
             stroke_width: 2.0,
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
+            use_local_coordinates: false,
         }
     }
 
-    /// 创建指定颜色的直线
+    /// 从点列表创建折线
+    pub fn from_points(points: Vec<novadraw_geometry::Vec2>) -> Self {
+        Self {
+            points,
+            stroke_color: Color::hex("#2c3e50"),
+            stroke_width: 2.0,
+            line_cap: novadraw_render::command::LineCap::default(),
+            line_join: novadraw_render::command::LineJoin::default(),
+            use_local_coordinates: false,
+        }
+    }
+
+    /// 创建指定颜色的折线
     pub fn new_with_color(x1: f64, y1: f64, x2: f64, y2: f64, color: Color) -> Self {
         Self {
-            bounds: Rectangle::new(x1.min(x2), y1.min(y2), (x2 - x1).abs(), (y2 - y1).abs()),
+            points: vec![
+                novadraw_geometry::Vec2::new(x1, y1),
+                novadraw_geometry::Vec2::new(x2, y2),
+            ],
             stroke_color: color,
             stroke_width: 2.0,
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
+            use_local_coordinates: false,
         }
+    }
+
+    /// 添加点
+    pub fn add_point(&mut self, x: f64, y: f64) {
+        self.points.push(novadraw_geometry::Vec2::new(x, y));
+    }
+
+    /// 获取点列表（引用）
+    pub fn get_points(&self) -> &[novadraw_geometry::Vec2] {
+        &self.points
+    }
+
+    /// 设置点列表
+    pub fn set_points(&mut self, points: Vec<novadraw_geometry::Vec2>) {
+        self.points = points;
+    }
+
+    /// 获取起点
+    pub fn start_point(&self) -> Option<novadraw_geometry::Vec2> {
+        self.points.first().copied()
+    }
+
+    /// 获取终点
+    pub fn end_point(&self) -> Option<novadraw_geometry::Vec2> {
+        self.points.last().copied()
+    }
+
+    /// 获取点数量
+    pub fn point_count(&self) -> usize {
+        self.points.len()
     }
 
     /// 设置线条宽度
@@ -322,33 +404,64 @@ impl LineFigure {
         self
     }
 
-    /// 获取起点
-    pub fn p1(&self) -> (f64, f64) {
-        // 如果直线是反向定义的，需要调整
-        if self.bounds.width == 0.0 && self.bounds.height == 0.0 {
-            (self.bounds.x, self.bounds.y)
-        } else {
-            // 对于斜线，这里简化为 bounds 左上角
-            // 实际渲染时 p1 和 p2 需要根据原始坐标计算
-            (self.bounds.x, self.bounds.y)
-        }
+    /// 设置坐标模式
+    pub fn with_local_coordinates(mut self, enable: bool) -> Self {
+        self.use_local_coordinates = enable;
+        self
     }
 
-    /// 获取终点
-    pub fn p2(&self) -> (f64, f64) {
-        (self.bounds.x + self.bounds.width, self.bounds.y + self.bounds.height)
+    /// 计算包含线宽的边界矩形
+    fn calculate_bounds(&self) -> Rectangle {
+        if self.points.is_empty() {
+            return Rectangle::ZERO;
+        }
+
+        let mut min_x = f64::MAX;
+        let mut min_y = f64::MAX;
+        let mut max_x = f64::MIN;
+        let mut max_y = f64::MIN;
+
+        for point in &self.points {
+            min_x = min_x.min(point.0.x);
+            min_y = min_y.min(point.0.y);
+            max_x = max_x.max(point.0.x);
+            max_y = max_y.max(point.0.y);
+        }
+
+        // 扩展边界以包含描边宽度
+        let half_stroke = self.stroke_width / 2.0;
+        Rectangle::new(
+            min_x - half_stroke,
+            min_y - half_stroke,
+            (max_x - min_x) + self.stroke_width,
+            (max_y - min_y) + self.stroke_width,
+        )
     }
 }
 
-impl Figure for LineFigure {
+impl Figure for PolylineFigure {
     fn bounds(&self) -> Rectangle {
-        self.bounds
+        self.calculate_bounds()
+    }
+
+    fn use_local_coordinates(&self) -> bool {
+        self.use_local_coordinates
     }
 
     fn paint_figure(&self, gc: &mut NdCanvas) {
-        gc.line(
-            glam::DVec2::new(self.bounds.x, self.bounds.y),
-            glam::DVec2::new(self.bounds.x + self.bounds.width, self.bounds.y + self.bounds.height),
+        if self.points.len() < 2 {
+            return;
+        }
+
+        // 转换为 DVec2 数组
+        let points: Vec<glam::DVec2> = self
+            .points
+            .iter()
+            .map(|p| glam::DVec2::new(p.0.x, p.0.y))
+            .collect();
+
+        gc.polyline(
+            &points,
             self.stroke_color,
             self.stroke_width,
             self.line_cap,
@@ -357,6 +470,9 @@ impl Figure for LineFigure {
     }
 
     fn name(&self) -> &'static str {
-        "LineFigure"
+        "PolylineFigure"
     }
 }
+
+/// 直线图形（PolylineFigure 的别名，保持向后兼容）
+pub type LineFigure = PolylineFigure;
