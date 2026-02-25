@@ -3,6 +3,7 @@
 //! 提供通用的演示应用构建和运行功能。
 
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub use novadraw::{RenderBackend, SceneGraph, WindowProxy};
 pub use novadraw_render::backend::vello::{VelloRenderer, WinitWindowProxy};
@@ -33,12 +34,16 @@ pub struct DemoApp {
     window: Option<Arc<winit::window::Window>>,
     /// 窗口标题
     title: String,
+    /// 应用名称（用于截图目录）
+    app_name: String,
     /// 窗口宽度
     width: f64,
     /// 窗口高度
     height: f64,
     /// 渲染模式
     use_iterative_render: bool,
+    /// 截图模式
+    screenshot_mode: Option<usize>,
 }
 
 impl DemoApp {
@@ -48,17 +53,23 @@ impl DemoApp {
         scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
         width: f64,
         height: f64,
+        app_name: &str,
+        screenshot_mode: Option<usize>,
     ) -> Self {
+        // 如果有截图模式，默认显示第一个场景
+        let default_scene = if screenshot_mode.is_some() { 0 } else { 4 };
         Self {
             scenes,
-            current_scene_idx: 0,
+            current_scene_idx: default_scene,
             scene_graph: None,
             renderer: None,
             window: None,
             title: title.to_string(),
+            app_name: app_name.to_string(),
             width,
             height,
             use_iterative_render: false,
+            screenshot_mode,
         }
     }
 
@@ -98,6 +109,103 @@ impl DemoApp {
         };
         renderer.render(render_ctx.commands());
     }
+
+    /// 截图并保存到文件
+    ///
+    /// 使用 VelloRenderer 直接捕获渲染结果
+    /// 截图保存到 `{app目录}/screenshot/{app_name}_{scene}_{timestamp}.png`
+    pub fn screenshot(&self, scene_name: &str) -> std::io::Result<std::path::PathBuf> {
+        // 获取应用根目录（通过 CARGO_MANIFEST_DIR 环境变量）
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
+            .map(std::path::PathBuf::from)
+            .or_else(|_| std::env::current_dir())
+            .unwrap_or_else(|_| std::path::PathBuf::from("."));
+
+        // 创建 screenshot 目录
+        let screenshot_dir = manifest_dir.join("screenshot");
+        std::fs::create_dir_all(&screenshot_dir)?;
+
+        // 生成文件名：{app_name}_{scene}_{timestamp}.png
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let safe_scene_name: String = scene_name
+            .chars()
+            .map(|c| if c.is_alphanumeric() || c == '_' { c } else { '_' })
+            .collect();
+        let filename = format!("{}_{}_{}.png", self.app_name, safe_scene_name, timestamp);
+        let output_path = screenshot_dir.join(&filename);
+
+        // 使用 VelloRenderer 捕获渲染结果
+        if let Some(renderer) = &self.renderer {
+            renderer.screenshot(&output_path)?;
+            log::info!("截图已保存: {}", output_path.display());
+            Ok(output_path)
+        } else {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "Renderer not initialized",
+            ))
+        }
+    }
+
+    /// 处理截图模式
+    fn handle_screenshot_mode(&mut self, mode: usize) {
+        // mode: usize::MAX = 截图所有场景, 其他值 = 截图指定场景
+        let scenes_to_capture: Vec<usize> = if mode == usize::MAX {
+            // 截图所有场景
+            (0..self.scenes.len()).collect()
+        } else {
+            // 截图指定场景
+            vec![mode]
+        };
+
+        log::info!("截图模式: {:?}, 场景数量: {}", scenes_to_capture, self.scenes.len());
+
+        // 截图每个场景
+        for idx in scenes_to_capture {
+            if idx >= self.scenes.len() {
+                log::warn!("场景索引 {} 超出范围", idx);
+                continue;
+            }
+
+            log::info!("截图场景 {}...", idx);
+
+            // 切换到目标场景
+            self.switch_scene(idx);
+
+            // 渲染一帧
+            self.render();
+
+            // 等待一小段时间确保渲染完成
+            std::thread::sleep(std::time::Duration::from_millis(200));
+
+            // 截图
+            let scene_name = self.scenes[idx].0;
+            match self.screenshot(scene_name) {
+                Ok(path) => {
+                    log::info!("截图成功: {}", path.display());
+                    // 分析截图
+                    self.analyze_screenshot(&path, scene_name);
+                }
+                Err(e) => {
+                    log::error!("截图失败: {}", e);
+                }
+            }
+        }
+
+        log::info!("截图完成，应用退出");
+        // 截图完成后退出应用
+        std::process::exit(0);
+    }
+
+    /// 分析截图结果
+    fn analyze_screenshot(&self, path: &std::path::Path, scene_name: &str) {
+        log::info!("分析截图: {} - {}", scene_name, path.display());
+        // 这里可以添加图像分析逻辑
+        // 例如：检查图像是否存在、尺寸等
+    }
 }
 
 impl ApplicationHandler<()> for DemoApp {
@@ -125,9 +233,17 @@ impl ApplicationHandler<()> for DemoApp {
 
         // 创建初始场景
         if !self.scenes.is_empty() {
-            let creator = &mut self.scenes[0].1;
+            let idx = self.current_scene_idx.min(self.scenes.len() - 1);
+            let creator = &mut self.scenes[idx].1;
             self.scene_graph = Some(creator());
+            log::info!("初始场景: {}", self.scenes[idx].0);
         }
+
+        // 截图模式处理
+        if let Some(screenshot_mode) = self.screenshot_mode {
+            self.handle_screenshot_mode(screenshot_mode);
+        }
+
         log::info!("应用启动: {}", self.title);
     }
 
@@ -174,6 +290,13 @@ impl ApplicationHandler<()> for DemoApp {
                             }
                         );
                         self.window.as_ref().unwrap().request_redraw();
+                    }
+                    PhysicalKey::Code(KeyCode::KeyS) => {
+                        // 截图
+                        let scene_name = self.current_scene_name().unwrap_or("unknown");
+                        if let Err(e) = self.screenshot(scene_name) {
+                            log::error!("截图失败: {}", e);
+                        }
                     }
                     // 数字键 0-9 切换场景
                     _ => {
@@ -223,9 +346,12 @@ fn get_digit_index(key: &winit::keyboard::PhysicalKey) -> Option<usize> {
 /// 用于更灵活地配置应用
 pub struct AppBuilder {
     title: String,
+    app_name: String,
     scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
     width: f64,
     height: f64,
+    /// 截图模式：None=正常模式, Some(true)=截图所有场景, Some(数字)=截图指定场景
+    screenshot_mode: Option<usize>,
 }
 
 impl AppBuilder {
@@ -233,9 +359,11 @@ impl AppBuilder {
     pub fn new(title: &str) -> Self {
         Self {
             title: title.to_string(),
+            app_name: String::new(),
             scenes: Vec::new(),
             width: 800.0,
             height: 600.0,
+            screenshot_mode: None,
         }
     }
 
@@ -243,6 +371,12 @@ impl AppBuilder {
     pub fn with_size(mut self, width: f64, height: f64) -> Self {
         self.width = width;
         self.height = height;
+        self
+    }
+
+    /// 设置应用名称（用于截图目录和文件名）
+    pub fn with_app_name(mut self, name: &str) -> Self {
+        self.app_name = name.to_string();
         self
     }
 
@@ -258,11 +392,35 @@ impl AppBuilder {
         self
     }
 
+    /// 设置截图模式
+    ///
+    /// `screenshot_all`: true=截图所有场景, false=不截图
+    pub fn with_screenshot(mut self, screenshot_all: bool) -> Self {
+        if screenshot_all {
+            self.screenshot_mode = Some(usize::MAX); // MAX 表示所有场景
+        }
+        self
+    }
+
+    /// 截图指定场景
+    ///
+    /// `scene_index`: 场景索引（从0开始）
+    pub fn with_screenshot_scene(mut self, scene_index: usize) -> Self {
+        self.screenshot_mode = Some(scene_index);
+        self
+    }
+
     /// 构建并运行应用
     pub fn run(self) -> Result<(), Box<dyn std::error::Error>> {
         let event_loop = EventLoop::new()?;
         let scenes: Vec<(_, Box<dyn FnMut() -> SceneGraph>)> = self.scenes.into_iter().map(|(n, c)| (n, c)).collect();
-        let mut app = DemoApp::new(&self.title, scenes, self.width, self.height);
+        let app_name = if self.app_name.is_empty() {
+            // 从 title 提取应用名称
+            self.title.split_whitespace().next().unwrap_or("app").to_string()
+        } else {
+            self.app_name
+        };
+        let mut app = DemoApp::new(&self.title, scenes, self.width, self.height, &app_name, self.screenshot_mode);
         event_loop.run_app(&mut app)?;
         Ok(())
     }
@@ -283,17 +441,54 @@ impl AppBuilder {
 /// }
 ///
 /// fn main() {
-///     run_demo_app("My App", vec![
+///     run_demo_app("My App", "rect-demo", vec![
 ///         ("Rectangle", Box::new(|| create_rect_scene())),
 ///     ]);
 /// }
 /// ```
 pub fn run_demo_app(
     title: &str,
+    app_name: &str,
     scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    AppBuilder::new(title)
+    run_demo_app_with_options(title, app_name, scenes, false, None)
+}
+
+pub fn run_demo_app_with_screenshot(
+    title: &str,
+    app_name: &str,
+    scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
+    screenshot_all: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    run_demo_app_with_options(title, app_name, scenes, screenshot_all, None)
+}
+
+pub fn run_demo_app_with_scene_screenshot(
+    title: &str,
+    app_name: &str,
+    scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
+    scene_index: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    run_demo_app_with_options(title, app_name, scenes, false, Some(scene_index))
+}
+
+fn run_demo_app_with_options(
+    title: &str,
+    app_name: &str,
+    scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
+    screenshot_all: bool,
+    screenshot_scene: Option<usize>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut builder = AppBuilder::new(title)
         .with_size(800.0, 600.0)
-        .with_scenes_boxed(scenes)
-        .run()
+        .with_app_name(app_name)
+        .with_scenes_boxed(scenes);
+
+    if screenshot_all {
+        builder = builder.with_screenshot(true);
+    } else if let Some(idx) = screenshot_scene {
+        builder = builder.with_screenshot_scene(idx);
+    }
+
+    builder.run()
 }

@@ -24,5 +24,5 @@
 pub mod app;
 pub mod prelude;
 
-pub use app::{run_demo_app, AppBuilder, DemoApp};
+pub use app::{run_demo_app, run_demo_app_with_screenshot, run_demo_app_with_scene_screenshot, AppBuilder, DemoApp};
 pub use prelude::*;
