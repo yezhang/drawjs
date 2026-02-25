@@ -262,14 +262,6 @@ fn test_local_coordinates_mode() {
             true
         }
 
-        fn as_rectangle(&self) -> Option<&RectangleFigure> {
-            None
-        }
-
-        fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-            None
-        }
-
         fn name(&self) -> &'static str {
             "LocalCoordFigure"
         }

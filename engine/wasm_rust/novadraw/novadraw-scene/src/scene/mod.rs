@@ -215,7 +215,7 @@ impl SceneGraph {
             uuid,
             children: Vec::new(),
             parent: None,
-            figure: Box::new(super::figure::BaseFigure::new(0.0, 0.0, 0.0, 0.0)),
+            figure: Box::new(super::figure::RootFigure::new(0.0, 0.0, 0.0, 0.0)),
             is_selected: false,
             is_visible: true,
             is_enabled: true,
@@ -623,9 +623,12 @@ impl SceneGraph {
 
             for (child_id, new_bounds) in children_bounds {
                 if let Some(child) = self.blocks.get_mut(child_id) {
-                    if let Some(rect) = child.figure.as_rectangle_mut() {
-                        rect.bounds = new_bounds;
-                    }
+                    child.figure.set_bounds(
+                        new_bounds.x,
+                        new_bounds.y,
+                        new_bounds.width,
+                        new_bounds.height,
+                    );
                 }
             }
         }
@@ -692,10 +695,13 @@ impl SceneGraph {
         while let Some(id) = stack.pop() {
             if let Some(block) = self.blocks.get_mut(id) {
                 // 修改当前节点的 bounds (x, y)
-                if let Some(rect) = block.figure.as_rectangle_mut() {
-                    rect.bounds.x += dx;
-                    rect.bounds.y += dy;
-                }
+                let current_bounds = block.figure.bounds();
+                block.figure.set_bounds(
+                    current_bounds.x + dx,
+                    current_bounds.y + dy,
+                    current_bounds.width,
+                    current_bounds.height,
+                );
 
                 // 检查是否使用本地坐标模式
                 if block.figure.use_local_coordinates() {
@@ -1208,12 +1214,6 @@ mod tests {
             fn use_local_coordinates(&self) -> bool {
                 true
             }
-            fn as_rectangle(&self) -> Option<&RectangleFigure> {
-                None
-            }
-            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-                None
-            }
             fn name(&self) -> &'static str {
                 "CoordinateRootFigure"
             }
@@ -1258,12 +1258,6 @@ mod tests {
             }
             fn insets(&self) -> (f64, f64, f64, f64) {
                 (5.0, 5.0, 0.0, 0.0)
-            }
-            fn as_rectangle(&self) -> Option<&RectangleFigure> {
-                None
-            }
-            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-                None
             }
             fn name(&self) -> &'static str {
                 "FigureWithInsets"
@@ -1333,12 +1327,6 @@ mod tests {
             fn use_local_coordinates(&self) -> bool {
                 true
             }
-            fn as_rectangle(&self) -> Option<&RectangleFigure> {
-                None
-            }
-            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-                None
-            }
             fn name(&self) -> &'static str {
                 "CoordinateRootFigure"
             }
@@ -1383,12 +1371,6 @@ mod tests {
             }
             fn insets(&self) -> (f64, f64, f64, f64) {
                 (5.0, 5.0, 0.0, 0.0)
-            }
-            fn as_rectangle(&self) -> Option<&RectangleFigure> {
-                None
-            }
-            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-                None
             }
             fn name(&self) -> &'static str {
                 "FigureWithInsets"
@@ -1435,12 +1417,6 @@ mod tests {
             fn use_local_coordinates(&self) -> bool {
                 true
             }
-            fn as_rectangle(&self) -> Option<&RectangleFigure> {
-                None
-            }
-            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-                None
-            }
             fn name(&self) -> &'static str {
                 "CoordinateRootFigure"
             }
@@ -1482,12 +1458,6 @@ mod tests {
             }
             fn use_local_coordinates(&self) -> bool {
                 true
-            }
-            fn as_rectangle(&self) -> Option<&RectangleFigure> {
-                None
-            }
-            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-                None
             }
             fn name(&self) -> &'static str {
                 "CoordinateRootFigure"
@@ -1543,12 +1513,6 @@ mod tests {
             fn use_local_coordinates(&self) -> bool {
                 true
             }
-            fn as_rectangle(&self) -> Option<&RectangleFigure> {
-                None
-            }
-            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-                None
-            }
             fn name(&self) -> &'static str {
                 "CoordinateRootFigure"
             }
@@ -1596,12 +1560,6 @@ mod tests {
             fn use_local_coordinates(&self) -> bool {
                 true
             }
-            fn as_rectangle(&self) -> Option<&RectangleFigure> {
-                None
-            }
-            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-                None
-            }
             fn name(&self) -> &'static str {
                 "CoordinateRootFigure"
             }
@@ -1646,12 +1604,6 @@ mod tests {
             }
             fn use_local_coordinates(&self) -> bool {
                 true
-            }
-            fn as_rectangle(&self) -> Option<&RectangleFigure> {
-                None
-            }
-            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-                None
             }
             fn name(&self) -> &'static str {
                 "CoordinateRootFigure"
@@ -1705,12 +1657,6 @@ mod tests {
             }
             fn use_local_coordinates(&self) -> bool {
                 true
-            }
-            fn as_rectangle(&self) -> Option<&RectangleFigure> {
-                None
-            }
-            fn as_rectangle_mut(&mut self) -> Option<&mut RectangleFigure> {
-                None
             }
             fn name(&self) -> &'static str {
                 "CoordinateRootFigure"
