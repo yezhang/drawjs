@@ -12,6 +12,7 @@ glam.workspace = true
 slotmap.workspace = true
 uuid.workspace = true
 serde.workspace = true
+log.workspace = true
 
 [features]
 default = []
