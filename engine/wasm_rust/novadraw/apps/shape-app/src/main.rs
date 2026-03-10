@@ -64,39 +64,229 @@ fn create_scene_1_ellipse_fill() -> novadraw::SceneGraph {
     scene
 }
 
-/// Scene 2: 直线图形 - 验证 LineFigure
-/// MECE: 单独验证直线（水平、垂直、斜线）
-fn create_scene_2_line_directions() -> novadraw::SceneGraph {
+/// Scene 2: 圆角矩形
+fn create_scene_2_rounded_rect() -> novadraw::SceneGraph {
     let mut scene = novadraw::SceneGraph::new();
 
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
-    // 水平线
-    let h_line = novadraw::LineFigure::new_with_color(100.0, 100.0, 400.0, 100.0, novadraw::Color::rgba(0.9, 0.2, 0.2, 1.0))
+    // 不同圆角半径的矩形
+    let rect_0 = novadraw::RoundedRectangleFigure::new_with_color(50.0, 50.0, 150.0, 80.0, 0.0, novadraw::Color::rgba(0.9, 0.5, 0.1, 1.0))
+        .with_stroke(novadraw::Color::WHITE, 2.0);
+    let rect_5 = novadraw::RoundedRectangleFigure::new_with_color(250.0, 50.0, 150.0, 80.0, 5.0, novadraw::Color::rgba(0.1, 0.5, 0.9, 1.0))
+        .with_stroke(novadraw::Color::WHITE, 2.0);
+    let rect_15 = novadraw::RoundedRectangleFigure::new_with_color(450.0, 50.0, 150.0, 80.0, 15.0, novadraw::Color::rgba(0.2, 0.8, 0.3, 1.0))
+        .with_stroke(novadraw::Color::WHITE, 2.0);
+    let rect_30 = novadraw::RoundedRectangleFigure::new_with_color(650.0, 50.0, 100.0, 80.0, 30.0, novadraw::Color::rgba(0.9, 0.2, 0.2, 1.0))
+        .with_stroke(novadraw::Color::WHITE, 2.0);
+
+    // 纯填充（无描边）
+    let rect_fill = novadraw::RoundedRectangleFigure::new_with_color(50.0, 180.0, 150.0, 80.0, 20.0, novadraw::Color::rgba(0.3, 0.3, 0.3, 1.0));
+
+    // 纯描边（无填充）
+    let rect_stroke = novadraw::RoundedRectangleFigure::new(250.0, 180.0, 150.0, 80.0, 20.0)
+        .with_stroke(novadraw::Color::RED, 3.0);
+
+    // 填充 + 描边
+    let rect_both = novadraw::RoundedRectangleFigure::new_with_color(450.0, 180.0, 150.0, 80.0, 20.0, novadraw::Color::rgba(0.3, 0.3, 0.3, 1.0))
+        .with_stroke(novadraw::Color::GREEN, 3.0);
+
+    // 不同描边宽度
+    let rect_sw_1 = novadraw::RoundedRectangleFigure::new_with_color(50.0, 300.0, 150.0, 80.0, 15.0, novadraw::Color::rgba(0.6, 0.3, 0.9, 1.0))
+        .with_stroke(novadraw::Color::WHITE, 1.0);
+    let rect_sw_4 = novadraw::RoundedRectangleFigure::new_with_color(250.0, 300.0, 150.0, 80.0, 15.0, novadraw::Color::rgba(0.6, 0.3, 0.9, 1.0))
+        .with_stroke(novadraw::Color::WHITE, 4.0);
+    let rect_sw_8 = novadraw::RoundedRectangleFigure::new_with_color(450.0, 300.0, 150.0, 80.0, 15.0, novadraw::Color::rgba(0.6, 0.3, 0.9, 1.0))
+        .with_stroke(novadraw::Color::WHITE, 8.0);
+
+    // 大圆角（接近圆形）
+    let rect_circle = novadraw::RoundedRectangleFigure::new_with_color(650.0, 300.0, 100.0, 80.0, 40.0, novadraw::Color::rgba(0.9, 0.6, 0.1, 1.0))
+        .with_stroke(novadraw::Color::WHITE, 2.0);
+
+    scene.add_child_to(container_id, Box::new(rect_0));
+    scene.add_child_to(container_id, Box::new(rect_5));
+    scene.add_child_to(container_id, Box::new(rect_15));
+    scene.add_child_to(container_id, Box::new(rect_30));
+    scene.add_child_to(container_id, Box::new(rect_fill));
+    scene.add_child_to(container_id, Box::new(rect_stroke));
+    scene.add_child_to(container_id, Box::new(rect_both));
+    scene.add_child_to(container_id, Box::new(rect_sw_1));
+    scene.add_child_to(container_id, Box::new(rect_sw_4));
+    scene.add_child_to(container_id, Box::new(rect_sw_8));
+    scene.add_child_to(container_id, Box::new(rect_circle));
+
+    scene
+}
+
+/// Scene 3: 折线图形 - 验证 PolylineFigure
+/// MECE: 按折线属性分类（点数、线宽、线帽、连接样式、闭合）
+fn create_scene_2_line_directions() -> novadraw::SceneGraph {
+    let mut scene = novadraw::SceneGraph::new();
+
+    let container = novadraw::RectangleFigure::new_with_color(0.0, 0.0, WINDOW_WIDTH as f64, WINDOW_HEIGHT as f64, novadraw::Color::rgba(0.15, 0.15, 0.15, 1.0));
+    let container_id = scene.set_contents(Box::new(container));
+
+    // ============================================================
+    // 测试1: 不同点数的折线
+    // ============================================================
+    // 2点折线（直线）
+    let line_2pt = novadraw::PolylineFigure::new_with_color(50.0, 40.0, 200.0, 40.0, novadraw::Color::WHITE)
         .with_width(3.0);
+    scene.add_child_to(container_id, Box::new(line_2pt));
 
-    // 垂直线
-    let v_line = novadraw::LineFigure::new_with_color(500.0, 50.0, 500.0, 250.0, novadraw::Color::rgba(0.2, 0.2, 0.9, 1.0))
+    // 3点折线（折线）
+    let line_3pt = novadraw::PolylineFigure::from_points(vec![
+        novadraw_geometry::Vec2::new(50.0, 80.0),
+        novadraw_geometry::Vec2::new(125.0, 40.0),
+        novadraw_geometry::Vec2::new(200.0, 80.0),
+    ]).with_width(3.0);
+    scene.add_child_to(container_id, Box::new(line_3pt));
+
+    // 5点折线（多段折线）
+    let line_5pt = novadraw::PolylineFigure::from_points(vec![
+        novadraw_geometry::Vec2::new(50.0, 120.0),
+        novadraw_geometry::Vec2::new(100.0, 80.0),
+        novadraw_geometry::Vec2::new(150.0, 160.0),
+        novadraw_geometry::Vec2::new(200.0, 120.0),
+        novadraw_geometry::Vec2::new(250.0, 160.0),
+    ]).with_width(3.0);
+    scene.add_child_to(container_id, Box::new(line_5pt));
+
+    // ============================================================
+    // 测试2: 不同线宽
+    // ============================================================
+    let widths = [1.0, 2.0, 4.0, 6.0, 8.0];
+    for (i, &w) in widths.iter().enumerate() {
+        let line = novadraw::PolylineFigure::new_with_color(
+            300.0 + i as f64 * 80.0, 40.0,
+            350.0 + i as f64 * 80.0, 80.0,
+            novadraw::Color::WHITE
+        ).with_width(w);
+        scene.add_child_to(container_id, Box::new(line));
+    }
+
+    // ============================================================
+    // 测试3: 不同线帽样式 (LineCap)
+    // ============================================================
+    let cap_butt = novadraw::PolylineFigure::new_with_color(50.0, 200.0, 150.0, 200.0, novadraw::Color::rgba(1.0, 0.3, 0.3, 1.0))
+        .with_width(8.0)
+        .with_cap(novadraw::render::command::LineCap::Butt);
+    scene.add_child_to(container_id, Box::new(cap_butt));
+
+    let cap_round = novadraw::PolylineFigure::new_with_color(200.0, 200.0, 300.0, 200.0, novadraw::Color::rgba(0.3, 1.0, 0.3, 1.0))
+        .with_width(8.0)
+        .with_cap(novadraw::render::command::LineCap::Round);
+    scene.add_child_to(container_id, Box::new(cap_round));
+
+    let cap_square = novadraw::PolylineFigure::new_with_color(350.0, 200.0, 450.0, 200.0, novadraw::Color::rgba(0.3, 0.3, 1.0, 1.0))
+        .with_width(8.0)
+        .with_cap(novadraw::render::command::LineCap::Square);
+    scene.add_child_to(container_id, Box::new(cap_square));
+
+    // ============================================================
+    // 测试4: 不同连接样式 (LineJoin)
+    // ============================================================
+    // 尖角连接
+    let join_miter = novadraw::PolylineFigure::from_points(vec![
+        novadraw_geometry::Vec2::new(50.0, 260.0),
+        novadraw_geometry::Vec2::new(100.0, 220.0),
+        novadraw_geometry::Vec2::new(150.0, 300.0),
+    ]).with_width(8.0)
+        .with_join(novadraw::render::command::LineJoin::Miter)
+        .with_color(novadraw::Color::rgba(1.0, 0.5, 0.0, 1.0));
+    scene.add_child_to(container_id, Box::new(join_miter));
+
+    // 圆角连接
+    let join_round = novadraw::PolylineFigure::from_points(vec![
+        novadraw_geometry::Vec2::new(200.0, 260.0),
+        novadraw_geometry::Vec2::new(250.0, 220.0),
+        novadraw_geometry::Vec2::new(300.0, 300.0),
+    ]).with_width(8.0)
+        .with_join(novadraw::render::command::LineJoin::Round)
+        .with_color(novadraw::Color::rgba(0.0, 1.0, 1.0, 1.0));
+    scene.add_child_to(container_id, Box::new(join_round));
+
+    // 斜切连接
+    let join_bevel = novadraw::PolylineFigure::from_points(vec![
+        novadraw_geometry::Vec2::new(350.0, 260.0),
+        novadraw_geometry::Vec2::new(400.0, 220.0),
+        novadraw_geometry::Vec2::new(450.0, 300.0),
+    ]).with_width(8.0)
+        .with_join(novadraw::render::command::LineJoin::Bevel)
+        .with_color(novadraw::Color::rgba(1.0, 0.0, 1.0, 1.0));
+    scene.add_child_to(container_id, Box::new(join_bevel));
+
+    // ============================================================
+    // 测试5: 水平/垂直/对角线
+    // ============================================================
+    let h_line = novadraw::PolylineFigure::new_with_color(500.0, 40.0, 750.0, 40.0, novadraw::Color::rgba(0.9, 0.2, 0.2, 1.0))
         .with_width(3.0);
-
-    // 斜线 (45度)
-    let diag_line = novadraw::LineFigure::new_with_color(100.0, 300.0, 300.0, 500.0, novadraw::Color::rgba(0.2, 0.9, 0.2, 1.0))
-        .with_width(3.0);
-
-    // 反向斜线
-    let diag_line2 = novadraw::LineFigure::new_with_color(400.0, 300.0, 200.0, 400.0, novadraw::Color::rgba(0.9, 0.5, 0.1, 1.0))
-        .with_width(3.0);
-
-    // 短斜线
-    let short_line = novadraw::LineFigure::new_with_color(600.0, 400.0, 650.0, 450.0, novadraw::Color::rgba(0.6, 0.3, 0.9, 1.0))
-        .with_width(4.0);
-
     scene.add_child_to(container_id, Box::new(h_line));
+
+    let v_line = novadraw::PolylineFigure::new_with_color(700.0, 50.0, 700.0, 150.0, novadraw::Color::rgba(0.2, 0.2, 0.9, 1.0))
+        .with_width(3.0);
     scene.add_child_to(container_id, Box::new(v_line));
-    scene.add_child_to(container_id, Box::new(diag_line));
-    scene.add_child_to(container_id, Box::new(diag_line2));
-    scene.add_child_to(container_id, Box::new(short_line));
+
+    let diag_45 = novadraw::PolylineFigure::new_with_color(500.0, 200.0, 650.0, 350.0, novadraw::Color::rgba(0.2, 0.9, 0.2, 1.0))
+        .with_width(3.0);
+    scene.add_child_to(container_id, Box::new(diag_45));
+
+    let diag_135 = novadraw::PolylineFigure::new_with_color(650.0, 200.0, 500.0, 350.0, novadraw::Color::rgba(0.9, 0.5, 0.1, 1.0))
+        .with_width(3.0);
+    scene.add_child_to(container_id, Box::new(diag_135));
+
+    // ============================================================
+    // 测试6: 自相交折线
+    // ============================================================
+    let self_intersect = novadraw::PolylineFigure::from_points(vec![
+        novadraw_geometry::Vec2::new(50.0, 380.0),
+        novadraw_geometry::Vec2::new(150.0, 480.0),
+        novadraw_geometry::Vec2::new(150.0, 380.0),
+        novadraw_geometry::Vec2::new(50.0, 480.0),
+    ]).with_width(2.0)
+        .with_color(novadraw::Color::rgba(1.0, 1.0, 0.0, 1.0));
+    scene.add_child_to(container_id, Box::new(self_intersect));
+
+    // ============================================================
+    // 测试7: 密集多段折线（波浪形）
+    // ============================================================
+    let mut points = Vec::new();
+    for i in 0..20 {
+        let x = 250.0 + i as f64 * 25.0;
+        let y = 400.0 + (i as f64 * 25.0).sin() * 50.0;
+        points.push(novadraw_geometry::Vec2::new(x, y));
+    }
+    let wave = novadraw::PolylineFigure::from_points(points)
+        .with_width(2.0)
+        .with_color(novadraw::Color::rgba(0.0, 0.8, 1.0, 1.0));
+    scene.add_child_to(container_id, Box::new(wave));
+
+    // ============================================================
+    // 测试8: 短折线（端点测试）
+    // ============================================================
+    let short_1 = novadraw::PolylineFigure::new_with_color(600.0, 380.0, 610.0, 390.0, novadraw::Color::WHITE)
+        .with_width(3.0);
+    scene.add_child_to(container_id, Box::new(short_1));
+
+    let short_2 = novadraw::PolylineFigure::new_with_color(640.0, 380.0, 650.0, 380.0, novadraw::Color::WHITE)
+        .with_width(3.0);
+    scene.add_child_to(container_id, Box::new(short_2));
+
+    let short_3 = novadraw::PolylineFigure::new_with_color(680.0, 380.0, 680.0, 390.0, novadraw::Color::WHITE)
+        .with_width(3.0);
+    scene.add_child_to(container_id, Box::new(short_3));
+
+    // ============================================================
+    // 测试9: 坐标边界（靠近边界）
+    // ============================================================
+    let edge_1 = novadraw::PolylineFigure::new_with_color(0.0, 500.0, 100.0, 500.0, novadraw::Color::rgba(1.0, 0.3, 0.7, 1.0))
+        .with_width(4.0);
+    scene.add_child_to(container_id, Box::new(edge_1));
+
+    let edge_2 = novadraw::PolylineFigure::new_with_color(700.0, 500.0, 800.0, 500.0, novadraw::Color::rgba(1.0, 0.3, 0.7, 1.0))
+        .with_width(4.0);
+    scene.add_child_to(container_id, Box::new(edge_2));
 
     scene
 }
@@ -249,7 +439,7 @@ fn create_scene_6_alpha() -> novadraw::SceneGraph {
     // 直线透明度
     for (i, &alpha) in alpha_levels.iter().enumerate() {
         let y = 350.0 + (i as f64) * 40.0;
-        let line = novadraw::LineFigure::new_with_color(50.0, y, 700.0, y, novadraw::Color::rgba(0.2, 0.8, 0.2, alpha))
+        let line = novadraw::PolylineFigure::new_with_color(50.0, y, 700.0, y, novadraw::Color::rgba(0.2, 0.8, 0.2, alpha))
             .with_width(6.0);
         scene.add_child_to(container_id, Box::new(line));
     }
@@ -285,7 +475,7 @@ fn create_scene_7_mixed_shapes() -> novadraw::SceneGraph {
 
     // 组合2: 椭圆 + 直线
     let ellipse_combo2 = novadraw::EllipseFigure::new_with_color(300.0, 80.0, 100.0, 60.0, novadraw::Color::rgba(0.9, 0.2, 0.2, 1.0));
-    let line_through = novadraw::LineFigure::new_with_color(250.0, 110.0, 400.0, 110.0, novadraw::Color::BLACK)
+    let line_through = novadraw::PolylineFigure::new_with_color(250.0, 110.0, 400.0, 110.0, novadraw::Color::BLACK)
         .with_width(2.0);
 
     // 组合3: 矩形框住多个图形
@@ -293,7 +483,7 @@ fn create_scene_7_mixed_shapes() -> novadraw::SceneGraph {
         .with_stroke(novadraw::Color::rgba(0.2, 0.2, 0.2, 1.0), 1.0);
     let inner_rect = novadraw::RectangleFigure::new_with_color(470.0, 70.0, 60.0, 40.0, novadraw::Color::rgba(0.9, 0.3, 0.3, 1.0));
     let inner_ellipse = novadraw::EllipseFigure::new_with_color(560.0, 90.0, 50.0, 30.0, novadraw::Color::rgba(0.3, 0.9, 0.3, 1.0));
-    let inner_line = novadraw::LineFigure::new_with_color(480.0, 150.0, 620.0, 150.0, novadraw::Color::rgba(0.3, 0.3, 0.9, 1.0))
+    let inner_line = novadraw::PolylineFigure::new_with_color(480.0, 150.0, 620.0, 150.0, novadraw::Color::rgba(0.3, 0.3, 0.9, 1.0))
         .with_width(2.0);
 
     // 组合4: 复杂图形组合
@@ -301,19 +491,19 @@ fn create_scene_7_mixed_shapes() -> novadraw::SceneGraph {
         .with_stroke(novadraw::Color::WHITE, 3.0);
     let complex_ellipse = novadraw::EllipseFigure::new_with_color(50.0, 350.0, 120.0, 80.0, novadraw::Color::rgba(0.2, 0.5, 0.8, 1.0))
         .with_stroke(novadraw::Color::WHITE, 3.0);
-    let complex_line1 = novadraw::LineFigure::new_with_color(200.0, 250.0, 300.0, 280.0, novadraw::Color::rgba(0.9, 0.6, 0.1, 1.0))
+    let complex_line1 = novadraw::PolylineFigure::new_with_color(200.0, 250.0, 300.0, 280.0, novadraw::Color::rgba(0.9, 0.6, 0.1, 1.0))
         .with_width(3.0);
-    let complex_line2 = novadraw::LineFigure::new_with_color(200.0, 280.0, 300.0, 250.0, novadraw::Color::rgba(0.1, 0.6, 0.9, 1.0))
+    let complex_line2 = novadraw::PolylineFigure::new_with_color(200.0, 280.0, 300.0, 250.0, novadraw::Color::rgba(0.1, 0.6, 0.9, 1.0))
         .with_width(3.0);
-    let complex_line3 = novadraw::LineFigure::new_with_color(250.0, 350.0, 250.0, 420.0, novadraw::Color::rgba(0.3, 0.8, 0.3, 1.0))
+    let complex_line3 = novadraw::PolylineFigure::new_with_color(250.0, 350.0, 250.0, 420.0, novadraw::Color::rgba(0.3, 0.8, 0.3, 1.0))
         .with_width(4.0);
 
     // 组合5: 细线装饰
-    let decor_line1 = novadraw::LineFigure::new_with_color(400.0, 260.0, 550.0, 260.0, novadraw::Color::rgba(0.3, 0.3, 0.3, 1.0))
+    let decor_line1 = novadraw::PolylineFigure::new_with_color(400.0, 260.0, 550.0, 260.0, novadraw::Color::rgba(0.3, 0.3, 0.3, 1.0))
         .with_width(1.0);
-    let decor_line2 = novadraw::LineFigure::new_with_color(400.0, 300.0, 550.0, 300.0, novadraw::Color::rgba(0.3, 0.3, 0.3, 1.0))
+    let decor_line2 = novadraw::PolylineFigure::new_with_color(400.0, 300.0, 550.0, 300.0, novadraw::Color::rgba(0.3, 0.3, 0.3, 1.0))
         .with_width(2.0);
-    let decor_line3 = novadraw::LineFigure::new_with_color(400.0, 350.0, 550.0, 350.0, novadraw::Color::rgba(0.3, 0.3, 0.3, 1.0))
+    let decor_line3 = novadraw::PolylineFigure::new_with_color(400.0, 350.0, 550.0, 350.0, novadraw::Color::rgba(0.3, 0.3, 0.3, 1.0))
         .with_width(4.0);
 
     // 边框装饰
@@ -355,7 +545,7 @@ fn create_scene_8_zorder() -> novadraw::SceneGraph {
     // 底层图形（先添加）
     let bottom_rect = novadraw::RectangleFigure::new_with_color(100.0, 100.0, 300.0, 200.0, novadraw::Color::BLUE);
     let bottom_ellipse = novadraw::EllipseFigure::new_with_color(250.0, 150.0, 200.0, 100.0, novadraw::Color::GREEN);
-    let bottom_line = novadraw::LineFigure::new_with_color(150.0, 200.0, 400.0, 250.0, novadraw::Color::rgba(1.0, 1.0, 0.0, 1.0))
+    let bottom_line = novadraw::PolylineFigure::new_with_color(150.0, 200.0, 400.0, 250.0, novadraw::Color::rgba(1.0, 1.0, 0.0, 1.0))
         .with_width(8.0);
 
     // 中间层（遮挡部分底层）
@@ -399,7 +589,7 @@ fn create_scene_9_parent_child() -> novadraw::SceneGraph {
     // 子图形 - 直接添加到父矩形中
     let child_rect = novadraw::RectangleFigure::new_with_color(80.0, 80.0, 100.0, 60.0, novadraw::Color::rgba(0.2, 0.5, 0.9, 1.0));
     let child_ellipse = novadraw::EllipseFigure::new_with_color(200.0, 100.0, 80.0, 50.0, novadraw::Color::rgba(0.9, 0.2, 0.2, 1.0));
-    let child_line = novadraw::LineFigure::new_with_color(100.0, 200.0, 300.0, 200.0, novadraw::Color::rgba(0.2, 0.8, 0.2, 1.0))
+    let child_line = novadraw::PolylineFigure::new_with_color(100.0, 200.0, 300.0, 200.0, novadraw::Color::rgba(0.2, 0.8, 0.2, 1.0))
         .with_width(3.0);
 
     scene.add_child_to(parent_id, Box::new(child_rect));
@@ -439,16 +629,17 @@ fn main() {
         // 维度1: 图形类型验证
         ("0:Rectangle Fill", Box::new(|| create_scene_0_rectangle_fill())),
         ("1:Ellipse Fill", Box::new(|| create_scene_1_ellipse_fill())),
-        ("2:Line Directions", Box::new(|| create_scene_2_line_directions())),
+        ("2:Rounded Rect", Box::new(|| create_scene_2_rounded_rect())),
+        ("3:Line Directions", Box::new(|| create_scene_2_line_directions())),
         // 维度2: 属性验证
-        ("3:Stroke Attr", Box::new(|| create_scene_3_stroke_attributes())),
-        ("4:LineCap", Box::new(|| create_scene_4_line_cap())),
-        ("5:LineJoin", Box::new(|| create_scene_5_line_join())),
-        ("6:Alpha", Box::new(|| create_scene_6_alpha())),
+        ("4:Stroke Attr", Box::new(|| create_scene_3_stroke_attributes())),
+        ("5:LineCap", Box::new(|| create_scene_4_line_cap())),
+        ("6:LineJoin", Box::new(|| create_scene_5_line_join())),
+        ("7:Alpha", Box::new(|| create_scene_6_alpha())),
         // 维度3: 组合验证
-        ("7:Mixed Shapes", Box::new(|| create_scene_7_mixed_shapes())),
-        ("8:Z-Order", Box::new(|| create_scene_8_zorder())),
-        ("9:Parent-Child", Box::new(|| create_scene_9_parent_child())),
+        ("8:Mixed Shapes", Box::new(|| create_scene_7_mixed_shapes())),
+        ("9:Z-Order", Box::new(|| create_scene_8_zorder())),
+        ("10:Parent-Child", Box::new(|| create_scene_9_parent_child())),
     ];
 
     // 检查截图模式

@@ -20,12 +20,14 @@ mod polygon;
 mod polyline;
 mod rectangle;
 mod root;
+mod rounded_rectangle;
 
 pub use ellipse::EllipseFigure;
 pub use polygon::PolygonFigure;
 pub use polyline::PolylineFigure;
 pub use rectangle::RectangleFigure;
 pub use root::RootFigure;
+pub use rounded_rectangle::RoundedRectangleFigure;
 
 use novadraw_core::Color;
 use novadraw_geometry::Rectangle;

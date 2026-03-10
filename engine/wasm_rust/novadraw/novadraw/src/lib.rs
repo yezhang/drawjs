@@ -18,4 +18,4 @@ pub use novadraw_render::backend;
 pub use novadraw_render::traits;
 
 #[cfg(feature = "vello")]
-pub use novadraw_scene::{Bounded, Border, BlockId, EllipseFigure, Figure, FigureRenderer, FillLayout, LayoutManager, LineBorder, MarginBorder, Point, PolygonFigure, PolylineFigure, Rectangle, RectangleBorder, RectangleFigure, RootFigure, RuntimeBlock, SceneGraph, Viewport, XYLayout};
+pub use novadraw_scene::{Bounded, Border, BlockId, EllipseFigure, Figure, FigureRenderer, FillLayout, LayoutManager, LineBorder, MarginBorder, Point, PolygonFigure, PolylineFigure, Rectangle, RectangleBorder, RectangleFigure, RootFigure, RoundedRectangleFigure, RuntimeBlock, SceneGraph, Viewport, XYLayout};
