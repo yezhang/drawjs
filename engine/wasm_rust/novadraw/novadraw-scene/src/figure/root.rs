@@ -3,7 +3,7 @@
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::Figure;
+use super::{Bounded, Figure};
 
 /// 根图形（内部使用）
 ///
@@ -14,6 +14,7 @@ use super::Figure;
 /// - 透明（不渲染自身）
 /// - 使用 trait 默认的本地坐标模式（false）
 /// - 不需要填充/描边属性
+/// - 不是 Shape 子类，只实现 Figure
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RootFigure {
     /// 边界矩形
@@ -34,14 +35,10 @@ impl RootFigure {
     }
 }
 
-impl Figure for RootFigure {
+// 实现 Bounded trait
+impl Bounded for RootFigure {
     fn bounds(&self) -> Rectangle {
         self.bounds
-    }
-
-    /// 根图形不渲染自身（透明）
-    fn paint_figure(&self, _gc: &mut NdCanvas) {
-        // 空实现：根图形透明，不渲染自身
     }
 
     fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
@@ -50,5 +47,13 @@ impl Figure for RootFigure {
 
     fn name(&self) -> &'static str {
         "RootFigure"
+    }
+}
+
+// 实现 Figure trait：根图形透明，不渲染自身
+impl Figure for RootFigure {
+    /// 根图形不渲染自身（透明）
+    fn paint_figure(&self, _gc: &mut NdCanvas) {
+        // 空实现：根图形透明，不渲染自身
     }
 }

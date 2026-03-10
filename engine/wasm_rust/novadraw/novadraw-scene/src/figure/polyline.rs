@@ -4,7 +4,7 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Figure, Shape};
+use super::{Bounded, Shape};
 
 /// 折线图形
 ///
@@ -99,6 +99,12 @@ impl PolylineFigure {
         self.points.len()
     }
 
+    /// 设置线条颜色
+    pub fn with_color(mut self, color: Color) -> Self {
+        self.stroke_color = color;
+        self
+    }
+
     /// 设置线条宽度
     pub fn with_width(mut self, width: f64) -> Self {
         self.stroke_width = width;
@@ -146,9 +152,29 @@ impl PolylineFigure {
     }
 }
 
-impl Figure for PolylineFigure {
+// 实现 Bounded trait
+impl Bounded for PolylineFigure {
     fn bounds(&self) -> Rectangle {
         self.calculate_bounds()
+    }
+
+    fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        // 折线通过点定义，set_bounds 需要重新计算点位置
+        let current_bounds = self.calculate_bounds();
+        if current_bounds.width == 0.0 || current_bounds.height == 0.0 {
+            return;
+        }
+        let scale_x = width / current_bounds.width;
+        let scale_y = height / current_bounds.height;
+        let dx = x - current_bounds.x;
+        let dy = y - current_bounds.y;
+
+        let new_points: Vec<novadraw_geometry::Vec2> = self
+            .points
+            .iter()
+            .map(|p| novadraw_geometry::Vec2::new((p.0.x + dx) * scale_x, (p.0.y + dy) * scale_y))
+            .collect();
+        self.points = new_points;
     }
 
     fn name(&self) -> &'static str {
@@ -156,6 +182,7 @@ impl Figure for PolylineFigure {
     }
 }
 
+// 实现 Shape trait
 impl Shape for PolylineFigure {
     fn stroke_color(&self) -> Option<Color> {
         Some(self.stroke_color)
@@ -194,6 +221,7 @@ impl Shape for PolylineFigure {
             return;
         }
 
+        // 直接使用 Polyline 命令
         let points: Vec<glam::DVec2> = self
             .points
             .iter()
@@ -209,6 +237,3 @@ impl Shape for PolylineFigure {
         );
     }
 }
-
-/// 直线图形（PolylineFigure 的别名，保持向后兼容）
-pub type LineFigure = PolylineFigure;
