@@ -2,6 +2,18 @@
 //!
 //! 定义图形渲染的通用接口，遵循 Eclipse Draw2D 设计模式。
 //! Figure 只负责渲染，不包含状态（状态在 RuntimeBlock 中）。
+//!
+//! # Trait 层级
+//!
+//! ```
+//! Bounded        - 边界相关方法（bounds, set_bounds, name 等）
+//!   │
+//!   ▼
+//! Figure         - 渲染接口（继承 Bounded）
+//!   │
+//!   ▼
+//! Shape          - 描边/填充（继承 Figure）
+//! ```
 
 mod ellipse;
 mod polygon;
@@ -11,7 +23,7 @@ mod root;
 
 pub use ellipse::EllipseFigure;
 pub use polygon::PolygonFigure;
-pub use polyline::{LineFigure, PolylineFigure};
+pub use polyline::PolylineFigure;
 pub use rectangle::RectangleFigure;
 pub use root::RootFigure;
 
@@ -20,71 +32,28 @@ use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 use novadraw_render::command::{LineCap, LineJoin};
 
-/// Figure 渲染 trait
+// ============================================================================
+// Bounded Trait: 边界相关方法
+// ============================================================================
+
+/// 边界相关方法 trait
 ///
-/// 所有图形对象都需要实现此 trait。
-/// 只包含渲染相关方法，不包含状态（状态在 RuntimeBlock 中）。
-///
-/// # 渲染流程（参考 Draw2D）
-///
-/// ```text
-/// paint(Graphics) [模板方法]
-///   ├─> setLocalBackgroundColor()  [InitProperties]
-///   ├─> setLocalForegroundColor()  [InitProperties]
-///   ├─> setLocalFont()             [InitProperties]
-///   └─> paintFigure()              [PaintSelf]
-///         ├─> paintClientArea()    [PaintChildren]
-///         │     └─> paintChildren()
-///         └─> paintBorder()        [PaintBorder]
-/// ```
-pub trait Figure: Send + Sync {
-    /// ===== 模板方法 =====
-
-    /// 初始化本地属性
-    ///
-    /// 对应 d2: setLocalBackgroundColor/ForegroundColor/Font
-    /// 设置图形的本地渲染属性（颜色、字体等）
-    fn init_properties(&self, _gc: &mut NdCanvas) {
-        // 默认空实现，子类可覆盖
-    }
-
-    /// ===== PaintSelf 阶段方法 =====
-
-    /// 绘制自身（背景）
-    ///
-    /// 对应 d2: paintFigure(Graphics)
-    fn paint_figure(&self, _gc: &mut NdCanvas) {}
-
-    /// ===== PaintChildren 相关方法 =====
-
-    /// 绘制子元素
-    ///
-    /// 对应 d2 paintChildren(Graphics)
-    /// 默认行为由渲染器调度 PaintChildren 任务
-    fn paint_children(&self) {
-        // 默认行为由渲染器处理
-    }
-
-    /// 是否使用本地坐标
-    ///
-    /// 对应 d2: useLocalCoordinates()
-    /// true: 子元素使用 Figure 内部坐标（相对于 bounds 左上角）
-    /// false: 子元素使用父节点坐标（默认）
-    fn use_local_coordinates(&self) -> bool {
-        false
-    }
-
-    /// ===== PaintBorder 阶段方法 =====
-
-    /// 绘制边框
-    ///
-    /// 对应 d2: paintBorder(Graphics)
-    fn paint_border(&self, _gc: &mut NdCanvas) {}
-
-    /// ===== 基础方法 =====
-
+/// 包含图形的边界、名称、位置检测等基础方法。
+/// 所有图形类型都需要实现此 trait。
+pub trait Bounded: Send + Sync {
     /// 获取图形边界
+    ///
+    /// 默认实现返回零矩形，子类应覆盖
     fn bounds(&self) -> Rectangle;
+
+    /// 设置图形边界
+    ///
+    /// 对应 d2: setBounds(Rectangle)
+    /// 注意：本实现只更新 bounds 本身，不触发事件通知
+    fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64);
+
+    /// 获取名称（用于调试）
+    fn name(&self) -> &'static str;
 
     /// 检查点是否在图形边界内
     ///
@@ -105,29 +74,82 @@ pub trait Figure: Send + Sync {
             && b.y + b.height > rect.y
     }
 
-    /// 设置图形边界
-    ///
-    /// 对应 d2: setBounds(Rectangle)
-    /// 注意：本实现只更新 bounds 本身，不触发事件通知
-    /// 事件通知（fireFigureMoved, repaint）由 RuntimeBlock 或 SceneGraph 处理
-    /// 具体图形的 set_bounds 由各自实现
-    fn set_bounds(&mut self, _x: f64, _y: f64, _width: f64, _height: f64) {
-        // 默认空实现，具体图形需覆盖
-        // 注意：RectangleFigure, EllipseFigure, RootFigure 等都覆盖了此方法
-    }
-
-    /// 获取名称（用于调试）
-    fn name(&self) -> &'static str {
-        "Figure"
-    }
-
-    /// ===== 辅助方法（可 override）=====
-
     /// 获取内边距 (top, left, bottom, right)
     fn insets(&self) -> (f64, f64, f64, f64) {
         (0.0, 0.0, 0.0, 0.0)
     }
+
+    /// 是否使用本地坐标
+    ///
+    /// 对应 d2: useLocalCoordinates()
+    /// true: 子元素使用 Figure 内部坐标（相对于 bounds 左上角）
+    /// false: 子元素使用父节点坐标（默认）
+    fn use_local_coordinates(&self) -> bool {
+        false
+    }
 }
+
+// ============================================================================
+// Figure Trait: 渲染接口
+// ============================================================================
+
+/// Figure 渲染 trait
+///
+/// 所有图形对象都需要实现此 trait。
+/// 只包含渲染相关方法，边界方法在 Bounded trait 中。
+///
+/// # 渲染流程（参考 Draw2D）
+///
+/// ```text
+/// paint(Graphics) [模板方法]
+///   ├─> setLocalBackgroundColor()  [InitProperties]
+///   ├─> setLocalForegroundColor()  [InitProperties]
+///   ├─> setLocalFont()             [InitProperties]
+///   └─> paintFigure()              [PaintSelf]
+///         ├─> paintClientArea()    [PaintChildren]
+///         │     └─> paintChildren()
+///         └─> paintBorder()        [PaintBorder]
+/// ```
+pub trait Figure: Bounded + Send + Sync {
+    /// ===== 模板方法 =====
+
+    /// 初始化本地属性
+    ///
+    /// 对应 d2: setLocalBackgroundColor/ForegroundColor/Font
+    /// 设置图形的本地渲染属性（颜色、字体等）
+    fn init_properties(&self, _gc: &mut NdCanvas) {
+        // 默认空实现，子类可覆盖
+    }
+
+    /// ===== PaintSelf 阶段方法 =====
+
+    /// 绘制自身（背景）
+    ///
+    /// 对应 d2: paintFigure(Graphics)
+    /// 默认空实现，由 Shape trait 覆盖
+    fn paint_figure(&self, _gc: &mut NdCanvas) {}
+
+    /// ===== PaintChildren 相关方法 =====
+
+    /// 绘制子元素
+    ///
+    /// 对应 d2 paintChildren(Graphics)
+    /// 默认行为由渲染器调度 PaintChildren 任务
+    fn paint_children(&self) {
+        // 默认行为由渲染器处理
+    }
+
+    /// ===== PaintBorder 阶段方法 =====
+
+    /// 绘制边框
+    ///
+    /// 对应 d2: paintBorder(Graphics)
+    fn paint_border(&self, _gc: &mut NdCanvas) {}
+}
+
+// ============================================================================
+// Shape Trait: 描边/填充
+// ============================================================================
 
 /// Shape 图形 trait
 ///
@@ -144,6 +166,8 @@ pub trait Figure: Send + Sync {
 ///         └─> outline_shape() [抽象方法]
 /// ```
 pub trait Shape: Figure {
+    /// ===== Shape 特有方法 =====
+
     /// 获取描边颜色
     fn stroke_color(&self) -> Option<Color>;
 
@@ -218,3 +242,33 @@ pub trait Shape: Figure {
     fn outline_shape(&self, gc: &mut NdCanvas);
 }
 
+// ============================================================================
+// Blanket Impl: 让所有实现 Bounds 的类型自动实现 Figure
+// ============================================================================
+//
+// 设计原理：
+// 1. Bounds trait 定义边界相关方法（bounds, set_bounds, name, use_local_coordinates 等）
+// 2. Figure trait 继承 Bounds，定义渲染接口（paint_figure, paint_border 等）
+// 3. Shape trait 继承 Figure，添加描边/填充属性和 fill_shape/outline_shape 抽象方法
+// 4. 所有实现 Bounds 的类型自动获得 Figure 的实现
+// 5. Shape 类型会覆盖 paint_figure 实现，调用 paint_fill 和 paint_outline
+//
+// 关键点：
+// - 具体图形类型需要实现 Bounds 和 Shape
+// - Blanket impl 让所有 Bounds 实现自动获得 Figure 实现
+// - Shape 类型的 paint_figure 会覆盖默认实现
+
+/// Blanket Impl：所有实现 Shape trait 的类型自动获得 Figure trait 的实现
+///
+/// 具体图形类型只需要实现 Shape，不需要显式实现 Figure。
+/// Shape 继承 Figure，paint_figure 会自动覆盖默认实现。
+///
+/// RootFigure 只实现 Figure（不实现 Shape），所以需要显式 impl Figure。
+impl<T: Shape> Figure for T where T: Bounded {
+    /// 绘制自身：调用 Shape 的 paint_figure
+    ///
+    /// 当通过 Box<dyn Figure> 调用时，会正确分派到 Shape 的实现
+    fn paint_figure(&self, gc: &mut NdCanvas) {
+        Shape::paint_figure(self, gc);
+    }
+}

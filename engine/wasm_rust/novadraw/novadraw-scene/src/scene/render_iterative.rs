@@ -6,6 +6,7 @@
 use novadraw_render::NdCanvas;
 
 use super::{BlockId, SceneGraphRenderRef};
+use crate::figure::Bounded;
 
 /// 四状态渲染任务
 ///
@@ -126,14 +127,15 @@ impl<'a> FigureRendererIter<'a> {
         };
 
         // 1. 设置坐标系
-        if block.figure.use_local_coordinates() {
-            let bounds = block.figure.bounds();
-            let (top, left, _, _) = block.figure.insets();
+        if Bounded::use_local_coordinates(block.figure.as_ref()) {
+            let bounds = Bounded::bounds(block.figure.as_ref());
+            let (top, left, bottom, right) = Bounded::insets(block.figure.as_ref());
             self.gc.translate(bounds.x + left, bounds.y + top);
+            // clip 到 client area = bounds - insets
             self.gc
-                .clip_rect(0.0, 0.0, bounds.width - left, bounds.height - top);
+                .clip_rect(0.0, 0.0, bounds.width - left - right, bounds.height - top - bottom);
         } else {
-            let bounds = block.figure.bounds();
+            let bounds = Bounded::bounds(block.figure.as_ref());
             self.gc
                 .clip_rect(bounds.x, bounds.y, bounds.width, bounds.height);
         }
