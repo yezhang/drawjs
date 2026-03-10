@@ -238,12 +238,10 @@ impl ApplicationHandler<()> for DemoApp {
         let renderer = VelloRenderer::new(window_proxy, self.width, self.height);
         self.renderer = Some(renderer);
 
-        // 创建初始场景
+        // 创建初始场景（通过 switch_scene 以更新窗口标题）
         if !self.scenes.is_empty() {
             let idx = self.current_scene_idx.min(self.scenes.len() - 1);
-            let creator = &mut self.scenes[idx].1;
-            self.scene_graph = Some(creator());
-            log::info!("初始场景: {}", self.scenes[idx].0);
+            self.switch_scene(idx);
         }
 
         // 截图模式处理
