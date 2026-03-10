@@ -5,13 +5,13 @@
 //!
 //! # Trait 层级
 //!
-//! ```
+//! ```text
 //! Bounded        - 边界相关方法（bounds, set_bounds, name 等）
-//!   │
-//!   ▼
+//!   |
+//!   v
 //! Figure         - 渲染接口（继承 Bounded）
-//!   │
-//!   ▼
+//!   |
+//!   v
 //! Shape          - 描边/填充（继承 Figure）
 //! ```
 
@@ -33,6 +33,8 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 use novadraw_render::command::{LineCap, LineJoin};
+
+use crate::border::Border;
 
 // ============================================================================
 // Bounded Trait: 边界相关方法
@@ -143,10 +145,22 @@ pub trait Figure: Bounded + Send + Sync {
 
     /// ===== PaintBorder 阶段方法 =====
 
+    /// 获取边框
+    ///
+    /// 对应 d2: getBorder()
+    fn get_border(&self) -> Option<&dyn Border> {
+        None
+    }
+
     /// 绘制边框
     ///
     /// 对应 d2: paintBorder(Graphics)
-    fn paint_border(&self, _gc: &mut NdCanvas) {}
+    /// 默认实现调用 Border::paint()
+    fn paint_border(&self, gc: &mut NdCanvas) {
+        if let Some(border) = self.get_border() {
+            border.paint(self.bounds(), gc);
+        }
+    }
 }
 
 // ============================================================================
@@ -160,15 +174,22 @@ pub trait Figure: Bounded + Send + Sync {
 ///
 /// # 渲染流程
 ///
-/// ```
+/// ```text
 /// paint_figure()            [覆盖 Figure trait]
-///   ├─> paint_fill()       [内部方法]
-///   │     └─> fill_shape()    [抽象方法]
-///   └─> paint_outline()    [内部方法]
-///         └─> outline_shape() [抽象方法]
+///   +-> paint_fill()       [内部方法]
+///   |     +-> fill_shape()    [抽象方法]
+///   +-> paint_outline()    [内部方法]
+///         +-> outline_shape() [抽象方法]
 /// ```
 pub trait Shape: Figure {
     /// ===== Shape 特有方法 =====
+
+    /// 获取边框装饰器（覆盖 Figure 的默认实现）
+    ///
+    /// 对应 d2: getBorder()
+    fn get_border(&self) -> Option<&dyn Border> {
+        None
+    }
 
     /// 获取描边颜色
     fn stroke_color(&self) -> Option<Color>;
@@ -257,20 +278,28 @@ pub trait Shape: Figure {
 //
 // 关键点：
 // - 具体图形类型需要实现 Bounds 和 Shape
-// - Blanket impl 让所有 Bounds 实现自动获得 Figure 实现
-// - Shape 类型的 paint_figure 会覆盖默认实现
+// - Shape: Figure，所以所有实现 Shape 的类型也实现 Figure
+// - Blanket impl 让所有实现 Shape 的类型自动获得 Figure 实现
 
 /// Blanket Impl：所有实现 Shape trait 的类型自动获得 Figure trait 的实现
 ///
 /// 具体图形类型只需要实现 Shape，不需要显式实现 Figure。
-/// Shape 继承 Figure，paint_figure 会自动覆盖默认实现。
-///
-/// RootFigure 只实现 Figure（不实现 Shape），所以需要显式 impl Figure。
-impl<T: Shape> Figure for T where T: Bounded {
+/// Shape 继承 Figure，paint_figure 由 Shape 提供。
+impl<T: Shape> Figure for T
+where
+    T: Bounded,
+{
     /// 绘制自身：调用 Shape 的 paint_figure
     ///
     /// 当通过 Box<dyn Figure> 调用时，会正确分派到 Shape 的实现
     fn paint_figure(&self, gc: &mut NdCanvas) {
         Shape::paint_figure(self, gc);
+    }
+
+    /// 获取边框：调用 Shape 的 get_border
+    ///
+    /// 当通过 Box<dyn Figure> 调用时，会正确分派到 Shape 的实现
+    fn get_border(&self) -> Option<&dyn super::Border> {
+        Shape::get_border(self)
     }
 }

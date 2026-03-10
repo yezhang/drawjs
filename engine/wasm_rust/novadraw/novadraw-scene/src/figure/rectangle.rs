@@ -1,16 +1,18 @@
 //! 矩形图形
 
+use std::sync::Arc;
+
 use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Bounded, Shape};
+use super::{Border, Bounded, Shape};
 
 /// 矩形图形
 ///
 /// 用于渲染矩形形状。
 /// 遵循 d2 设计：使用 `bounds: Rectangle` 统一管理边界，而非独立 x/y/width/height 字段。
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone)]
 pub struct RectangleFigure {
     /// 边界矩形（包含 x, y, width, height）
     pub bounds: Rectangle,
@@ -26,6 +28,8 @@ pub struct RectangleFigure {
     pub line_join: novadraw_render::command::LineJoin,
     /// 是否使用本地坐标模式
     use_local_coordinates: bool,
+    /// 边框装饰器
+    pub border: Option<Arc<dyn Border>>,
 }
 
 impl RectangleFigure {
@@ -39,6 +43,7 @@ impl RectangleFigure {
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
             use_local_coordinates: false,
+            border: None,
         }
     }
 
@@ -52,6 +57,7 @@ impl RectangleFigure {
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
             use_local_coordinates: false,
+            border: None,
         }
     }
 
@@ -65,10 +71,11 @@ impl RectangleFigure {
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
             use_local_coordinates: false,
+            border: None,
         }
     }
 
-    /// 添加边框
+    /// 添加描边（Shape 级别）
     pub fn with_stroke(mut self, color: Color, width: f64) -> Self {
         self.stroke_color = Some(color);
         self.stroke_width = width;
@@ -81,6 +88,14 @@ impl RectangleFigure {
     /// `false`: 使用绝对坐标（子元素使用全局坐标）
     pub fn with_local_coordinates(mut self, enable: bool) -> Self {
         self.use_local_coordinates = enable;
+        self
+    }
+
+    /// 添加边框装饰器（Border 级别）
+    ///
+    /// 对应 d2: setBorder()
+    pub fn with_border(mut self, border: impl Border + 'static) -> Self {
+        self.border = Some(Arc::new(border));
         self
     }
 
@@ -117,6 +132,10 @@ impl Bounded for RectangleFigure {
 
 // 实现 Shape trait：描边/填充相关方法
 impl Shape for RectangleFigure {
+    fn get_border(&self) -> Option<&dyn Border> {
+        self.border.as_deref()
+    }
+
     fn stroke_color(&self) -> Option<Color> {
         self.stroke_color
     }

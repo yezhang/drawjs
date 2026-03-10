@@ -1,0 +1,103 @@
+//! RectangleBorder 矩形边框
+//!
+//! 绘制带圆角的矩形边框。
+
+use novadraw_core::Color;
+use novadraw_geometry::Rectangle;
+use novadraw_render::NdCanvas;
+
+use super::{Border, BorderStyle, DEFAULT_BORDER_WIDTH};
+
+/// 矩形边框
+///
+/// 绘制矩形边框，支持圆角。
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RectangleBorder {
+    /// 边框颜色
+    pub color: Color,
+    /// 边框宽度
+    pub width: f64,
+    /// 边框样式
+    pub style: BorderStyle,
+    /// 内边距 (top, left, bottom, right)
+    pub insets: (f64, f64, f64, f64),
+    /// 圆角半径
+    pub corner_radius: f64,
+}
+
+impl RectangleBorder {
+    /// 创建矩形边框
+    pub fn new(color: Color, width: f64) -> Self {
+        Self {
+            color,
+            width,
+            style: BorderStyle::Solid,
+            insets: (0.0, 0.0, 0.0, 0.0),
+            corner_radius: 0.0,
+        }
+    }
+
+    /// 创建默认矩形边框
+    pub fn default_border() -> Self {
+        Self::new(Color::rgba(0.0, 0.0, 0.0, 1.0), DEFAULT_BORDER_WIDTH)
+    }
+
+    /// 设置内边距
+    pub fn with_insets(mut self, top: f64, left: f64, bottom: f64, right: f64) -> Self {
+        self.insets = (top, left, bottom, right);
+        self
+    }
+
+    /// 设置边框样式
+    pub fn with_style(mut self, style: BorderStyle) -> Self {
+        self.style = style;
+        self
+    }
+
+    /// 设置圆角半径
+    pub fn with_corner_radius(mut self, radius: f64) -> Self {
+        self.corner_radius = radius;
+        self
+    }
+}
+
+impl Border for RectangleBorder {
+    fn get_insets(&self) -> (f64, f64, f64, f64) {
+        self.insets
+    }
+
+    fn paint(&self, figure_bounds: Rectangle, gc: &mut NdCanvas) {
+        let half_width = self.width / 2.0;
+
+        // 根据内边距计算实际边框区域
+        let x = figure_bounds.x + self.insets.1 + half_width;
+        let y = figure_bounds.y + self.insets.0 + half_width;
+        let width = figure_bounds.width - self.insets.1 - self.insets.3 - self.width;
+        let height = figure_bounds.height - self.insets.0 - self.insets.2 - self.width;
+
+        if width <= 0.0 || height <= 0.0 {
+            return;
+        }
+
+        let cap = novadraw_render::command::LineCap::Butt;
+        let join = novadraw_render::command::LineJoin::Miter;
+
+        if self.corner_radius > 0.0 {
+            // 圆角矩形：使用多条线段模拟（当前版本暂不支持圆角）
+            // TODO: 后续添加 stroke_rounded_rect 支持
+            // 暂时绘制普通矩形
+            gc.stroke_rect(x, y, width, height, self.color, self.width, cap, join);
+        } else {
+            // 绘制普通矩形边框
+            gc.stroke_rect(x, y, width, height, self.color, self.width, cap, join);
+        }
+    }
+
+    fn get_color(&self) -> Color {
+        self.color
+    }
+
+    fn get_width(&self) -> f64 {
+        self.width
+    }
+}
