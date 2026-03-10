@@ -269,6 +269,30 @@ impl ApplicationHandler<()> for DemoApp {
                     renderer.window().request_redraw();
                 }
             }
+            WindowEvent::MouseWheel { delta, .. } => {
+                // 鼠标滚轮切换场景
+                let count = self.scenes.len();
+                if count > 0 {
+                    let scroll_up = match delta {
+                        winit::event::MouseScrollDelta::LineDelta(_, y) => *y > 0.0,
+                        winit::event::MouseScrollDelta::PixelDelta(p) => p.y > 0.0,
+                    };
+                    if scroll_up {
+                        // 滚轮向上，切换到上一个场景
+                        let new_idx = if self.current_scene_idx == 0 {
+                            count - 1
+                        } else {
+                            self.current_scene_idx - 1
+                        };
+                        self.switch_scene(new_idx);
+                    } else {
+                        // 滚轮向下，切换到下一个场景
+                        let new_idx = (self.current_scene_idx + 1) % count;
+                        self.switch_scene(new_idx);
+                    }
+                    self.window.as_ref().unwrap().request_redraw();
+                }
+            }
             WindowEvent::KeyboardInput { event, .. } => {
                 if event.state != winit::event::ElementState::Pressed {
                     return;
@@ -296,6 +320,44 @@ impl ApplicationHandler<()> for DemoApp {
                         let scene_name = self.current_scene_name().unwrap_or("unknown");
                         if let Err(e) = self.screenshot(scene_name) {
                             log::error!("截图失败: {}", e);
+                        }
+                    }
+                    // 左右方向键 / PageUp/PageDown 循环切换场景
+                    PhysicalKey::Code(KeyCode::ArrowLeft) | PhysicalKey::Code(KeyCode::PageUp) => {
+                        // 切换到上一个场景（循环）
+                        let count = self.scenes.len();
+                        if count > 0 {
+                            let new_idx = if self.current_scene_idx == 0 {
+                                count - 1
+                            } else {
+                                self.current_scene_idx - 1
+                            };
+                            self.switch_scene(new_idx);
+                            self.window.as_ref().unwrap().request_redraw();
+                        }
+                    }
+                    PhysicalKey::Code(KeyCode::ArrowRight) | PhysicalKey::Code(KeyCode::PageDown) => {
+                        // 切换到下一个场景（循环）
+                        let count = self.scenes.len();
+                        if count > 0 {
+                            let new_idx = (self.current_scene_idx + 1) % count;
+                            self.switch_scene(new_idx);
+                            self.window.as_ref().unwrap().request_redraw();
+                        }
+                    }
+                    PhysicalKey::Code(KeyCode::Home) => {
+                        // 切换到第一个场景
+                        if !self.scenes.is_empty() {
+                            self.switch_scene(0);
+                            self.window.as_ref().unwrap().request_redraw();
+                        }
+                    }
+                    PhysicalKey::Code(KeyCode::End) => {
+                        // 切换到最后一个场景
+                        let count = self.scenes.len();
+                        if count > 0 {
+                            self.switch_scene(count - 1);
+                            self.window.as_ref().unwrap().request_redraw();
                         }
                     }
                     // 数字键 0-9 切换场景
