@@ -4,7 +4,7 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Figure, Shape};
+use super::{Bounded, Shape};
 
 /// 矩形图形
 ///
@@ -96,21 +96,10 @@ impl RectangleFigure {
     }
 }
 
-impl Figure for RectangleFigure {
+// 实现 Bounded trait：边界相关方法
+impl Bounded for RectangleFigure {
     fn bounds(&self) -> Rectangle {
         self.bounds
-    }
-
-    fn use_local_coordinates(&self) -> bool {
-        self.use_local_coordinates
-    }
-
-    fn paint_figure(&self, gc: &mut NdCanvas) {
-        // 使用 Shape trait 的渲染逻辑
-        // Shape: Figure 会调用 paint_fill() 和 paint_outline()
-        // 注意：通过 self 调用以确保使用正确的 trait 方法
-        self.paint_fill(gc);
-        self.paint_outline(gc);
     }
 
     fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
@@ -120,9 +109,14 @@ impl Figure for RectangleFigure {
     fn name(&self) -> &'static str {
         "RectangleFigure"
     }
+
+    fn use_local_coordinates(&self) -> bool {
+        self.use_local_coordinates
+    }
 }
 
-impl super::Shape for RectangleFigure {
+// 实现 Shape trait：描边/填充相关方法
+impl Shape for RectangleFigure {
     fn stroke_color(&self) -> Option<Color> {
         self.stroke_color
     }
@@ -163,11 +157,29 @@ impl super::Shape for RectangleFigure {
 
     fn outline_shape(&self, gc: &mut NdCanvas) {
         if let Some(color) = self.stroke_color {
+            // 参考 d2 RectangleFigure.outlineShape:
+            // 描边向内缩（inset），使描边完全在 bounds 内部
+            // lineInset = max(1.0, strokeWidth) / 2.0
+            let line_inset = (1.0_f64).max(self.stroke_width) / 2.0;
+
+            // 向内缩 bounds（使用浮点数避免 floor/ceil 不对称）
+            let x = self.bounds.x + line_inset;
+            let y = self.bounds.y + line_inset;
+            let width = self.bounds.width - line_inset * 2.0;
+            let height = self.bounds.height - line_inset * 2.0;
+
+            // 使用原始描边宽度
+            // 数学原理：
+            // - inset 后矩形：[x + sw/2, x + w - sw/2]
+            // - 绘制宽为 sw 的描边，中心在 inset 矩形上
+            // - 内边缘：x + sw/2 - sw/2 = x（原始左边界）
+            // - 外边缘：x + w - sw/2 + sw/2 = x + w（原始右边界）
+            // 这样描边正好填满原始 bounds
             gc.stroke_rect(
-                self.bounds.x,
-                self.bounds.y,
-                self.bounds.width,
-                self.bounds.height,
+                x,
+                y,
+                width.max(0.0),
+                height.max(0.0),
                 color,
                 self.stroke_width,
                 self.line_cap,

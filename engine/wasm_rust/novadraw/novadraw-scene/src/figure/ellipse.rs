@@ -4,7 +4,7 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Figure, Shape};
+use super::{Bounded, Shape};
 
 /// 椭圆图形
 ///
@@ -104,17 +104,10 @@ impl EllipseFigure {
     }
 }
 
-impl Figure for EllipseFigure {
+// 实现 Bounded trait
+impl Bounded for EllipseFigure {
     fn bounds(&self) -> Rectangle {
         self.bounds
-    }
-
-    fn paint_figure(&self, gc: &mut NdCanvas) {
-        // 使用 Shape trait 的渲染逻辑
-        // Shape: Figure 会调用 paint_fill() 和 paint_outline()
-        // 注意：通过 self 调用以确保使用正确的 trait 方法
-        self.paint_fill(gc);
-        self.paint_outline(gc);
     }
 
     fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
@@ -126,7 +119,8 @@ impl Figure for EllipseFigure {
     }
 }
 
-impl super::Shape for EllipseFigure {
+// 实现 Shape trait
+impl Shape for EllipseFigure {
     fn stroke_color(&self) -> Option<Color> {
         self.stroke_color
     }
@@ -156,16 +150,17 @@ impl super::Shape for EllipseFigure {
     }
 
     fn fill_shape(&self, gc: &mut NdCanvas) {
+        // 填充使用完整的 bounds
         let cx = self.bounds.x + self.bounds.width / 2.0;
         let cy = self.bounds.y + self.bounds.height / 2.0;
-        let rx = (self.bounds.width - self.stroke_width) / 2.0;
-        let ry = (self.bounds.height - self.stroke_width) / 2.0;
+        let rx = self.bounds.width / 2.0;
+        let ry = self.bounds.height / 2.0;
 
         gc.ellipse(
             cx,
             cy,
-            rx.max(0.0),
-            ry.max(0.0),
+            rx,
+            ry,
             Some(self.fill_color),
             None,
             0.0,
@@ -176,10 +171,20 @@ impl super::Shape for EllipseFigure {
 
     fn outline_shape(&self, gc: &mut NdCanvas) {
         if let Some(color) = self.stroke_color {
-            let cx = self.bounds.x + self.bounds.width / 2.0;
-            let cy = self.bounds.y + self.bounds.height / 2.0;
-            let rx = (self.bounds.width - self.stroke_width) / 2.0;
-            let ry = (self.bounds.height - self.stroke_width) / 2.0;
+            // 参考 d2 Ellipse.outlineShape:
+            // 描边向内缩（inset），使描边完全在 bounds 内部
+            let line_inset = (1.0_f64).max(self.stroke_width) / 2.0;
+
+            // 向内缩 bounds（使用浮点数避免 floor/ceil 不对称）
+            let x = self.bounds.x + line_inset;
+            let y = self.bounds.y + line_inset;
+            let width = self.bounds.width - line_inset * 2.0;
+            let height = self.bounds.height - line_inset * 2.0;
+
+            let cx = x + width / 2.0;
+            let cy = y + height / 2.0;
+            let rx = width / 2.0;
+            let ry = height / 2.0;
 
             gc.ellipse(
                 cx,
@@ -188,7 +193,7 @@ impl super::Shape for EllipseFigure {
                 ry.max(0.0),
                 None,
                 Some(color),
-                self.stroke_width,
+                0.0, // 使用 0.0 线宽，让描边完全落在 inset 区域内
                 self.line_cap,
                 self.line_join,
             );
