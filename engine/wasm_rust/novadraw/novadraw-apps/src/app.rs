@@ -80,6 +80,13 @@ impl DemoApp {
             let creator = &mut self.scenes[idx].1;
             self.scene_graph = Some(creator());
             log::info!("切换到场景: {}", self.scenes[idx].0);
+
+            // 更新窗口标题显示当前场景
+            let scene_name = self.scenes[idx].0;
+            let new_title = format!("{} - {}", self.title, scene_name);
+            if let Some(window) = &self.window {
+                window.set_title(&new_title);
+            }
         }
     }
 
