@@ -643,7 +643,7 @@ fn main() {
     ];
 
     // 检查截图模式
-    let title = "Shape App - 形状验证 (按数字键 0-9 切换场景)\nMECE: 图形类型 | 属性 | 组合";
+    let title = "Shape App";
     let app_name = "shape-app";
 
     if args.len() > 1 {
