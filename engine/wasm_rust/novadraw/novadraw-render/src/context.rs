@@ -7,16 +7,34 @@ use glam::DVec2;
 use novadraw_core::Color;
 use novadraw_geometry::Transform;
 
-use crate::command::{RenderCommand, RenderCommandKind};
+use crate::command::{Path, RenderCommand, RenderCommandKind};
 
 pub struct NdCanvas {
     commands: Vec<RenderCommand>,
+    /// 当前正在构建的路径（用于 begin_path/fill/stroke 流程）
+    current_path: Option<Path>,
+    /// 当前填充颜色
+    fill_color: Option<Color>,
+    /// 当前描边颜色
+    stroke_color: Option<Color>,
+    /// 当前描边宽度
+    stroke_width: f64,
+    /// 当前线帽样式
+    line_cap: crate::command::LineCap,
+    /// 当前连接样式
+    line_join: crate::command::LineJoin,
 }
 
 impl NdCanvas {
     pub fn new() -> Self {
         Self {
             commands: Vec::new(),
+            current_path: None,
+            fill_color: None,
+            stroke_color: None,
+            stroke_width: 1.0,
+            line_cap: crate::command::LineCap::Butt,
+            line_join: crate::command::LineJoin::Miter,
         }
     }
 
@@ -150,43 +168,121 @@ impl NdCanvas {
         });
     }
 
-    pub fn begin_path(&mut self) {}
+    /// 开始构建路径
+    pub fn begin_path(&mut self) {
+        self.current_path = Some(Path::new());
+    }
 
-    pub fn close_path(&mut self) {}
+    /// 闭合路径
+    pub fn close_path(&mut self) {
+        if let Some(ref mut path) = self.current_path {
+            path.close();
+        }
+    }
 
-    pub fn move_to(&mut self, _x: f64, _y: f64) {}
+    /// 移动到指定点（路径起点）
+    pub fn move_to(&mut self, x: f64, y: f64) {
+        if let Some(ref mut path) = self.current_path {
+            path.move_to(x, y);
+        }
+    }
 
-    pub fn line_to(&mut self, _x: f64, _y: f64) {}
+    /// 直线连接到指定点
+    pub fn line_to(&mut self, x: f64, y: f64) {
+        if let Some(ref mut path) = self.current_path {
+            path.line_to(x, y);
+        }
+    }
 
-    pub fn rect_path(&mut self, _x: f64, _y: f64, _width: f64, _height: f64) {}
+    /// 添加矩形路径
+    pub fn rect_path(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        if let Some(ref mut path) = self.current_path {
+            path.rect(x, y, width, height);
+        }
+    }
 
+    /// 添加弧线
     pub fn arc(
         &mut self,
-        _x: f64,
-        _y: f64,
-        _radius: f64,
-        _start_angle: f64,
-        _end_angle: f64,
-        _anticlockwise: bool,
+        x: f64,
+        y: f64,
+        radius: f64,
+        start_angle: f64,
+        end_angle: f64,
+        anticlockwise: bool,
     ) {
+        if let Some(ref mut path) = self.current_path {
+            // 将角度转换为弧度
+            let start = start_angle * std::f64::consts::PI / 180.0;
+            let end = end_angle * std::f64::consts::PI / 180.0;
+            // 简化的 arc 实现：使用贝塞尔曲线近似
+            let steps = 8;
+            for i in 0..=steps {
+                let angle = start + (end - start) * (i as f64 / steps as f64);
+                let px = x + radius * angle.cos();
+                let py = y + radius * angle.sin();
+                if i == 0 {
+                    path.move_to(px, py);
+                } else {
+                    path.line_to(px, py);
+                }
+            }
+        }
     }
 
-    pub fn quadratic_curve_to(&mut self, _cpx: f64, _cpy: f64, _x: f64, _y: f64) {}
+    /// 二次贝塞尔曲线
+    pub fn quadratic_curve_to(&mut self, cpx: f64, cpy: f64, x: f64, y: f64) {
+        if let Some(ref mut path) = self.current_path {
+            path.quad_to(cpx, cpy, x, y);
+        }
+    }
 
+    /// 三次贝塞尔曲线
     pub fn bezier_curve_to(
         &mut self,
-        _cp1x: f64,
-        _cp1y: f64,
-        _cp2x: f64,
-        _cp2y: f64,
-        _x: f64,
-        _y: f64,
+        cp1x: f64,
+        cp1y: f64,
+        cp2x: f64,
+        cp2y: f64,
+        x: f64,
+        y: f64,
     ) {
+        if let Some(ref mut path) = self.current_path {
+            path.cubic_to(cp1x, cp1y, cp2x, cp2y, x, y);
+        }
     }
 
-    pub fn fill(&mut self) {}
+    /// 填充当前路径
+    pub fn fill(&mut self) {
+        if let Some(path) = self.current_path.take() {
+            if let Some(color) = self.fill_color {
+                self.create_command(RenderCommandKind::FillPath(path));
+                // 保存颜色供后续使用
+                self.fill_color = Some(color);
+            }
+        }
+    }
 
-    pub fn stroke(&mut self) {}
+    /// 描边当前路径
+    pub fn stroke(&mut self) {
+        if let Some(path) = self.current_path.take() {
+            if self.stroke_color.is_some() {
+                self.create_command(RenderCommandKind::StrokePath(path));
+            }
+        }
+    }
+
+    /// 填充并描边当前路径
+    pub fn fill_and_stroke(&mut self) {
+        if let Some(path) = self.current_path.take() {
+            if let Some(fill_color) = self.fill_color {
+                self.create_command(RenderCommandKind::FillPath(path.clone()));
+            }
+            if self.stroke_color.is_some() {
+                self.create_command(RenderCommandKind::StrokePath(path));
+            }
+        }
+    }
 
     pub fn clip_rect(&mut self, x: f64, y: f64, width: f64, height: f64) {
         let rect = [DVec2::new(x, y), DVec2::new(x + width, y + height)];
@@ -207,15 +303,25 @@ impl NdCanvas {
         &mut self.commands
     }
 
-    pub fn fill_style(&mut self, _color: Color) {}
+    pub fn fill_style(&mut self, color: Color) {
+        self.fill_color = Some(color);
+    }
 
-    pub fn stroke_style(&mut self, _color: Color) {}
+    pub fn stroke_style(&mut self, color: Color) {
+        self.stroke_color = Some(color);
+    }
 
-    pub fn line_width(&mut self, _width: f64) {}
+    pub fn line_width(&mut self, width: f64) {
+        self.stroke_width = width;
+    }
 
-    pub fn line_cap(&mut self, _cap: crate::command::LineCap) {}
+    pub fn line_cap(&mut self, cap: crate::command::LineCap) {
+        self.line_cap = cap;
+    }
 
-    pub fn line_join(&mut self, _join: crate::command::LineJoin) {}
+    pub fn line_join(&mut self, join: crate::command::LineJoin) {
+        self.line_join = join;
+    }
 
     pub fn line_dash_offset(&mut self, _offset: f64) {}
 

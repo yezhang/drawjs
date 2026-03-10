@@ -417,6 +417,138 @@ impl VelloRenderer {
                 }
             }
 
+            crate::command::RenderCommandKind::FillPath(path) => {
+                let affine =
+                    Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
+                let vello_color = VelloColor::new([1.0, 0.0, 0.0, 1.0]); // TODO: 从 path 获取颜色
+
+                // 构建填充路径
+                let mut bez_path = vello::kurbo::BezPath::new();
+                let mut current_pos: Option<(f64, f64)> = None;
+                for op in path.operations() {
+                    match op {
+                        crate::command::PathOp::MoveTo(p) => {
+                            let px = p.x * self.scale_factor;
+                            let py = p.y * self.scale_factor;
+                            bez_path.move_to((px, py));
+                            current_pos = Some((px, py));
+                        }
+                        crate::command::PathOp::LineTo(p) => {
+                            let px = p.x * self.scale_factor;
+                            let py = p.y * self.scale_factor;
+                            bez_path.line_to((px, py));
+                            current_pos = Some((px, py));
+                        }
+                        crate::command::PathOp::HLineTo(x) => {
+                            let px = *x * self.scale_factor;
+                            let py = current_pos.map(|(_, y)| y).unwrap_or(0.0);
+                            bez_path.line_to((px, py));
+                            current_pos = Some((px, py));
+                        }
+                        crate::command::PathOp::VLineTo(y) => {
+                            let px = current_pos.map(|(x, _)| x).unwrap_or(0.0);
+                            let py = *y * self.scale_factor;
+                            bez_path.line_to((px, py));
+                            current_pos = Some((px, py));
+                        }
+                        crate::command::PathOp::CubicTo(p0, p1, p2) => {
+                            bez_path.curve_to(
+                                (p0.x * self.scale_factor, p0.y * self.scale_factor),
+                                (p1.x * self.scale_factor, p1.y * self.scale_factor),
+                                (p2.x * self.scale_factor, p2.y * self.scale_factor),
+                            );
+                            current_pos = Some((p2.x * self.scale_factor, p2.y * self.scale_factor));
+                        }
+                        crate::command::PathOp::QuadTo(p0, p1) => {
+                            bez_path.quad_to(
+                                (p0.x * self.scale_factor, p0.y * self.scale_factor),
+                                (p1.x * self.scale_factor, p1.y * self.scale_factor),
+                            );
+                            current_pos = Some((p1.x * self.scale_factor, p1.y * self.scale_factor));
+                        }
+                        crate::command::PathOp::Close => {
+                            bez_path.close_path();
+                            current_pos = None;
+                        }
+                        _ => {}
+                    }
+                }
+
+                // 填充路径 - 需要从 context 获取颜色，这里简化处理
+                // TODO: 正确传递颜色
+                self.scene.fill(
+                    vello::peniko::Fill::NonZero,
+                    affine,
+                    vello_color,
+                    None,
+                    &bez_path,
+                );
+            }
+
+            crate::command::RenderCommandKind::StrokePath(path) => {
+                let affine =
+                    Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
+                let vello_color = VelloColor::new([1.0, 0.0, 0.0, 1.0]); // TODO: 从 path 获取颜色
+
+                let stroke = Stroke::new(1.0 * self.scale_factor)
+                    .with_caps(Cap::Butt)
+                    .with_join(Join::Miter);
+
+                // 构建描边路径
+                let mut bez_path = vello::kurbo::BezPath::new();
+                let mut current_pos: Option<(f64, f64)> = None;
+                for op in path.operations() {
+                    match op {
+                        crate::command::PathOp::MoveTo(p) => {
+                            let px = p.x * self.scale_factor;
+                            let py = p.y * self.scale_factor;
+                            bez_path.move_to((px, py));
+                            current_pos = Some((px, py));
+                        }
+                        crate::command::PathOp::LineTo(p) => {
+                            let px = p.x * self.scale_factor;
+                            let py = p.y * self.scale_factor;
+                            bez_path.line_to((px, py));
+                            current_pos = Some((px, py));
+                        }
+                        crate::command::PathOp::HLineTo(x) => {
+                            let px = *x * self.scale_factor;
+                            let py = current_pos.map(|(_, y)| y).unwrap_or(0.0);
+                            bez_path.line_to((px, py));
+                            current_pos = Some((px, py));
+                        }
+                        crate::command::PathOp::VLineTo(y) => {
+                            let px = current_pos.map(|(x, _)| x).unwrap_or(0.0);
+                            let py = *y * self.scale_factor;
+                            bez_path.line_to((px, py));
+                            current_pos = Some((px, py));
+                        }
+                        crate::command::PathOp::CubicTo(p0, p1, p2) => {
+                            bez_path.curve_to(
+                                (p0.x * self.scale_factor, p0.y * self.scale_factor),
+                                (p1.x * self.scale_factor, p1.y * self.scale_factor),
+                                (p2.x * self.scale_factor, p2.y * self.scale_factor),
+                            );
+                            current_pos = Some((p2.x * self.scale_factor, p2.y * self.scale_factor));
+                        }
+                        crate::command::PathOp::QuadTo(p0, p1) => {
+                            bez_path.quad_to(
+                                (p0.x * self.scale_factor, p0.y * self.scale_factor),
+                                (p1.x * self.scale_factor, p1.y * self.scale_factor),
+                            );
+                            current_pos = Some((p1.x * self.scale_factor, p1.y * self.scale_factor));
+                        }
+                        crate::command::PathOp::Close => {
+                            bez_path.close_path();
+                            current_pos = None;
+                        }
+                        _ => {}
+                    }
+                }
+
+                self.scene.stroke(&stroke, affine, vello_color, None, &bez_path);
+            }
+
             // 其他命令暂未实现
             _ => {}
         }
