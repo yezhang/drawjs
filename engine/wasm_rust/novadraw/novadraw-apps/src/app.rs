@@ -274,7 +274,7 @@ impl ApplicationHandler<()> for DemoApp {
                 let count = self.scenes.len();
                 if count > 0 {
                     let scroll_up = match delta {
-                        winit::event::MouseScrollDelta::LineDelta(_, y) => *y > 0.0,
+                        winit::event::MouseScrollDelta::LineDelta(_, y) => y > 0.0,
                         winit::event::MouseScrollDelta::PixelDelta(p) => p.y > 0.0,
                     };
                     if scroll_up {
