@@ -241,7 +241,9 @@ pub fn start_app() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("启动事件循环...");
     println!("  按 0-8 切换场景：");
-    println!("    0=基础定位点 1=嵌套父子 2=嵌套(含根) 3=Z-order 4=不可见 5=平移验证 6=裁剪测试 7=椭圆测试 8=直线测试");
+    println!(
+        "    0=基础定位点 1=嵌套父子 2=嵌套(含根) 3=Z-order 4=不可见 5=平移验证 6=裁剪测试 7=椭圆测试 8=直线测试"
+    );
     println!("  按 T 键：在场景 5 中平移父节点");
     println!("  按 I 键：切换递归/迭代渲染模式");
     println!("  按 ESC 退出");

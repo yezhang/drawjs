@@ -2,8 +2,8 @@
 //!
 //! 直接调用 NdCanvas API 测试每个渲染命令
 
-use novadraw::{Color, Bounded, Figure, NdCanvas, Rectangle, RectangleFigure};
 use novadraw::command::{LineCap, LineJoin};
+use novadraw::{Bounded, Color, Figure, NdCanvas, Rectangle, RectangleFigure};
 use novadraw_apps::{run_demo_app, run_demo_app_with_scene_screenshot};
 
 // 窗口大小
@@ -78,9 +78,36 @@ fn create_scene_stroke_rect() -> novadraw::SceneGraph {
 
     // 直接调用 stroke_rect
     let test = TestFigure::new("stroke_rect", |gc| {
-        gc.stroke_rect(50.0, 50.0, 200.0, 100.0, Color::RED, 3.0, LineCap::Butt, LineJoin::Miter);
-        gc.stroke_rect(300.0, 50.0, 200.0, 100.0, Color::GREEN, 5.0, LineCap::Round, LineJoin::Round);
-        gc.stroke_rect(550.0, 50.0, 200.0, 100.0, Color::BLUE, 8.0, LineCap::Square, LineJoin::Bevel);
+        gc.stroke_rect(
+            50.0,
+            50.0,
+            200.0,
+            100.0,
+            Color::RED,
+            3.0,
+            LineCap::Butt,
+            LineJoin::Miter,
+        );
+        gc.stroke_rect(
+            300.0,
+            50.0,
+            200.0,
+            100.0,
+            Color::GREEN,
+            5.0,
+            LineCap::Round,
+            LineJoin::Round,
+        );
+        gc.stroke_rect(
+            550.0,
+            50.0,
+            200.0,
+            100.0,
+            Color::BLUE,
+            8.0,
+            LineCap::Square,
+            LineJoin::Bevel,
+        );
     });
     scene.add_child_to(bg_id, Box::new(test));
     scene
@@ -94,11 +121,41 @@ fn create_scene_ellipse() -> novadraw::SceneGraph {
     // 直接调用 ellipse
     let test = TestFigure::new("ellipse", |gc| {
         // 填充椭圆
-        gc.ellipse(150.0, 150.0, 80.0, 50.0, Some(Color::RED), None, 0.0, LineCap::Butt, LineJoin::Miter);
+        gc.ellipse(
+            150.0,
+            150.0,
+            80.0,
+            50.0,
+            Some(Color::RED),
+            None,
+            0.0,
+            LineCap::Butt,
+            LineJoin::Miter,
+        );
         // 描边椭圆
-        gc.ellipse(400.0, 150.0, 80.0, 50.0, None, Some(Color::GREEN), 3.0, LineCap::Butt, LineJoin::Miter);
+        gc.ellipse(
+            400.0,
+            150.0,
+            80.0,
+            50.0,
+            None,
+            Some(Color::GREEN),
+            3.0,
+            LineCap::Butt,
+            LineJoin::Miter,
+        );
         // 填充+描边椭圆
-        gc.ellipse(650.0, 150.0, 80.0, 50.0, Some(Color::BLUE), Some(Color::WHITE), 3.0, LineCap::Butt, LineJoin::Miter);
+        gc.ellipse(
+            650.0,
+            150.0,
+            80.0,
+            50.0,
+            Some(Color::BLUE),
+            Some(Color::WHITE),
+            3.0,
+            LineCap::Butt,
+            LineJoin::Miter,
+        );
     });
     scene.add_child_to(bg_id, Box::new(test));
     scene
@@ -115,25 +172,62 @@ fn create_scene_line() -> novadraw::SceneGraph {
         gc.line(
             glam::DVec2::new(50.0, 50.0),
             glam::DVec2::new(250.0, 50.0),
-            Color::RED, 3.0, LineCap::Butt, LineJoin::Miter
+            Color::RED,
+            3.0,
+            LineCap::Butt,
+            LineJoin::Miter,
         );
         // 垂直线
         gc.line(
             glam::DVec2::new(300.0, 30.0),
             glam::DVec2::new(300.0, 200.0),
-            Color::GREEN, 3.0, LineCap::Butt, LineJoin::Miter
+            Color::GREEN,
+            3.0,
+            LineCap::Butt,
+            LineJoin::Miter,
         );
         // 斜线
         gc.line(
             glam::DVec2::new(400.0, 30.0),
             glam::DVec2::new(550.0, 200.0),
-            Color::BLUE, 3.0, LineCap::Butt, LineJoin::Miter
+            Color::BLUE,
+            3.0,
+            LineCap::Butt,
+            LineJoin::Miter,
         );
         // 不同线宽
-        gc.line(glam::DVec2::new(50.0, 250.0), glam::DVec2::new(150.0, 250.0), Color::BLACK, 1.0, LineCap::Butt, LineJoin::Miter);
-        gc.line(glam::DVec2::new(170.0, 250.0), glam::DVec2::new(270.0, 250.0), Color::BLACK, 2.0, LineCap::Butt, LineJoin::Miter);
-        gc.line(glam::DVec2::new(290.0, 250.0), glam::DVec2::new(390.0, 250.0), Color::BLACK, 4.0, LineCap::Butt, LineJoin::Miter);
-        gc.line(glam::DVec2::new(410.0, 250.0), glam::DVec2::new(510.0, 250.0), Color::BLACK, 8.0, LineCap::Butt, LineJoin::Miter);
+        gc.line(
+            glam::DVec2::new(50.0, 250.0),
+            glam::DVec2::new(150.0, 250.0),
+            Color::BLACK,
+            1.0,
+            LineCap::Butt,
+            LineJoin::Miter,
+        );
+        gc.line(
+            glam::DVec2::new(170.0, 250.0),
+            glam::DVec2::new(270.0, 250.0),
+            Color::BLACK,
+            2.0,
+            LineCap::Butt,
+            LineJoin::Miter,
+        );
+        gc.line(
+            glam::DVec2::new(290.0, 250.0),
+            glam::DVec2::new(390.0, 250.0),
+            Color::BLACK,
+            4.0,
+            LineCap::Butt,
+            LineJoin::Miter,
+        );
+        gc.line(
+            glam::DVec2::new(410.0, 250.0),
+            glam::DVec2::new(510.0, 250.0),
+            Color::BLACK,
+            8.0,
+            LineCap::Butt,
+            LineJoin::Miter,
+        );
     });
     scene.add_child_to(bg_id, Box::new(test));
     scene
@@ -165,23 +259,41 @@ fn create_scene_polyline() -> novadraw::SceneGraph {
         gc.polyline(&points2, Color::GREEN, 3.0, LineCap::Butt, LineJoin::Miter);
 
         // 不同线宽
-        let points3 = vec![glam::DVec2::new(50.0, 200.0), glam::DVec2::new(200.0, 200.0)];
+        let points3 = vec![
+            glam::DVec2::new(50.0, 200.0),
+            glam::DVec2::new(200.0, 200.0),
+        ];
         gc.polyline(&points3, Color::BLACK, 1.0, LineCap::Butt, LineJoin::Miter);
 
-        let points4 = vec![glam::DVec2::new(230.0, 200.0), glam::DVec2::new(380.0, 200.0)];
+        let points4 = vec![
+            glam::DVec2::new(230.0, 200.0),
+            glam::DVec2::new(380.0, 200.0),
+        ];
         gc.polyline(&points4, Color::BLACK, 2.0, LineCap::Butt, LineJoin::Miter);
 
-        let points5 = vec![glam::DVec2::new(410.0, 200.0), glam::DVec2::new(560.0, 200.0)];
+        let points5 = vec![
+            glam::DVec2::new(410.0, 200.0),
+            glam::DVec2::new(560.0, 200.0),
+        ];
         gc.polyline(&points5, Color::BLACK, 4.0, LineCap::Butt, LineJoin::Miter);
 
         // 不同线帽
-        let points6 = vec![glam::DVec2::new(50.0, 300.0), glam::DVec2::new(150.0, 300.0)];
+        let points6 = vec![
+            glam::DVec2::new(50.0, 300.0),
+            glam::DVec2::new(150.0, 300.0),
+        ];
         gc.polyline(&points6, Color::RED, 8.0, LineCap::Butt, LineJoin::Miter);
 
-        let points7 = vec![glam::DVec2::new(200.0, 300.0), glam::DVec2::new(300.0, 300.0)];
+        let points7 = vec![
+            glam::DVec2::new(200.0, 300.0),
+            glam::DVec2::new(300.0, 300.0),
+        ];
         gc.polyline(&points7, Color::GREEN, 8.0, LineCap::Round, LineJoin::Miter);
 
-        let points8 = vec![glam::DVec2::new(350.0, 300.0), glam::DVec2::new(450.0, 300.0)];
+        let points8 = vec![
+            glam::DVec2::new(350.0, 300.0),
+            glam::DVec2::new(450.0, 300.0),
+        ];
         gc.polyline(&points8, Color::BLUE, 8.0, LineCap::Square, LineJoin::Miter);
     });
     scene.add_child_to(bg_id, Box::new(test));
@@ -231,16 +343,43 @@ fn create_scene_transform() -> novadraw::SceneGraph {
     // 测试变换
     let test = TestFigure::new("transform", |gc| {
         // 原始矩形
-        gc.stroke_rect(50.0, 50.0, 100.0, 60.0, Color::RED, 2.0, LineCap::Butt, LineJoin::Miter);
+        gc.stroke_rect(
+            50.0,
+            50.0,
+            100.0,
+            60.0,
+            Color::RED,
+            2.0,
+            LineCap::Butt,
+            LineJoin::Miter,
+        );
 
         // 平移
         gc.translate(50.0, 50.0);
-        gc.stroke_rect(50.0, 50.0, 100.0, 60.0, Color::GREEN, 2.0, LineCap::Butt, LineJoin::Miter);
+        gc.stroke_rect(
+            50.0,
+            50.0,
+            100.0,
+            60.0,
+            Color::GREEN,
+            2.0,
+            LineCap::Butt,
+            LineJoin::Miter,
+        );
 
         // 旋转
         gc.translate(100.0, 50.0);
         gc.rotate(45.0);
-        gc.stroke_rect(50.0, 50.0, 100.0, 60.0, Color::BLUE, 2.0, LineCap::Butt, LineJoin::Miter);
+        gc.stroke_rect(
+            50.0,
+            50.0,
+            100.0,
+            60.0,
+            Color::BLUE,
+            2.0,
+            LineCap::Butt,
+            LineJoin::Miter,
+        );
     });
     scene.add_child_to(bg_id, Box::new(test));
     scene
@@ -269,7 +408,10 @@ fn main() {
 
     if args.len() > 1 {
         if let Some(arg) = args.get(1) {
-            if let Some(idx) = arg.strip_prefix("--screenshot=").and_then(|s| s.parse::<usize>().ok()) {
+            if let Some(idx) = arg
+                .strip_prefix("--screenshot=")
+                .and_then(|s| s.parse::<usize>().ok())
+            {
                 run_demo_app_with_scene_screenshot(title, app_name, scenes, idx).unwrap();
                 return;
             }

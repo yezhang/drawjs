@@ -1,4 +1,4 @@
-use novadraw::{Color, EllipseFigure, LineFigure, RectangleFigure, SceneGraph};
+use novadraw::{Color, EllipseFigure, PolylineFigure, RectangleFigure, SceneGraph};
 
 pub struct SceneManager {
     pub scene: SceneGraph,
@@ -8,15 +8,15 @@ pub struct SceneManager {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SceneType {
-    BasicAnchors,      // 场景0：基础四个定位点
-    Nested,            // 场景1：嵌套父子结构
-    NestedWithRoot,    // 场景2：嵌套场景（含透明根节点）
-    ZOrder,            // 场景3：Z-order 叠加
-    Visibility,        // 场景4：不可见节点过滤
-    BoundsTranslate,   // 场景5：prim_translate 平移传播
-    ClipTest,          // 场景6：裁剪测试（子元素超出父边界）
-    EllipseTest,       // 场景7：椭圆图形测试
-    LineTest,          // 场景8：直线图形测试
+    BasicAnchors,    // 场景0：基础四个定位点
+    Nested,          // 场景1：嵌套父子结构
+    NestedWithRoot,  // 场景2：嵌套场景（含透明根节点）
+    ZOrder,          // 场景3：Z-order 叠加
+    Visibility,      // 场景4：不可见节点过滤
+    BoundsTranslate, // 场景5：prim_translate 平移传播
+    ClipTest,        // 场景6：裁剪测试（子元素超出父边界）
+    EllipseTest,     // 场景7：椭圆图形测试
+    LineTest,        // 场景8：直线图形测试
 }
 
 impl SceneManager {
@@ -263,14 +263,20 @@ impl SceneManager {
     fn create_nested_with_root_scene(scene: &mut SceneGraph) {
         // 创建透明背景作为根容器
         let root = RectangleFigure::new_with_color(
-            0.0, 0.0, 800.0, 600.0,
+            0.0,
+            0.0,
+            800.0,
+            600.0,
             Color::rgba(0.0, 0.0, 0.0, 0.0),
         );
         let root_id = scene.set_contents(Box::new(root));
 
         // Parent - 深紫色（与场景 1 相同尺寸：250x200）
         let parent = RectangleFigure::new_with_color(
-            350.0, 50.0, 250.0, 200.0,
+            350.0,
+            50.0,
+            250.0,
+            200.0,
             Color::rgba(0.4, 0.2, 0.5, 1.0),
         )
         .with_local_coordinates(true);
@@ -278,7 +284,10 @@ impl SceneManager {
 
         // Child - 橙色（与场景 1 相同尺寸：150x100）
         let child = RectangleFigure::new_with_color(
-            30.0, 30.0, 150.0, 100.0,
+            30.0,
+            30.0,
+            150.0,
+            100.0,
             Color::rgba(0.9, 0.5, 0.1, 1.0),
         )
         .with_local_coordinates(true);
@@ -287,7 +296,10 @@ impl SceneManager {
         // Grandchild - 青色（选中状态，与场景 1 相同尺寸：80x40）
         // 实际位置 = parent(350,50) + child(30,30) + gc(20,20) = (400, 100)
         let gc = RectangleFigure::new_with_color(
-            20.0, 20.0, 80.0, 40.0,
+            20.0,
+            20.0,
+            80.0,
+            40.0,
             Color::rgba(0.1, 0.8, 0.8, 1.0),
         )
         .with_local_coordinates(true);
@@ -301,21 +313,30 @@ impl SceneManager {
     fn create_clip_test_scene(scene: &mut SceneGraph) {
         // 创建透明背景作为根容器
         let root = RectangleFigure::new_with_color(
-            0.0, 0.0, 800.0, 600.0,
+            0.0,
+            0.0,
+            800.0,
+            600.0,
             Color::rgba(0.0, 0.0, 0.0, 0.0),
         );
         let root_id = scene.set_contents(Box::new(root));
 
         // Parent - 半透明蓝色容器 (100x100)
         let parent = RectangleFigure::new_with_color(
-            350.0, 250.0, 100.0, 100.0,
+            350.0,
+            250.0,
+            100.0,
+            100.0,
             Color::rgba(0.2, 0.4, 0.8, 0.5),
         );
         let parent_id = scene.add_child_to(root_id, Box::new(parent));
 
         // Child 1 - 完全在父容器内 (绿色)
         let child1 = RectangleFigure::new_with_color(
-            360.0, 260.0, 30.0, 30.0,
+            360.0,
+            260.0,
+            30.0,
+            30.0,
             Color::rgba(0.2, 0.8, 0.3, 1.0),
         );
         scene.add_child_to(parent_id, Box::new(child1));
@@ -324,7 +345,10 @@ impl SceneManager {
         // 父容器 (350, 250, 100, 100)，右边界是 450
         // 子元素从 430 开始，宽度 50，所以超出 450 的部分应该被裁剪
         let child2 = RectangleFigure::new_with_color(
-            430.0, 280.0, 50.0, 40.0,
+            430.0,
+            280.0,
+            50.0,
+            40.0,
             Color::rgba(0.9, 0.2, 0.2, 1.0),
         );
         scene.add_child_to(parent_id, Box::new(child2));
@@ -333,7 +357,10 @@ impl SceneManager {
         // 父容器下边界是 350
         // 子元素从 340 开始，高度 40，所以超出 350 的部分应该被裁剪
         let child3 = RectangleFigure::new_with_color(
-            380.0, 340.0, 40.0, 40.0,
+            380.0,
+            340.0,
+            40.0,
+            40.0,
             Color::rgba(0.9, 0.8, 0.2, 1.0),
         );
         scene.add_child_to(parent_id, Box::new(child3));
@@ -345,28 +372,48 @@ impl SceneManager {
     fn create_ellipse_test_scene(scene: &mut SceneGraph) {
         // 创建透明背景
         let root = RectangleFigure::new_with_color(
-            0.0, 0.0, 800.0, 600.0,
+            0.0,
+            0.0,
+            800.0,
+            600.0,
             Color::rgba(0.1, 0.1, 0.1, 1.0),
         );
         let root_id = scene.set_contents(Box::new(root));
 
         // 椭圆 1 - 红色填充，带白色边框
-        let ellipse1 = EllipseFigure::new(150.0, 150.0, 100.0, 80.0)
-            .with_stroke(Color::WHITE, 2.0);
+        let ellipse1 = EllipseFigure::new(150.0, 150.0, 100.0, 80.0).with_stroke(Color::WHITE, 2.0);
         scene.add_child_to(root_id, Box::new(ellipse1));
 
         // 椭圆 2 - 蓝色填充，无边框
-        let ellipse2 = EllipseFigure::new_with_color(350.0, 200.0, 120.0, 120.0, Color::rgba(0.2, 0.6, 0.9, 1.0));
+        let ellipse2 = EllipseFigure::new_with_color(
+            350.0,
+            200.0,
+            120.0,
+            120.0,
+            Color::rgba(0.2, 0.6, 0.9, 1.0),
+        );
         scene.add_child_to(root_id, Box::new(ellipse2));
 
         // 椭圆 3 - 绿色描边，无填充
-        let ellipse3 = EllipseFigure::new_with_color(550.0, 150.0, 80.0, 150.0, Color::rgba(0.0, 0.0, 0.0, 0.0))
-            .with_stroke(Color::rgba(0.2, 0.8, 0.3, 1.0), 3.0);
+        let ellipse3 = EllipseFigure::new_with_color(
+            550.0,
+            150.0,
+            80.0,
+            150.0,
+            Color::rgba(0.0, 0.0, 0.0, 0.0),
+        )
+        .with_stroke(Color::rgba(0.2, 0.8, 0.3, 1.0), 3.0);
         scene.add_child_to(root_id, Box::new(ellipse3));
 
         // 圆形 - 正椭圆
-        let circle = EllipseFigure::new_with_color(400.0, 400.0, 100.0, 100.0, Color::rgba(0.9, 0.6, 0.2, 1.0))
-            .with_stroke(Color::WHITE, 2.0);
+        let circle = EllipseFigure::new_with_color(
+            400.0,
+            400.0,
+            100.0,
+            100.0,
+            Color::rgba(0.9, 0.6, 0.2, 1.0),
+        )
+        .with_stroke(Color::WHITE, 2.0);
         scene.add_child_to(root_id, Box::new(circle));
     }
 
@@ -376,38 +423,71 @@ impl SceneManager {
     fn create_line_test_scene(scene: &mut SceneGraph) {
         // 创建透明背景
         let root = RectangleFigure::new_with_color(
-            0.0, 0.0, 800.0, 600.0,
+            0.0,
+            0.0,
+            800.0,
+            600.0,
             Color::rgba(0.1, 0.1, 0.1, 1.0),
         );
         let root_id = scene.set_contents(Box::new(root));
 
         // 水平线 - 红色
-        let h_line = LineFigure::new_with_color(100.0, 100.0, 300.0, 100.0, Color::rgba(0.9, 0.3, 0.3, 1.0))
-            .with_width(3.0);
+        let h_line = PolylineFigure::new_with_color(
+            100.0,
+            100.0,
+            300.0,
+            100.0,
+            Color::rgba(0.9, 0.3, 0.3, 1.0),
+        )
+        .with_width(3.0);
         scene.add_child_to(root_id, Box::new(h_line));
 
         // 垂直线 - 蓝色
-        let v_line = LineFigure::new_with_color(400.0, 50.0, 400.0, 250.0, Color::rgba(0.3, 0.3, 0.9, 1.0))
-            .with_width(3.0);
+        let v_line = PolylineFigure::new_with_color(
+            400.0,
+            50.0,
+            400.0,
+            250.0,
+            Color::rgba(0.3, 0.3, 0.9, 1.0),
+        )
+        .with_width(3.0);
         scene.add_child_to(root_id, Box::new(v_line));
 
         // 斜线 - 绿色
-        let diag_line = LineFigure::new_with_color(100.0, 200.0, 300.0, 400.0, Color::rgba(0.3, 0.9, 0.3, 1.0))
-            .with_width(3.0);
+        let diag_line = PolylineFigure::new_with_color(
+            100.0,
+            200.0,
+            300.0,
+            400.0,
+            Color::rgba(0.3, 0.9, 0.3, 1.0),
+        )
+        .with_width(3.0);
         scene.add_child_to(root_id, Box::new(diag_line));
 
         // 反向斜线 - 橙色（测试反向坐标）
-        let diag_line2 = LineFigure::new_with_color(400.0, 200.0, 300.0, 400.0, Color::rgba(0.9, 0.6, 0.2, 1.0))
-            .with_width(3.0);
+        let diag_line2 = PolylineFigure::new_with_color(
+            400.0,
+            200.0,
+            300.0,
+            400.0,
+            Color::rgba(0.9, 0.6, 0.2, 1.0),
+        )
+        .with_width(3.0);
         scene.add_child_to(root_id, Box::new(diag_line2));
 
         // 粗线 - 紫色
-        let thick_line = LineFigure::new_with_color(100.0, 450.0, 700.0, 450.0, Color::rgba(0.6, 0.3, 0.9, 1.0))
-            .with_width(8.0);
+        let thick_line = PolylineFigure::new_with_color(
+            100.0,
+            450.0,
+            700.0,
+            450.0,
+            Color::rgba(0.6, 0.3, 0.9, 1.0),
+        )
+        .with_width(8.0);
         scene.add_child_to(root_id, Box::new(thick_line));
 
         // 加粗白色细线
-        let white_line = LineFigure::new_with_color(500.0, 300.0, 750.0, 550.0, Color::WHITE)
+        let white_line = PolylineFigure::new_with_color(500.0, 300.0, 750.0, 550.0, Color::WHITE)
             .with_width(2.0);
         scene.add_child_to(root_id, Box::new(white_line));
     }
