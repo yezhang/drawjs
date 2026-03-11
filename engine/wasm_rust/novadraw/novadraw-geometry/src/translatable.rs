@@ -32,7 +32,12 @@ impl Insets {
     /// * `right` - 右边距
     #[inline]
     pub fn new(top: f64, left: f64, bottom: f64, right: f64) -> Self {
-        Self { left, top, bottom, right }
+        Self {
+            left,
+            top,
+            bottom,
+            right,
+        }
     }
 
     /// 等值内边距
@@ -40,11 +45,21 @@ impl Insets {
     /// 所有方向使用相同的边距值。
     #[inline]
     pub fn uniform(value: f64) -> Self {
-        Self { left: value, top: value, right: value, bottom: value }
+        Self {
+            left: value,
+            top: value,
+            right: value,
+            bottom: value,
+        }
     }
 
     /// 零内边距
-    pub const ZERO: Insets = Insets { left: 0.0, top: 0.0, right: 0.0, bottom: 0.0 };
+    pub const ZERO: Insets = Insets {
+        left: 0.0,
+        top: 0.0,
+        right: 0.0,
+        bottom: 0.0,
+    };
 
     /// 内边距高度
     ///
@@ -65,7 +80,11 @@ impl Insets {
 
 impl std::fmt::Display for Insets {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Insets(t={:.4}, l={:.4}, b={:.4}, r={:.4})", self.top, self.left, self.bottom, self.right)
+        write!(
+            f,
+            "Insets(t={:.4}, l={:.4}, b={:.4}, r={:.4})",
+            self.top, self.left, self.bottom, self.right
+        )
     }
 }
 
@@ -132,6 +151,20 @@ impl Translatable for Rectangle {
         self.y *= factor;
         self.width *= factor;
         self.height *= factor;
+    }
+}
+
+impl Translatable for (f64, f64) {
+    #[inline]
+    fn translate(&mut self, dx: f64, dy: f64) {
+        self.0 += dx;
+        self.1 += dy;
+    }
+
+    #[inline]
+    fn scale(&mut self, factor: f64) {
+        self.0 *= factor;
+        self.1 *= factor;
     }
 }
 

@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use novadraw_geometry::Rectangle;
+use novadraw_geometry::{Rectangle, Translatable};
 use novadraw_render::NdCanvas;
 use slotmap::{Key, SlotMap};
 use uuid::Uuid;
@@ -22,27 +22,6 @@ pub use render_recursive::{FigureRenderer, SceneGraphRenderRef};
 pub mod bounds_test;
 
 slotmap::new_key_type! { pub struct BlockId; }
-
-/// 可坐标转换的几何类型
-///
-/// 允许对坐标点进行平移操作，用于坐标系统之间的转换。
-pub trait Translatable {
-    fn translate(&mut self, dx: f64, dy: f64);
-}
-
-impl Translatable for (f64, f64) {
-    fn translate(&mut self, dx: f64, dy: f64) {
-        self.0 += dx;
-        self.1 += dy;
-    }
-}
-
-impl Translatable for Rectangle {
-    fn translate(&mut self, dx: f64, dy: f64) {
-        self.x += dx;
-        self.y += dy;
-    }
-}
 
 /// 运行时块
 ///
@@ -565,6 +544,7 @@ impl SceneGraph {
     ///
     /// 在渲染前调用，渲染后会打印渲染顺序
     #[cfg(feature = "debug_render")]
+    #[allow(clippy::collapsible_if)]
     pub fn print_render_order(&self) {
         let start_id = self.contents.unwrap_or(self.root);
         let mut stack = vec![start_id];
