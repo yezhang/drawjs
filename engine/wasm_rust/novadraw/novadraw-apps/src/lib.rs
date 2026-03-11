@@ -4,25 +4,28 @@
 //!
 //! # 使用示例
 //!
-//! ```rust
-//! use novadraw_apps::{run_demo_app, scene_creator};
+//! ```rust,ignore
+//! use novadraw_apps::run_demo_app;
+//! use novadraw::SceneGraph;
 //!
-//! #[scene_creator]
-//! fn create_scene() -> novadraw::SceneGraph {
-//!     let mut scene = novadraw::SceneGraph::new();
+//! fn create_scene() -> SceneGraph {
+//!     let mut scene = SceneGraph::new();
 //!     // 创建场景...
 //!     scene
 //! }
 //!
-//! fn main() {
-//!     run_demo_app("My App", vec![
-//!         ("Scene 1", create_scene),
-//!     ]);
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     run_demo_app("My App", "my-app", vec![
+//!         ("Scene 1", Box::new(create_scene)),
+//!     ])
 //! }
 //! ```
 
 pub mod app;
 pub mod prelude;
 
-pub use app::{run_demo_app, run_demo_app_with_screenshot, run_demo_app_with_scene_screenshot, AppBuilder, DemoApp};
+pub use app::{
+    AppBuilder, DemoApp, run_demo_app, run_demo_app_with_scene_screenshot,
+    run_demo_app_with_screenshot,
+};
 pub use prelude::*;

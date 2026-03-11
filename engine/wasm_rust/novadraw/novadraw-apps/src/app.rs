@@ -21,9 +21,14 @@ pub use winit::{application::ApplicationHandler, window::WindowId};
 /// - 渲染器初始化
 /// - 场景切换
 /// - 事件处理
+///
+// 场景创建函数类型
+type SceneCreator = Box<dyn FnMut() -> SceneGraph>;
+
 pub struct DemoApp {
     /// 场景名称列表
-    scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
+    #[allow(clippy::type_complexity)]
+    scenes: Vec<(&'static str, SceneCreator)>,
     /// 当前场景索引
     current_scene_idx: usize,
     /// 场景图
@@ -48,9 +53,10 @@ pub struct DemoApp {
 
 impl DemoApp {
     /// 创建一个新的演示应用
+    #[allow(clippy::type_complexity)]
     pub fn new(
         title: &str,
-        scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
+        scenes: Vec<(&'static str, SceneCreator)>,
         width: f64,
         height: f64,
         app_name: &str,
@@ -87,14 +93,16 @@ impl DemoApp {
             eprintln!("设置窗口标题: {}", new_title);
             if let Some(window) = &self.window {
                 window.set_title(&new_title);
-                let _ = window.request_redraw(); // 忽略错误
+                window.request_redraw(); // 忽略错误
             }
         }
     }
 
     /// 获取当前场景名称
     pub fn current_scene_name(&self) -> Option<&'static str> {
-        self.scenes.get(self.current_scene_idx).map(|(name, _)| *name)
+        self.scenes
+            .get(self.current_scene_idx)
+            .map(|(name, _)| *name)
     }
 
     /// 获取场景数量
@@ -141,7 +149,13 @@ impl DemoApp {
             .as_secs();
         let safe_scene_name: String = scene_name
             .chars()
-            .map(|c| if c.is_alphanumeric() || c == '_' { c } else { '_' })
+            .map(|c| {
+                if c.is_alphanumeric() || c == '_' {
+                    c
+                } else {
+                    '_'
+                }
+            })
             .collect();
         let filename = format!("{}_{}_{}.png", self.app_name, safe_scene_name, timestamp);
         let output_path = screenshot_dir.join(&filename);
@@ -170,7 +184,11 @@ impl DemoApp {
             vec![mode]
         };
 
-        log::info!("截图模式: {:?}, 场景数量: {}", scenes_to_capture, self.scenes.len());
+        log::info!(
+            "截图模式: {:?}, 场景数量: {}",
+            scenes_to_capture,
+            self.scenes.len()
+        );
 
         // 截图每个场景
         for idx in scenes_to_capture {
@@ -343,7 +361,8 @@ impl ApplicationHandler<()> for DemoApp {
                             self.window.as_ref().unwrap().request_redraw();
                         }
                     }
-                    PhysicalKey::Code(KeyCode::ArrowRight) | PhysicalKey::Code(KeyCode::PageDown) => {
+                    PhysicalKey::Code(KeyCode::ArrowRight)
+                    | PhysicalKey::Code(KeyCode::PageDown) => {
                         // 切换到下一个场景（循环）
                         let count = self.scenes.len();
                         if count > 0 {
@@ -413,10 +432,11 @@ fn get_digit_index(key: &winit::keyboard::PhysicalKey) -> Option<usize> {
 /// 应用构建器
 ///
 /// 用于更灵活地配置应用
+#[allow(clippy::type_complexity)]
 pub struct AppBuilder {
     title: String,
     app_name: String,
-    scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
+    scenes: Vec<(&'static str, SceneCreator)>,
     width: f64,
     height: f64,
     /// 截图模式：None=正常模式, Some(true)=截图所有场景, Some(数字)=截图指定场景
@@ -450,13 +470,21 @@ impl AppBuilder {
     }
 
     /// 添加场景
-    pub fn add_scene(mut self, name: &'static str, creator: impl FnMut() -> SceneGraph + 'static) -> Self {
+    pub fn add_scene(
+        mut self,
+        name: &'static str,
+        creator: impl FnMut() -> SceneGraph + 'static,
+    ) -> Self {
         self.scenes.push((name, Box::new(creator)));
         self
     }
 
     /// 批量添加场景（已装箱）
-    pub fn with_scenes_boxed(mut self, scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>) -> Self {
+    #[allow(clippy::type_complexity)]
+    pub fn with_scenes_boxed(
+        mut self,
+        scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
+    ) -> Self {
         self.scenes = scenes;
         self
     }
@@ -482,14 +510,25 @@ impl AppBuilder {
     /// 构建并运行应用
     pub fn run(self) -> Result<(), Box<dyn std::error::Error>> {
         let event_loop = EventLoop::new()?;
-        let scenes: Vec<(_, Box<dyn FnMut() -> SceneGraph>)> = self.scenes.into_iter().map(|(n, c)| (n, c)).collect();
+        let scenes: Vec<(_, SceneCreator)> = self.scenes;
         let app_name = if self.app_name.is_empty() {
             // 从 title 提取应用名称
-            self.title.split_whitespace().next().unwrap_or("app").to_string()
+            self.title
+                .split_whitespace()
+                .next()
+                .unwrap_or("app")
+                .to_string()
         } else {
             self.app_name
         };
-        let mut app = DemoApp::new(&self.title, scenes, self.width, self.height, &app_name, self.screenshot_mode);
+        let mut app = DemoApp::new(
+            &self.title,
+            scenes,
+            self.width,
+            self.height,
+            &app_name,
+            self.screenshot_mode,
+        );
         event_loop.run_app(&mut app)?;
         Ok(())
     }
@@ -515,6 +554,7 @@ impl AppBuilder {
 ///     ]);
 /// }
 /// ```
+#[allow(clippy::type_complexity)]
 pub fn run_demo_app(
     title: &str,
     app_name: &str,
@@ -523,6 +563,7 @@ pub fn run_demo_app(
     run_demo_app_with_options(title, app_name, scenes, false, None)
 }
 
+#[allow(clippy::type_complexity)]
 pub fn run_demo_app_with_screenshot(
     title: &str,
     app_name: &str,
@@ -532,6 +573,7 @@ pub fn run_demo_app_with_screenshot(
     run_demo_app_with_options(title, app_name, scenes, screenshot_all, None)
 }
 
+#[allow(clippy::type_complexity)]
 pub fn run_demo_app_with_scene_screenshot(
     title: &str,
     app_name: &str,
@@ -541,6 +583,7 @@ pub fn run_demo_app_with_scene_screenshot(
     run_demo_app_with_options(title, app_name, scenes, false, Some(scene_index))
 }
 
+#[allow(clippy::type_complexity)]
 fn run_demo_app_with_options(
     title: &str,
     app_name: &str,
