@@ -25,6 +25,12 @@ pub struct NdCanvas {
     line_join: crate::command::LineJoin,
 }
 
+impl Default for NdCanvas {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NdCanvas {
     pub fn new() -> Self {
         Self {
@@ -116,15 +122,44 @@ impl NdCanvas {
         self.create_command(RenderCommandKind::FillRect { rect, color });
     }
 
-    pub fn stroke_rect(&mut self, x: f64, y: f64, width: f64, height: f64, color: Color, stroke_width: f64, cap: crate::command::LineCap, join: crate::command::LineJoin) {
+    #[allow(clippy::too_many_arguments)]
+    pub fn stroke_rect(
+        &mut self,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        color: Color,
+        stroke_width: f64,
+        cap: crate::command::LineCap,
+        join: crate::command::LineJoin,
+    ) {
         let rect = [DVec2::new(x, y), DVec2::new(x + width, y + height)];
-        self.create_command(RenderCommandKind::StrokeRect { rect, color, width: stroke_width, cap, join });
+        self.create_command(RenderCommandKind::StrokeRect {
+            rect,
+            color,
+            width: stroke_width,
+            cap,
+            join,
+        });
     }
 
     /// 绘制椭圆
     ///
     /// 椭圆中心为 (cx, cy)，x 轴半径 rx，y 轴半径 ry
-    pub fn ellipse(&mut self, cx: f64, cy: f64, rx: f64, ry: f64, fill_color: Option<Color>, stroke_color: Option<Color>, stroke_width: f64, cap: crate::command::LineCap, join: crate::command::LineJoin) {
+    #[allow(clippy::too_many_arguments)]
+    pub fn ellipse(
+        &mut self,
+        cx: f64,
+        cy: f64,
+        rx: f64,
+        ry: f64,
+        fill_color: Option<Color>,
+        stroke_color: Option<Color>,
+        stroke_width: f64,
+        cap: crate::command::LineCap,
+        join: crate::command::LineJoin,
+    ) {
         self.create_command(RenderCommandKind::Ellipse {
             cx,
             cy,
@@ -141,7 +176,15 @@ impl NdCanvas {
     /// 绘制直线
     ///
     /// 从 p1 到 p2 的直线
-    pub fn line(&mut self, p1: DVec2, p2: DVec2, color: Color, width: f64, cap: crate::command::LineCap, join: crate::command::LineJoin) {
+    pub fn line(
+        &mut self,
+        p1: DVec2,
+        p2: DVec2,
+        color: Color,
+        width: f64,
+        cap: crate::command::LineCap,
+        join: crate::command::LineJoin,
+    ) {
         self.create_command(RenderCommandKind::Line {
             p1,
             p2,
@@ -155,7 +198,14 @@ impl NdCanvas {
     /// 绘制折线
     ///
     /// 从 points[0] 到 points[1] ... 到 points[n] 的折线
-    pub fn polyline(&mut self, points: &[DVec2], color: Color, width: f64, cap: crate::command::LineCap, join: crate::command::LineJoin) {
+    pub fn polyline(
+        &mut self,
+        points: &[DVec2],
+        color: Color,
+        width: f64,
+        cap: crate::command::LineCap,
+        join: crate::command::LineJoin,
+    ) {
         if points.len() < 2 {
             return;
         }
@@ -202,6 +252,7 @@ impl NdCanvas {
     }
 
     /// 添加弧线
+    #[allow(unused_variables)]
     pub fn arc(
         &mut self,
         x: f64,
@@ -238,21 +289,14 @@ impl NdCanvas {
     }
 
     /// 三次贝塞尔曲线
-    pub fn bezier_curve_to(
-        &mut self,
-        cp1x: f64,
-        cp1y: f64,
-        cp2x: f64,
-        cp2y: f64,
-        x: f64,
-        y: f64,
-    ) {
+    pub fn bezier_curve_to(&mut self, cp1x: f64, cp1y: f64, cp2x: f64, cp2y: f64, x: f64, y: f64) {
         if let Some(ref mut path) = self.current_path {
             path.cubic_to(cp1x, cp1y, cp2x, cp2y, x, y);
         }
     }
 
     /// 填充当前路径
+    #[allow(clippy::collapsible_if)]
     pub fn fill(&mut self) {
         if let Some(path) = self.current_path.take() {
             if let Some(color) = self.fill_color {
@@ -264,6 +308,7 @@ impl NdCanvas {
     }
 
     /// 描边当前路径
+    #[allow(clippy::collapsible_if)]
     pub fn stroke(&mut self) {
         if let Some(path) = self.current_path.take() {
             if self.stroke_color.is_some() {
@@ -275,7 +320,7 @@ impl NdCanvas {
     /// 填充并描边当前路径
     pub fn fill_and_stroke(&mut self) {
         if let Some(path) = self.current_path.take() {
-            if let Some(fill_color) = self.fill_color {
+            if let Some(_fill_color) = self.fill_color {
                 self.create_command(RenderCommandKind::FillPath(path.clone()));
             }
             if self.stroke_color.is_some() {

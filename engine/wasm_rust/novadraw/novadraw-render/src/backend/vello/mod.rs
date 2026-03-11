@@ -78,6 +78,7 @@ impl VelloRenderer {
         let height = self.surface.config.height;
 
         // 检查是否需要重新创建
+        #[allow(clippy::collapsible_if)]
         if let Some((_, _, old_width, old_height)) = &self.screenshot_texture {
             if *old_width == width && *old_height == height {
                 return;
@@ -91,25 +92,23 @@ impl VelloRenderer {
         // 创建带 COPY_SRC 权限的纹理
         // 注意：必须使用 Rgba8Unorm 格式，因为 Vello 内部期望此格式
         // macOS surface 默认是 Bgra8Unorm，需要显式转换
-        let texture = device.create_texture(
-            &vello::wgpu::TextureDescriptor {
-                label: Some("Screenshot Texture"),
-                size: vello::wgpu::Extent3d {
-                    width,
-                    height,
-                    depth_or_array_layers: 1,
-                },
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: vello::wgpu::TextureDimension::D2,
-                format: vello::wgpu::TextureFormat::Rgba8Unorm,
-                usage: vello::wgpu::TextureUsages::COPY_SRC
-                    | vello::wgpu::TextureUsages::RENDER_ATTACHMENT
-                    | vello::wgpu::TextureUsages::TEXTURE_BINDING
-                    | vello::wgpu::TextureUsages::STORAGE_BINDING,
-                view_formats: &[vello::wgpu::TextureFormat::Rgba8Unorm],
+        let texture = device.create_texture(&vello::wgpu::TextureDescriptor {
+            label: Some("Screenshot Texture"),
+            size: vello::wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
             },
-        );
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: vello::wgpu::TextureDimension::D2,
+            format: vello::wgpu::TextureFormat::Rgba8Unorm,
+            usage: vello::wgpu::TextureUsages::COPY_SRC
+                | vello::wgpu::TextureUsages::RENDER_ATTACHMENT
+                | vello::wgpu::TextureUsages::TEXTURE_BINDING
+                | vello::wgpu::TextureUsages::STORAGE_BINDING,
+            view_formats: &[vello::wgpu::TextureFormat::Rgba8Unorm],
+        });
 
         let view = texture.create_view(&vello::wgpu::TextureViewDescriptor::default());
 
@@ -226,7 +225,13 @@ impl VelloRenderer {
                 );
             }
 
-            crate::command::RenderCommandKind::StrokeRect { rect, color, width, cap, join } => {
+            crate::command::RenderCommandKind::StrokeRect {
+                rect,
+                color,
+                width,
+                cap,
+                join,
+            } => {
                 let affine =
                     Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
                 let x0 = rect[0].x * self.scale_factor;
@@ -251,13 +256,8 @@ impl VelloRenderer {
                         crate::command::LineJoin::Round => Join::Round,
                         crate::command::LineJoin::Bevel => Join::Bevel,
                     });
-                self.scene.stroke(
-                    &stroke,
-                    affine,
-                    vello_color,
-                    None,
-                    &kurbo_rect,
-                );
+                self.scene
+                    .stroke(&stroke, affine, vello_color, None, &kurbo_rect);
             }
 
             crate::command::RenderCommandKind::Clear { color: _ } => {
@@ -345,10 +345,7 @@ impl VelloRenderer {
                     first_point.y * self.scale_factor,
                 ));
                 for point in &points[1..] {
-                    path.line_to((
-                        point.x * self.scale_factor,
-                        point.y * self.scale_factor,
-                    ));
+                    path.line_to((point.x * self.scale_factor, point.y * self.scale_factor));
                 }
 
                 self.scene.stroke(&stroke, affine, vello_color, None, &path);
@@ -367,8 +364,10 @@ impl VelloRenderer {
             } => {
                 let affine =
                     Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
-                let center = vello::kurbo::Point::new(cx * self.scale_factor, cy * self.scale_factor);
-                let radii = vello::kurbo::Vec2::new(*rx * self.scale_factor, *ry * self.scale_factor);
+                let center =
+                    vello::kurbo::Point::new(cx * self.scale_factor, cy * self.scale_factor);
+                let radii =
+                    vello::kurbo::Vec2::new(*rx * self.scale_factor, *ry * self.scale_factor);
                 let ellipse = vello::kurbo::Ellipse::new(center, radii, 0.0);
 
                 // 填充椭圆
@@ -407,13 +406,8 @@ impl VelloRenderer {
                             crate::command::LineJoin::Round => Join::Round,
                             crate::command::LineJoin::Bevel => Join::Bevel,
                         });
-                    self.scene.stroke(
-                        &stroke,
-                        affine,
-                        vello_color,
-                        None,
-                        &ellipse,
-                    );
+                    self.scene
+                        .stroke(&stroke, affine, vello_color, None, &ellipse);
                 }
             }
 
@@ -457,14 +451,16 @@ impl VelloRenderer {
                                 (p1.x * self.scale_factor, p1.y * self.scale_factor),
                                 (p2.x * self.scale_factor, p2.y * self.scale_factor),
                             );
-                            current_pos = Some((p2.x * self.scale_factor, p2.y * self.scale_factor));
+                            current_pos =
+                                Some((p2.x * self.scale_factor, p2.y * self.scale_factor));
                         }
                         crate::command::PathOp::QuadTo(p0, p1) => {
                             bez_path.quad_to(
                                 (p0.x * self.scale_factor, p0.y * self.scale_factor),
                                 (p1.x * self.scale_factor, p1.y * self.scale_factor),
                             );
-                            current_pos = Some((p1.x * self.scale_factor, p1.y * self.scale_factor));
+                            current_pos =
+                                Some((p1.x * self.scale_factor, p1.y * self.scale_factor));
                         }
                         crate::command::PathOp::Close => {
                             bez_path.close_path();
@@ -529,14 +525,16 @@ impl VelloRenderer {
                                 (p1.x * self.scale_factor, p1.y * self.scale_factor),
                                 (p2.x * self.scale_factor, p2.y * self.scale_factor),
                             );
-                            current_pos = Some((p2.x * self.scale_factor, p2.y * self.scale_factor));
+                            current_pos =
+                                Some((p2.x * self.scale_factor, p2.y * self.scale_factor));
                         }
                         crate::command::PathOp::QuadTo(p0, p1) => {
                             bez_path.quad_to(
                                 (p0.x * self.scale_factor, p0.y * self.scale_factor),
                                 (p1.x * self.scale_factor, p1.y * self.scale_factor),
                             );
-                            current_pos = Some((p1.x * self.scale_factor, p1.y * self.scale_factor));
+                            current_pos =
+                                Some((p1.x * self.scale_factor, p1.y * self.scale_factor));
                         }
                         crate::command::PathOp::Close => {
                             bez_path.close_path();
@@ -546,7 +544,8 @@ impl VelloRenderer {
                     }
                 }
 
-                self.scene.stroke(&stroke, affine, vello_color, None, &bez_path);
+                self.scene
+                    .stroke(&stroke, affine, vello_color, None, &bez_path);
             }
 
             // 其他命令暂未实现
@@ -571,8 +570,7 @@ impl VelloRenderer {
 
     /// 推送裁剪层到场景
     fn push_clip_layer(&mut self, rect: &[DVec2; 2]) {
-        let affine =
-            Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
+        let affine = Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
         let x0 = rect[0].x * self.scale_factor;
         let y0 = rect[0].y * self.scale_factor;
         let x1 = rect[1].x * self.scale_factor;
@@ -608,7 +606,10 @@ impl RenderBackend for VelloRenderer {
 
         // 获取截图纹理和 device_handle（先完成 ensure_screenshot_texture）
         let screenshot_texture = {
-            let (_, view, _, _) = self.screenshot_texture.as_ref().expect("Screenshot texture not created");
+            let (_, view, _, _) = self
+                .screenshot_texture
+                .as_ref()
+                .expect("Screenshot texture not created");
             view.clone()
         };
 
@@ -716,21 +717,22 @@ impl VelloRenderer {
 
         // 创建输出缓冲区
         let buffer_size = (width * height * 4) as u64;
-        let buffer = device_handle.device.create_buffer(
-            &vello::wgpu::BufferDescriptor {
+        let buffer = device_handle
+            .device
+            .create_buffer(&vello::wgpu::BufferDescriptor {
                 label: Some("Screenshot Buffer"),
                 size: buffer_size,
                 usage: vello::wgpu::BufferUsages::COPY_DST | vello::wgpu::BufferUsages::MAP_READ,
                 mapped_at_creation: false,
-            },
-        );
+            });
 
         // 创建命令编码器
-        let mut encoder = device_handle.device.create_command_encoder(
-            &vello::wgpu::CommandEncoderDescriptor {
-                label: Some("Screenshot Encoder"),
-            },
-        );
+        let mut encoder =
+            device_handle
+                .device
+                .create_command_encoder(&vello::wgpu::CommandEncoderDescriptor {
+                    label: Some("Screenshot Encoder"),
+                });
 
         // 从 screenshot_texture 复制到 buffer
         encoder.copy_texture_to_buffer(
@@ -766,7 +768,9 @@ impl VelloRenderer {
         });
 
         // 等待映射完成
-        let _ = device_handle.device.poll(vello::wgpu::PollType::wait_indefinitely());
+        let _ = device_handle
+            .device
+            .poll(vello::wgpu::PollType::wait_indefinitely());
 
         // 检查映射结果
         receiver.recv().unwrap().unwrap();
@@ -780,8 +784,9 @@ impl VelloRenderer {
             .expect("Failed to create image buffer");
 
         // 保存为 PNG
-        buffer.save_with_format(path, image::ImageFormat::Png)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        buffer
+            .save_with_format(path, image::ImageFormat::Png)
+            .map_err(std::io::Error::other)
     }
 
     /// 获取窗口尺寸（像素）

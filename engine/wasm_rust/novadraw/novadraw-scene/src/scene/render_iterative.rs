@@ -99,12 +99,14 @@ impl<'a> FigureRendererIter<'a> {
         };
 
         // 1. 初始化本地属性
+        #[allow(clippy::needless_borrow)]
         block.figure.init_properties(&mut self.gc);
 
         // 2. 保存状态
         self.gc.push_state();
 
         // 3. 绘制自身（背景）
+        #[allow(clippy::needless_borrow)]
         block.figure.paint_figure(&mut self.gc);
 
         self.gc.restore_state();
@@ -132,8 +134,12 @@ impl<'a> FigureRendererIter<'a> {
             let (top, left, bottom, right) = Bounded::insets(block.figure.as_ref());
             self.gc.translate(bounds.x + left, bounds.y + top);
             // clip 到 client area = bounds - insets
-            self.gc
-                .clip_rect(0.0, 0.0, bounds.width - left - right, bounds.height - top - bottom);
+            self.gc.clip_rect(
+                0.0,
+                0.0,
+                bounds.width - left - right,
+                bounds.height - top - bottom,
+            );
         } else {
             let bounds = Bounded::bounds(block.figure.as_ref());
             self.gc
@@ -179,6 +185,7 @@ impl<'a> FigureRendererIter<'a> {
         };
 
         // 绘制边框
+        #[allow(clippy::needless_borrow)]
         block.figure.paint_border(&mut self.gc);
 
         // 恢复初始状态

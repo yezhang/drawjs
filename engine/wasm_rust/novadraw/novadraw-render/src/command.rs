@@ -269,6 +269,7 @@ impl Path {
     }
 
     /// 绘制弧线到指定点
+    #[allow(clippy::too_many_arguments)]
     pub fn arc_to(
         &mut self,
         rx: f64,

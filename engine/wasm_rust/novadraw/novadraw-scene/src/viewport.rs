@@ -37,8 +37,7 @@ impl Viewport {
 
     /// 屏幕坐标转世界坐标
     pub fn screen_to_world(&self, screen: DVec2) -> DVec2 {
-        let world = (screen / self.zoom) + self.origin;
-        world
+        (screen / self.zoom) + self.origin
     }
 
     /// 世界坐标转屏幕坐标
@@ -61,17 +60,20 @@ impl Viewport {
     }
 
     /// 缩放以适应矩形
-    pub fn zoom_to_fit(&mut self, rect: &crate::Rectangle, viewport_width: f64, viewport_height: f64, padding: f64) {
+    pub fn zoom_to_fit(
+        &mut self,
+        rect: &crate::Rectangle,
+        viewport_width: f64,
+        viewport_height: f64,
+        padding: f64,
+    ) {
         if rect.width <= 0.0 || rect.height <= 0.0 {
             return;
         }
         let scale_x = (viewport_width - padding * 2.0) / rect.width;
         let scale_y = (viewport_height - padding * 2.0) / rect.height;
         self.zoom = scale_x.min(scale_y);
-        self.origin = DVec2::new(
-            rect.x - padding / self.zoom,
-            rect.y - padding / self.zoom,
-        );
+        self.origin = DVec2::new(rect.x - padding / self.zoom, rect.y - padding / self.zoom);
     }
 
     /// 放大
@@ -101,11 +103,9 @@ impl Viewport {
     /// 使用 `*` 运算符：T(translate) * S(scale) = 先 S，后 T
     pub fn to_transform(&self) -> Transform {
         let scale = Transform::from_scale(self.zoom, self.zoom);
-        let translate = Transform::from_translation(
-            -self.origin.x * self.zoom,
-            -self.origin.y * self.zoom,
-        );
-        scale * translate  // S * T = 先平移 origin，后缩放
+        let translate =
+            Transform::from_translation(-self.origin.x * self.zoom, -self.origin.y * self.zoom);
+        scale * translate // S * T = 先平移 origin，后缩放
     }
 
     /// 转换为逆变换
@@ -114,11 +114,8 @@ impl Viewport {
     pub fn to_inverse_transform(&self) -> Transform {
         let inv_zoom = 1.0 / self.zoom;
         let scale = Transform::from_scale(inv_zoom, inv_zoom);
-        let translate = Transform::from_translation(
-            self.origin.x,
-            self.origin.y,
-        );
-        scale * translate  // S * T = 先平移 origin，后缩放
+        let translate = Transform::from_translation(self.origin.x, self.origin.y);
+        scale * translate // S * T = 先平移 origin，后缩放
     }
 }
 

@@ -38,10 +38,17 @@ impl Mat3 {
     /// | m20 m21 m22 |
     /// ```
     #[inline]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
-        m00: f64, m01: f64, m02: f64,
-        m10: f64, m11: f64, m12: f64,
-        m20: f64, m21: f64, m22: f64,
+        m00: f64,
+        m01: f64,
+        m02: f64,
+        m10: f64,
+        m11: f64,
+        m12: f64,
+        m20: f64,
+        m21: f64,
+        m22: f64,
     ) -> Self {
         Self(DMat3::from_cols(
             glam::DVec3::new(m00, m10, m20),
@@ -54,9 +61,8 @@ impl Mat3 {
     #[inline]
     pub fn from_array(arr: [[f64; 3]; 3]) -> Self {
         Self(DMat3::from_cols_array(&[
-            arr[0][0], arr[1][0], arr[2][0],
-            arr[0][1], arr[1][1], arr[2][1],
-            arr[0][2], arr[1][2], arr[2][2],
+            arr[0][0], arr[1][0], arr[2][0], arr[0][1], arr[1][1], arr[2][1], arr[0][2], arr[1][2],
+            arr[2][2],
         ]))
     }
 
@@ -194,9 +200,7 @@ impl std::fmt::Display for Mat3 {
         write!(
             f,
             "Mat3({:.4}, {:.4}, {:.4}\n     {:.4}, {:.4}, {:.4}\n     {:.4}, {:.4}, {:.4})",
-            m[0][0], m[0][1], m[0][2],
-            m[1][0], m[1][1], m[1][2],
-            m[2][0], m[2][1], m[2][2]
+            m[0][0], m[0][1], m[0][2], m[1][0], m[1][1], m[1][2], m[2][0], m[2][1], m[2][2]
         )
     }
 }

@@ -91,6 +91,43 @@ pub trait Bounded: Send + Sync {
     fn use_local_coordinates(&self) -> bool {
         false
     }
+
+    // ==================== 布局相关方法 ====================
+
+    /// 获取客户区域
+    ///
+    /// 对应 d2: getClientArea()
+    /// 返回 bounds 减去 insets 后的区域
+    fn client_area(&self) -> Rectangle {
+        let b = self.bounds();
+        let (top, left, bottom, right) = self.insets();
+        Rectangle::new(b.x + left, b.y + top, b.width - left - right, b.height - top - bottom)
+    }
+
+    /// 获取首选大小
+    ///
+    /// 对应 d2: getPreferredSize()
+    /// 默认返回 bounds 的尺寸
+    fn preferred_size(&self) -> (f64, f64) {
+        let b = self.bounds();
+        (b.width, b.height)
+    }
+
+    /// 获取最小大小
+    ///
+    /// 对应 d2: getMinimumSize()
+    /// 默认返回首选大小
+    fn minimum_size(&self) -> (f64, f64) {
+        self.preferred_size()
+    }
+
+    /// 获取最大大小
+    ///
+    /// 对应 d2: getMaximumSize()
+    /// 默认返回首选大小
+    fn maximum_size(&self) -> (f64, f64) {
+        self.preferred_size()
+    }
 }
 
 // ============================================================================
@@ -116,7 +153,6 @@ pub trait Bounded: Send + Sync {
 /// ```
 pub trait Figure: Bounded + Send + Sync {
     /// ===== 模板方法 =====
-
     /// 初始化本地属性
     ///
     /// 对应 d2: setLocalBackgroundColor/ForegroundColor/Font
@@ -126,7 +162,6 @@ pub trait Figure: Bounded + Send + Sync {
     }
 
     /// ===== PaintSelf 阶段方法 =====
-
     /// 绘制自身（背景）
     ///
     /// 对应 d2: paintFigure(Graphics)
@@ -134,7 +169,6 @@ pub trait Figure: Bounded + Send + Sync {
     fn paint_figure(&self, _gc: &mut NdCanvas) {}
 
     /// ===== PaintChildren 相关方法 =====
-
     /// 绘制子元素
     ///
     /// 对应 d2 paintChildren(Graphics)
@@ -144,7 +178,6 @@ pub trait Figure: Bounded + Send + Sync {
     }
 
     /// ===== PaintBorder 阶段方法 =====
-
     /// 获取边框
     ///
     /// 对应 d2: getBorder()
@@ -183,7 +216,6 @@ pub trait Figure: Bounded + Send + Sync {
 /// ```
 pub trait Shape: Figure {
     /// ===== Shape 特有方法 =====
-
     /// 获取边框装饰器（覆盖 Figure 的默认实现）
     ///
     /// 对应 d2: getBorder()
@@ -222,7 +254,6 @@ pub trait Shape: Figure {
     }
 
     /// ===== 渲染方法 =====
-
     /// 绘制自身（覆盖 Figure trait 的实现）
     ///
     /// 参考 d2: Shape.paintFigure()
