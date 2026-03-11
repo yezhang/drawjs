@@ -12,6 +12,7 @@ members = [
   "apps/editor",
   "apps/vello-demo",
   "apps/shape-app",
+  "apps/ndcanvas-test",
   "apps/transform-app",
   "apps/clip-app",
   "apps/layout-app",

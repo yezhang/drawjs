@@ -18,7 +18,10 @@ pub mod scene;
 pub mod viewport;
 
 pub use border::{Border, LineBorder, MarginBorder, RectangleBorder};
-pub use figure::{Bounded, EllipseFigure, Figure, PolygonFigure, PolylineFigure, RectangleFigure, RootFigure, RoundedRectangleFigure};
+pub use figure::{
+    Bounded, EllipseFigure, Figure, PolygonFigure, PolylineFigure, RectangleFigure, RootFigure,
+    RoundedRectangleFigure,
+};
 pub use layout::{FillLayout, LayoutManager, XYLayout};
 pub use novadraw_geometry::{Point, Rectangle};
 pub use scene::{BlockId, FigureRenderer, RuntimeBlock, SceneGraph};
