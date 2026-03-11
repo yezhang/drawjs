@@ -1,0 +1,4 @@
+{
+  "name": "novadraw-impl",
+  "description": "指导 novadraw 项目特定模块的实现模式，包括 Figure 类型、布局算法、渲染后端等"
+}

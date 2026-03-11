@@ -1,0 +1,4 @@
+{
+  "name": "code-review",
+  "description": "标准化代码审查流程，检查代码质量、架构设计和 Rust 最佳实践"
+}

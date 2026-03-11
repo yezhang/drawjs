@@ -1,0 +1,4 @@
+{
+  "name": "analyzing-xilem-code",
+  "description": "分析 Xilem 和 Masonry 源码并深入理解核心数据结构和算法。当需要分析 xilem 架构或借鉴其设计时调用。"
+}

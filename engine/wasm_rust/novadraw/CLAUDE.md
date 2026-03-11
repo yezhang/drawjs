@@ -138,18 +138,65 @@ impl Figure {
 
 ### 提交前检查
 
+每次提交前必须执行以下检查：
+
 ```bash
-cargo fmt      # 代码格式
-cargo check    # 编译检查
-cargo clippy   # 代码质量建议
-cargo test     # 运行测试
+# 1. 代码格式
+cargo fmt --check
+
+# 2. 编译检查
+cargo check
+
+# 3. 代码质量（将警告视为错误）
+cargo clippy -- -D warnings
+
+# 4. 运行测试
+cargo test
+
+# 5. 文档格式检查（如有修改）
+npx markdownlint-cli2 doc/**/*.md 2>/dev/null || true
 ```
+
+**注意**：必须全部通过才能提交。
+
+## 开发流程
+
+### 新功能开发流程
+
+1. **需求分析**：明确功能边界和验收标准
+2. **源码参考**：
+   - 使用 `/analyzing-gef-code` 分析 d2 对应实现
+   - 使用 `/analyzing-xilem-code` 参考现代 GUI 框架设计
+   - 使用 `/analyzing-swt-code` 分析底层 GC API
+3. **接口设计**：先定义 trait 接口，再逐步实现
+4. **迭代实现**：每次提交聚焦单一变更
+5. **文档更新**：如有新增模块，编写对应的 `doc/*.md`
+
+### Bug 修复流程
+
+1. **根因分析**：先理解问题根源，不急于修复
+2. **复现验证**：确保能稳定复现问题
+3. **修复方案**：解释修复思路后再实施
+4. **测试覆盖**：添加测试用例防止回归
+
+### 性能优化流程
+
+1. **基准测试**：提供优化前的性能数据
+2. **瓶颈定位**：使用 profiling 工具定位热点
+3. **优化实施**：针对性优化
+4. **效果验证**：对比优化前后的性能数据
 
 ### 文档要求
 
 - 所有 `pub` 类型和函数必须添加文档注释
 - 复杂算法添加示例代码
 - 使用 `cargo doc --open` 生成文档
+
+### 调试技巧
+
+- 分析截图/图像时，使用 MCP 的 `understand_image` 工具获取客观描述，避免主观臆测
+- 只有当处理渲染主循环时才分析 `render_iterative.rs`，其他渲染问题优先检查递归渲染流程
+- **不要分析迭代实现的逻辑正确性**（如 render_iterative.rs 的算法），除非用户明确要求
 
 ## 禁止事项
 
@@ -173,6 +220,67 @@ cargo test     # 运行测试
   - 若后期添加成本高或难以渐进式扩展：提前设计好
   - 若可平滑增量添加：留待后续迭代
 - **接口先行**: 对于不确定的实现细节，先定义接口契约，延迟具体实现
+- **架构决策记录 (ADR)**: 重大架构决策记录到 `doc/adr/` 目录
+
+## MCP 工具使用规范
+
+### understand_image 工具
+
+用于分析截图、UI 效果图等图像：
+
+- 分析渲染输出是否正确
+- 验证 UI 布局是否符合预期
+- **注意**: 获取客观描述，避免主观臆测
+
+### web_search 工具
+
+用于获取最新信息：
+
+- 查找最新的库版本和 API
+- 搜索 Rust 图形编程最佳实践
+- **注意**: 涉及安全补丁或新版 API 时必须使用
+
+### WebFetch 工具
+
+用于获取特定文档内容：
+
+- 官方库文档
+- API 参考
+- **注意**: 优先使用本地源码分析
+
+## 架构决策记录 (ADR)
+
+### 记录范围
+
+以下情况需要创建 ADR：
+
+- 引入新的核心抽象或 trait
+- 改变模块间依赖关系
+- 采用新的第三方 crate
+- 性能优化方案
+
+### ADR 模板
+
+```markdown
+# ADR-XXX: [标题]
+
+## 状态
+[提议/已通过/已废弃/已替换]
+
+## 背景
+[描述问题和上下文]
+
+## 决策
+[描述选择的方案]
+
+## 后果
+- 正面：...
+- 负面：...
+```
+
+### ADR 位置
+
+`doc/adr/` 目录，按编号排序。
 
 ## 角色定位
 
@@ -192,4 +300,6 @@ cargo test     # 运行测试
 ## 参考代码
 
 - draw2d/gef 原始实现: `/Users/bytedance/Documents/code/GitHub/gef-classic`
+- swt 代码库(含GC.java)：`/Users/bytedance/Documents/code/GitHub/eclipse.platform.swt`
 - vello 渲染库: `/Users/bytedance/Documents/code/GitHub/vello`
+- xilem GUI 框架: `/Users/bytedance/Documents/code/GitHub/xilem`
