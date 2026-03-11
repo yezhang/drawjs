@@ -1,0 +1,6 @@
+# Screenshot directories
+apps/*/screenshot/
+screenshot/
+
+# Build outputs
+target/
