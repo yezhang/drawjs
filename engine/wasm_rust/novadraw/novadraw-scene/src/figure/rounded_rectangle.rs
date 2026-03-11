@@ -58,7 +58,14 @@ impl RoundedRectangleFigure {
     }
 
     /// 创建指定颜色的圆角矩形
-    pub fn new_with_color(x: f64, y: f64, width: f64, height: f64, corner_radius: f64, color: Color) -> Self {
+    pub fn new_with_color(
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+        corner_radius: f64,
+        color: Color,
+    ) -> Self {
         Self {
             bounds: Rectangle::new(x, y, width, height),
             corner_radius: corner_radius.max(0.0),
@@ -177,7 +184,12 @@ impl Shape for RoundedRectangleFigure {
 
 impl RoundedRectangleFigure {
     /// 绘制圆角矩形（填充和/或描边）
-    fn draw_rounded_rect(&self, gc: &mut NdCanvas, fill_color: Option<Color>, stroke_color: Option<Color>) {
+    fn draw_rounded_rect(
+        &self,
+        gc: &mut NdCanvas,
+        fill_color: Option<Color>,
+        stroke_color: Option<Color>,
+    ) {
         let x = self.bounds.x;
         let y = self.bounds.y;
         let width = self.bounds.width;
@@ -195,7 +207,16 @@ impl RoundedRectangleFigure {
                 gc.fill_rect(x, y, width, height, color);
             }
             if let Some(color) = stroke_color {
-                gc.stroke_rect(x, y, width, height, color, self.stroke_width, self.line_cap, self.line_join);
+                gc.stroke_rect(
+                    x,
+                    y,
+                    width,
+                    height,
+                    color,
+                    self.stroke_width,
+                    self.line_cap,
+                    self.line_join,
+                );
             }
             return;
         }

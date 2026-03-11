@@ -4,9 +4,78 @@
 
 use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
+use novadraw_render::NdCanvas;
 
-use crate::figure::{Figure, RectangleFigure};
+use crate::figure::{Bounded, Figure, RectangleFigure, Shape};
 use crate::scene::SceneGraph;
+
+// ========== 测试用 Figure 类型 ==========
+
+/// 坐标根 Figure（使用本地坐标）
+#[derive(Clone, Copy)]
+struct TestCoordRootFigure {
+    bounds: Rectangle,
+}
+
+impl TestCoordRootFigure {
+    fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
+        Self {
+            bounds: Rectangle::new(x, y, width, height),
+        }
+    }
+}
+
+impl Bounded for TestCoordRootFigure {
+    fn bounds(&self) -> Rectangle {
+        self.bounds
+    }
+
+    fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        self.bounds = Rectangle::new(x, y, width, height);
+    }
+
+    fn use_local_coordinates(&self) -> bool {
+        true
+    }
+
+    fn name(&self) -> &'static str {
+        "TestCoordRootFigure"
+    }
+}
+
+impl Shape for TestCoordRootFigure {
+    fn stroke_color(&self) -> Option<novadraw_core::Color> {
+        None
+    }
+
+    fn stroke_width(&self) -> f64 {
+        0.0
+    }
+
+    fn fill_color(&self) -> Option<novadraw_core::Color> {
+        None
+    }
+
+    fn line_cap(&self) -> novadraw_render::command::LineCap {
+        novadraw_render::command::LineCap::default()
+    }
+
+    fn line_join(&self) -> novadraw_render::command::LineJoin {
+        novadraw_render::command::LineJoin::default()
+    }
+
+    fn fill_enabled(&self) -> bool {
+        false
+    }
+
+    fn outline_enabled(&self) -> bool {
+        false
+    }
+
+    fn fill_shape(&self, _gc: &mut NdCanvas) {}
+
+    fn outline_shape(&self, _gc: &mut NdCanvas) {}
+}
 
 /// 辅助函数：收集所有 FillRect 命令的 rect 坐标
 fn collect_fill_rects(gc: &novadraw_render::NdCanvas) -> Vec<[glam::DVec2; 2]> {
@@ -249,30 +318,10 @@ fn test_render_commands_after_translate() {
 /// 期望：translate 生效，裁剪区在本地坐标 (0, 0)
 #[test]
 fn test_local_coordinates_mode() {
-    struct LocalCoordFigure {
-        bounds: Rectangle,
-    }
-
-    impl Figure for LocalCoordFigure {
-        fn bounds(&self) -> Rectangle {
-            self.bounds
-        }
-
-        fn use_local_coordinates(&self) -> bool {
-            true
-        }
-
-        fn name(&self) -> &'static str {
-            "LocalCoordFigure"
-        }
-    }
-
     let mut scene = SceneGraph::new();
 
     // 坐标根 (10, 10, 100, 100)
-    let coord_root = LocalCoordFigure {
-        bounds: Rectangle::new(10.0, 10.0, 100.0, 100.0),
-    };
+    let coord_root = TestCoordRootFigure::new(10.0, 10.0, 100.0, 100.0);
     let root_id = scene.set_contents(Box::new(coord_root));
 
     // 子节点 (30, 40, 50, 50)
@@ -291,10 +340,7 @@ fn test_local_coordinates_mode() {
     // clip_rects 应该包含：
     // 1. 坐标根的 clip: (0, 0, 100, 100) - 在 translate 之后
     // 2. 子节点的 clip: (30, 40, 50, 50) - 全局坐标
-    assert!(
-        !clip_rects.is_empty(),
-        "应有 ClipRect 命令"
-    );
+    assert!(!clip_rects.is_empty(), "应有 ClipRect 命令");
 }
 
 /// 测试：场景结构验证 bounds 完整性
@@ -442,7 +488,10 @@ fn test_intersects_basic() {
 
     // 刚好相切
     let rect_f = RectangleFigure::new(100.0, 100.0, 50.0, 50.0);
-    assert!(!rect_a.intersects(rect_f.bounds), "刚好相切应返回 false（按 > 判断）");
+    assert!(
+        !rect_a.intersects(rect_f.bounds),
+        "刚好相切应返回 false（按 > 判断）"
+    );
 }
 
 /// 测试：intersects 与自身
@@ -510,7 +559,7 @@ fn test_figure_set_bounds() {
     let mut rect = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
 
     // 通过 trait 调用 set_bounds
-    Figure::set_bounds(&mut rect, 10.0, 20.0, 80.0, 60.0);
+    <RectangleFigure as Bounded>::set_bounds(&mut rect, 10.0, 20.0, 80.0, 60.0);
 
     let b = rect.bounds();
     assert_eq!(b.x, 10.0);
@@ -530,7 +579,10 @@ fn test_empty_bounds() {
 
     // 宽度和高度都为 0 时，边界外的点不在内部
     assert!(!rect.contains_point(5.0, 5.0), "点 (5,5) 应不在空矩形内");
-    assert!(!rect.contains_point(11.0, 11.0), "点 (11,11) 应不在空矩形内");
+    assert!(
+        !rect.contains_point(11.0, 11.0),
+        "点 (11,11) 应不在空矩形内"
+    );
 
     // 注意：点 (10,10) 在边界上，根据包含边界的实现会在内部
     // 这是符合预期的行为
@@ -690,57 +742,52 @@ fn test_scene_set_bounds_size_only() {
 #[test]
 fn test_clip_test_scene_commands() {
     use novadraw_render::command::RenderCommandKind;
-    
+
     let mut scene = SceneGraph::new();
-    
+
     // Root
-    let root = RectangleFigure::new_with_color(
-        0.0, 0.0, 800.0, 600.0,
-        Color::rgba(0.0, 0.0, 0.0, 0.0),
-    );
+    let root =
+        RectangleFigure::new_with_color(0.0, 0.0, 800.0, 600.0, Color::rgba(0.0, 0.0, 0.0, 0.0));
     let root_id = scene.set_contents(Box::new(root));
 
     // Parent - 半透明蓝色容器 (350, 250, 100, 100)
     let parent = RectangleFigure::new_with_color(
-        350.0, 250.0, 100.0, 100.0,
+        350.0,
+        250.0,
+        100.0,
+        100.0,
         Color::rgba(0.2, 0.4, 0.8, 0.5),
     );
     let parent_id = scene.add_child_to(root_id, Box::new(parent));
 
     // Child 1 - 完全在父容器内 (360, 260, 30, 30) - 绿色
-    let child1 = RectangleFigure::new_with_color(
-        360.0, 260.0, 30.0, 30.0,
-        Color::rgba(0.2, 0.8, 0.3, 1.0),
-    );
+    let child1 =
+        RectangleFigure::new_with_color(360.0, 260.0, 30.0, 30.0, Color::rgba(0.2, 0.8, 0.3, 1.0));
     let _child1_id = scene.add_child_to(parent_id, Box::new(child1));
 
     // Child 2 - 超出父容器右边界 (430, 280, 50, 40) - 红色
     // 父容器右边界是 450，子元素从 430 开始，宽度 50，应该超出到 480
-    let child2 = RectangleFigure::new_with_color(
-        430.0, 280.0, 50.0, 40.0,
-        Color::rgba(0.9, 0.2, 0.2, 1.0),
-    );
+    let child2 =
+        RectangleFigure::new_with_color(430.0, 280.0, 50.0, 40.0, Color::rgba(0.9, 0.2, 0.2, 1.0));
     let _child2_id = scene.add_child_to(parent_id, Box::new(child2));
 
     // Child 3 - 超出父容器下边界 (380, 340, 40, 40) - 黄色
     // 父容器下边界是 350，子元素从 340 开始，高度 40，应该超出到 380
-    let child3 = RectangleFigure::new_with_color(
-        380.0, 340.0, 40.0, 40.0,
-        Color::rgba(0.9, 0.8, 0.2, 1.0),
-    );
+    let child3 =
+        RectangleFigure::new_with_color(380.0, 340.0, 40.0, 40.0, Color::rgba(0.9, 0.8, 0.2, 1.0));
     let _child3_id = scene.add_child_to(parent_id, Box::new(child3));
 
     // 渲染并分析命令
     let gc = scene.render();
     let commands = gc.commands();
-    
+
     println!("\n=== 场景6：裁剪测试命令分析 ===");
     println!("Parent bounds: (350, 250, 100, 100)");
     println!("  Child 1 (绿色): (360, 260, 30, 30) - 完全在内");
     println!("  Child 2 (红色): (430, 280, 50, 40) - 超出右边界 (480 > 450)");
     println!("  Child 3 (黄色): (380, 340, 40, 40) - 超出下边界 (380 > 350)");
     println!();
-    
+
     for (i, cmd) in commands.iter().enumerate() {
         match &cmd.kind {
             RenderCommandKind::PushState => {
@@ -757,7 +804,7 @@ fn test_clip_test_scene_commands() {
                 let y = rect[0].y;
                 let w = rect[1].x - rect[0].x;
                 let h = rect[1].y - rect[0].y;
-                
+
                 // 判断是哪个 clip
                 let desc = if (x - 350.0).abs() < 0.1 && (y - 250.0).abs() < 0.1 {
                     "Parent (350, 250, 100, 100)"
@@ -772,9 +819,11 @@ fn test_clip_test_scene_commands() {
                 } else {
                     "Unknown"
                 };
-                
-                println!("[{:2}] Clip: ({:.0}, {:.0}, {:.0}, {:.0}) <- {}", 
-                    i, x, y, w, h, desc);
+
+                println!(
+                    "[{:2}] Clip: ({:.0}, {:.0}, {:.0}, {:.0}) <- {}",
+                    i, x, y, w, h, desc
+                );
             }
             RenderCommandKind::FillRect { rect, color } => {
                 let x = rect[0].x;
@@ -782,7 +831,7 @@ fn test_clip_test_scene_commands() {
                 let w = rect[1].x - rect[0].x;
                 let h = rect[1].y - rect[0].y;
                 let (r, g, b) = (color.r, color.g, color.b);
-                
+
                 let desc = if r < 0.3 && g > 0.7 && b < 0.3 {
                     "Child 1 - 绿色"
                 } else if r > 0.8 && g < 0.3 && b < 0.3 {
@@ -794,17 +843,21 @@ fn test_clip_test_scene_commands() {
                 } else {
                     "Unknown"
                 };
-                
-                println!("[{:2}] FillRect: ({:.0}, {:.0}, {:.0}, {:.0}) - {}", 
-                    i, x, y, w, h, desc);
+
+                println!(
+                    "[{:2}] FillRect: ({:.0}, {:.0}, {:.0}, {:.0}) - {}",
+                    i, x, y, w, h, desc
+                );
             }
             RenderCommandKind::StrokeRect { rect, width, .. } => {
                 let x = rect[0].x;
                 let y = rect[0].y;
                 let w = rect[1].x - rect[0].x;
                 let h = rect[1].y - rect[0].y;
-                println!("[{:2}] StrokeRect: ({:.0}, {:.0}, {:.0}, {:.0}) w={:.0}", 
-                    i, x, y, w, h, width);
+                println!(
+                    "[{:2}] StrokeRect: ({:.0}, {:.0}, {:.0}, {:.0}) w={:.0}",
+                    i, x, y, w, h, width
+                );
             }
             RenderCommandKind::ConcatTransform { matrix } => {
                 let c = matrix.coeffs();
@@ -815,18 +868,19 @@ fn test_clip_test_scene_commands() {
             _ => {}
         }
     }
-    
+
     // 验证 clip 的数量和位置
-    let clip_rects: Vec<_> = commands.iter()
+    let clip_rects: Vec<_> = commands
+        .iter()
         .filter_map(|cmd| match &cmd.kind {
             RenderCommandKind::Clip { rect } => Some(*rect),
             _ => None,
         })
         .collect();
-    
+
     println!("\n=== Clip 统计 ===");
     println!("共 {} 个 Clip 命令", clip_rects.len());
-    
+
     // 期望的 clip 序列：
     // 1. Parent clip: (350, 250, 100, 100) - paint_client_area 设置
     // 2. Child 1 clip: (360, 260, 30, 30) - paint_children 为 child1 设置
@@ -835,26 +889,26 @@ fn test_clip_test_scene_commands() {
     // 5. Parent clip restored
     // 6. Child 3 clip: (380, 340, 40, 40) - paint_children 为 child3 设置
     // 7. Parent clip restored
-    
+
     // 验证关键 clip 存在
-    let has_parent_clip = clip_rects.iter().any(|r| {
-        (r[0].x - 350.0).abs() < 0.1 && (r[0].y - 250.0).abs() < 0.1
-    });
-    let has_child1_clip = clip_rects.iter().any(|r| {
-        (r[0].x - 360.0).abs() < 0.1 && (r[0].y - 260.0).abs() < 0.1
-    });
-    let has_child2_clip = clip_rects.iter().any(|r| {
-        (r[0].x - 430.0).abs() < 0.1 && (r[0].y - 280.0).abs() < 0.1
-    });
-    let has_child3_clip = clip_rects.iter().any(|r| {
-        (r[0].x - 380.0).abs() < 0.1 && (r[0].y - 340.0).abs() < 0.1
-    });
-    
+    let has_parent_clip = clip_rects
+        .iter()
+        .any(|r| (r[0].x - 350.0).abs() < 0.1 && (r[0].y - 250.0).abs() < 0.1);
+    let has_child1_clip = clip_rects
+        .iter()
+        .any(|r| (r[0].x - 360.0).abs() < 0.1 && (r[0].y - 260.0).abs() < 0.1);
+    let has_child2_clip = clip_rects
+        .iter()
+        .any(|r| (r[0].x - 430.0).abs() < 0.1 && (r[0].y - 280.0).abs() < 0.1);
+    let has_child3_clip = clip_rects
+        .iter()
+        .any(|r| (r[0].x - 380.0).abs() < 0.1 && (r[0].y - 340.0).abs() < 0.1);
+
     println!("Parent clip (350, 250): {}", has_parent_clip);
     println!("Child 1 clip (360, 260): {}", has_child1_clip);
     println!("Child 2 clip (430, 280): {}", has_child2_clip);
     println!("Child 3 clip (380, 340): {}", has_child3_clip);
-    
+
     assert!(has_parent_clip, "应有 Parent clip");
     assert!(has_child1_clip, "应有 Child 1 clip");
     assert!(has_child2_clip, "应有 Child 2 clip");

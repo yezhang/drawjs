@@ -4,7 +4,7 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Bounded, Shape, PolylineFigure};
+use super::{Bounded, PolylineFigure, Shape};
 
 /// 多边形图形
 ///
@@ -69,14 +69,11 @@ impl Bounded for PolygonFigure {
         let dx = x - current_bounds.x;
         let dy = y - current_bounds.y;
 
-        let new_points: Vec<novadraw_geometry::Vec2> = self.polyline.get_points()
+        let new_points: Vec<novadraw_geometry::Vec2> = self
+            .polyline
+            .get_points()
             .iter()
-            .map(|p| {
-                novadraw_geometry::Vec2::new(
-                    (p.0.x + dx) * scale_x,
-                    (p.0.y + dy) * scale_y,
-                )
-            })
+            .map(|p| novadraw_geometry::Vec2::new((p.0.x + dx) * scale_x, (p.0.y + dy) * scale_y))
             .collect();
         self.polyline.set_points(new_points);
     }

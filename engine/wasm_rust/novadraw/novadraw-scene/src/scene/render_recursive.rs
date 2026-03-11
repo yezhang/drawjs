@@ -123,10 +123,15 @@ impl<'a> FigureRenderer<'a> {
 
         if block.figure.use_local_coordinates() {
             let bounds = block.figure.bounds();
-            let (top, left, _, _) = block.figure.insets();
+            let (top, left, bottom, right) = block.figure.insets();
             self.gc.translate(bounds.x + left, bounds.y + top);
-            self.gc
-                .clip_rect(0.0, 0.0, bounds.width - left, bounds.height - top);
+            // clip 到 client area = bounds - insets
+            self.gc.clip_rect(
+                0.0,
+                0.0,
+                bounds.width - left - right,
+                bounds.height - top - bottom,
+            );
         } else {
             self.gc.clip_rect(
                 block.figure.bounds().x,

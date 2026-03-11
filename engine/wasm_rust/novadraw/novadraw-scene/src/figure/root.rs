@@ -1,9 +1,10 @@
 //! 根图形
 
+use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Bounded, Figure};
+use super::{Bounded, Shape};
 
 /// 根图形（内部使用）
 ///
@@ -14,7 +15,6 @@ use super::{Bounded, Figure};
 /// - 透明（不渲染自身）
 /// - 使用 trait 默认的本地坐标模式（false）
 /// - 不需要填充/描边属性
-/// - 不是 Shape 子类，只实现 Figure
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RootFigure {
     /// 边界矩形
@@ -50,10 +50,37 @@ impl Bounded for RootFigure {
     }
 }
 
-// 实现 Figure trait：根图形透明，不渲染自身
-impl Figure for RootFigure {
-    /// 根图形不渲染自身（透明）
-    fn paint_figure(&self, _gc: &mut NdCanvas) {
-        // 空实现：根图形透明，不渲染自身
+// 实现 Shape trait：根图形透明，不渲染自身
+impl Shape for RootFigure {
+    fn stroke_color(&self) -> Option<Color> {
+        None
     }
+
+    fn stroke_width(&self) -> f64 {
+        0.0
+    }
+
+    fn fill_color(&self) -> Option<Color> {
+        None
+    }
+
+    fn line_cap(&self) -> novadraw_render::command::LineCap {
+        novadraw_render::command::LineCap::default()
+    }
+
+    fn line_join(&self) -> novadraw_render::command::LineJoin {
+        novadraw_render::command::LineJoin::default()
+    }
+
+    fn fill_enabled(&self) -> bool {
+        false
+    }
+
+    fn outline_enabled(&self) -> bool {
+        false
+    }
+
+    fn fill_shape(&self, _gc: &mut NdCanvas) {}
+
+    fn outline_shape(&self, _gc: &mut NdCanvas) {}
 }
