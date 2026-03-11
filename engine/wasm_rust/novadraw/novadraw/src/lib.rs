@@ -6,7 +6,9 @@ pub use novadraw_core::Color;
 pub use novadraw_geometry::Transform;
 
 #[cfg(feature = "vello")]
-pub use novadraw_render::{NdCanvas, RenderCommand, RenderCommandKind, RenderBackend, WindowProxy, command};
+pub use novadraw_render::{
+    NdCanvas, RenderBackend, RenderCommand, RenderCommandKind, WindowProxy, command,
+};
 
 #[cfg(feature = "vello")]
 pub use novadraw_render as render;
@@ -18,4 +20,14 @@ pub use novadraw_render::backend;
 pub use novadraw_render::traits;
 
 #[cfg(feature = "vello")]
-pub use novadraw_scene::{Bounded, Border, BlockId, EllipseFigure, Figure, FigureRenderer, FillLayout, LayoutManager, LineBorder, MarginBorder, Point, PolygonFigure, PolylineFigure, Rectangle, RectangleBorder, RectangleFigure, RootFigure, RoundedRectangleFigure, RuntimeBlock, SceneGraph, Viewport, XYLayout};
+pub use novadraw_scene::{
+    BlockId, Border, Bounded, EllipseFigure, Figure, FigureRenderer, FillLayout, LayoutManager,
+    LineBorder, MarginBorder, Point, PolygonFigure, PolylineFigure, Rectangle, RectangleBorder,
+    RectangleFigure, RootFigure, RoundedRectangleFigure, RuntimeBlock, SceneGraph, Viewport,
+    XYLayout,
+};
+
+#[cfg(feature = "vello")]
+pub mod border {
+    pub use novadraw_scene::border::*;
+}

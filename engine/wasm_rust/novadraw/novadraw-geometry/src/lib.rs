@@ -11,12 +11,12 @@
 
 #![deny(missing_docs)]
 
-pub mod vec2;
 pub mod rect;
 pub mod transform;
 pub mod translatable;
+pub mod vec2;
 
-pub use vec2::Vec2;
 pub use rect::{Point, Rectangle, Size};
 pub use transform::Transform;
 pub use translatable::{Insets, Translatable};
+pub use vec2::Vec2;

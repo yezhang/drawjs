@@ -9,8 +9,8 @@
 
 #![deny(missing_docs)]
 
-pub mod vec3;
 pub mod mat3;
+pub mod vec3;
 
-pub use vec3::Vec3;
 pub use mat3::Mat3;
+pub use vec3::Vec3;

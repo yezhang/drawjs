@@ -27,7 +27,10 @@ impl Size {
     }
 
     /// 空尺寸
-    pub const ZERO: Size = Size { width: 0.0, height: 0.0 };
+    pub const ZERO: Size = Size {
+        width: 0.0,
+        height: 0.0,
+    };
 
     /// 检查是否为空
     #[inline]
@@ -98,7 +101,12 @@ impl Rectangle {
     /// 创建新矩形
     #[inline]
     pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     /// 从两个角点创建
@@ -110,7 +118,12 @@ impl Rectangle {
         let y = corner1.y().min(corner2.y());
         let width = (corner2.x() - corner1.x()).abs();
         let height = (corner2.y() - corner1.y()).abs();
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     /// 从中心点和尺寸创建
@@ -125,7 +138,12 @@ impl Rectangle {
     }
 
     /// 空矩形
-    pub const ZERO: Rectangle = Rectangle { x: 0.0, y: 0.0, width: 0.0, height: 0.0 };
+    pub const ZERO: Rectangle = Rectangle {
+        x: 0.0,
+        y: 0.0,
+        width: 0.0,
+        height: 0.0,
+    };
 
     /// 左上角
     #[inline]
@@ -234,7 +252,11 @@ impl From<Rectangle> for (f64, f64, f64, f64) {
 
 impl std::fmt::Display for Rectangle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Rectangle({:.4}, {:.4}, {:.4} × {:.4})", self.x, self.y, self.width, self.height)
+        write!(
+            f,
+            "Rectangle({:.4}, {:.4}, {:.4} × {:.4})",
+            self.x, self.y, self.width, self.height
+        )
     }
 }
 

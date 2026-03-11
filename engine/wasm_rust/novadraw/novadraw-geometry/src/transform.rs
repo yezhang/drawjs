@@ -221,7 +221,9 @@ impl Transform {
     #[inline]
     pub fn then_rotate_about(self, radians: f64, cx: f64, cy: f64) -> Self {
         Self {
-            inner: self.inner.then_rotate_about(radians, kurbo::Point::new(cx, cy)),
+            inner: self
+                .inner
+                .then_rotate_about(radians, kurbo::Point::new(cx, cy)),
         }
     }
 
@@ -231,7 +233,9 @@ impl Transform {
     #[inline]
     pub fn then_scale_about(self, scale: f64, cx: f64, cy: f64) -> Self {
         Self {
-            inner: self.inner.then_scale_about(scale, kurbo::Point::new(cx, cy)),
+            inner: self
+                .inner
+                .then_scale_about(scale, kurbo::Point::new(cx, cy)),
         }
     }
 
@@ -277,8 +281,7 @@ impl std::fmt::Display for Transform {
         write!(
             f,
             "Transform({:.4}, {:.4}, {:.4}\n          {:.4}, {:.4}, {:.4})",
-            coeffs[0], coeffs[2], coeffs[4],
-            coeffs[1], coeffs[3], coeffs[5]
+            coeffs[0], coeffs[2], coeffs[4], coeffs[1], coeffs[3], coeffs[5]
         )
     }
 }
@@ -393,7 +396,9 @@ mod tests {
     #[test]
     fn test_then_translate() {
         // 先平移(10,0)，再追加平移(0,5)
-        let t = Transform::IDENTITY.then_translate(10.0, 0.0).then_translate(0.0, 5.0);
+        let t = Transform::IDENTITY
+            .then_translate(10.0, 0.0)
+            .then_translate(0.0, 5.0);
         let p = t.transform_point(0.0, 0.0);
         assert_eq!(p, (10.0, 5.0));
     }

@@ -11,15 +11,15 @@
 
 #![allow(missing_docs)]
 
+/// 渲染后端模块
+#[cfg(feature = "vello")]
+pub mod backend;
 /// 渲染命令模块
 pub mod command;
 /// 渲染上下文模块
 pub mod context;
 /// 渲染器 traits 模块
 pub mod traits;
-/// 渲染后端模块
-#[cfg(feature = "vello")]
-pub mod backend;
 
 pub use command::{RenderCommand, RenderCommandKind};
 pub use context::NdCanvas;

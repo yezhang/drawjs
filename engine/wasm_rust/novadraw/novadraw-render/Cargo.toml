@@ -9,6 +9,7 @@ novadraw-math = { path = "../novadraw-math" }
 novadraw-core = { path = "../novadraw-core" }
 glam.workspace = true
 serde.workspace = true
+log = "0.4"
 
 vello = { workspace = true, optional = true }
 wgpu = { workspace = true, optional = true }
