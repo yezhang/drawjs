@@ -17,15 +17,17 @@ impl Rect {
     }
 }
 
-struct Cacher<T> 
-    where T: Fn(u32)-> u32
+struct Cacher<T>
+where
+    T: Fn(u32) -> u32,
 {
     run: T,
     inner_value: HashMap<u32, u32>,
 }
 
 impl<T> Cacher<T>
-    where T: Fn(u32)-> u32
+where
+    T: Fn(u32) -> u32,
 {
     fn new(cal: T) -> Cacher<T> {
         Cacher {
@@ -34,10 +36,10 @@ impl<T> Cacher<T>
         }
     }
 
-    fn value(&mut self, args: u32) -> u32{
+    fn value(&mut self, args: u32) -> u32 {
         let mut value_by_key = self.inner_value.get(&args);
 
-        match value_by_key{
+        match value_by_key {
             Some(v) => *v,
             None => {
                 let result = (self.run)(args);
@@ -48,6 +50,62 @@ impl<T> Cacher<T>
     }
 }
 
+trait Figure {
+    fn paint(&self) {
+        println!("figure trait")
+    }
+}
+
+trait Shape: Figure {
+    fn paint(&self) {
+        println!("shape default");
+        self.fill_shape();
+    }
+
+    fn fill_shape(&self);
+}
+
+trait SubShape: Shape {
+    fn fill_shape(&self) {
+        println!("fill sub shape");
+        self.fill_black();
+    }
+
+    fn fill_black(&self);
+}
+
+struct RectShape {
+    w: f32,
+    h: f32,
+}
+
+struct RectSubShape {}
+
+impl<T: Shape> Figure for T {
+    fn paint(&self) {
+        println!("figure impl default");
+        Shape::paint(self);
+    }
+}
+
+impl Shape for RectShape {
+    fn fill_shape(&self) {
+        println!("fill Rect Shape");
+    }
+}
+
+impl<T: SubShape> Shape for T {
+    fn fill_shape(&self) {
+        println!("sub shape, fill_shape");
+        SubShape::fill_shape(self);
+    }
+}
+
+impl SubShape for RectSubShape {
+    fn fill_black(&self) {
+        println!("sub shape, fill_black");
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -66,22 +124,14 @@ mod tests {
 
     #[test]
     fn test_can_hold() {
-        let big_rect = Rect {
-            w: 10,
-            h: 8,
-        };
-        let small_rect = Rect {
-            w: 6,
-            h: 2,
-        };
+        let big_rect = Rect { w: 10, h: 8 };
+        let small_rect = Rect { w: 6, h: 2 };
         assert!(big_rect.can_hold(&small_rect));
     }
 
     #[test]
     fn test_closure() {
-        let mut cacher = Cacher::new(|x: u32| -> u32 {
-            x+1
-        });
+        let mut cacher = Cacher::new(|x: u32| -> u32 { x + 1 });
 
         println!("{}", cacher.value(2));
 
@@ -97,19 +147,17 @@ mod tests {
             println!("{}", v);
         }
 
-        let v2= vec![4, 5, 6];
+        let v2 = vec![4, 5, 6];
         let v2_iter = v2.iter();
 
         let count: i32 = v2_iter.sum();
         println!("{}", count);
-
     }
     #[test]
     fn test_box() {
         struct Mybox<T>(T);
 
         impl<T> Mybox<T> {
-
             fn new(x: T) -> Mybox<T> {
                 Mybox(x)
             }
@@ -126,5 +174,16 @@ mod tests {
         let y = Mybox::new(x);
 
         println!("{}", *y);
+    }
+
+    #[test]
+    fn test_method_override() {
+        let f1: Box<dyn Figure> = Box::new(RectShape { w: 10.0, h: 5.0 });
+
+        f1.paint();
+
+        let f2: Box<dyn Figure> = Box::new(RectSubShape {});
+
+        f2.paint();
     }
 }
