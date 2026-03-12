@@ -326,7 +326,8 @@ fn create_scene_no_layout() -> novadraw::SceneGraph {
     scene
 }
 
-/// 创建边界布局模拟场景
+/// 创建 BorderLayout 场景
+/// 演示 BorderLayout 的五个区域：北、南、东、西、中
 fn create_scene_border_layout() -> novadraw::SceneGraph {
     let mut scene = novadraw::SceneGraph::new();
 
@@ -340,26 +341,57 @@ fn create_scene_border_layout() -> novadraw::SceneGraph {
     );
     let container_id = scene.set_contents(Box::new(container));
 
-    let xy_layout = Arc::new(novadraw::XYLayout::new());
-    scene.set_block_layout_manager(container_id, xy_layout);
+    // 设置 BorderLayout
+    let border_layout = Arc::new(novadraw::BorderLayout::new());
+    scene.set_block_layout_manager(container_id, border_layout);
 
-    // 模拟边界布局：北、南、东、西、中
-    let border_config = [
-        (150.0, 20.0, 500.0, 60.0, "north", "#e74c3c"),
-        (150.0, 500.0, 500.0, 60.0, "south", "#2ecc71"),
-        (20.0, 90.0, 120.0, 400.0, "west", "#3498db"),
-        (660.0, 90.0, 120.0, 400.0, "east", "#f1c40f"),
-        (150.0, 90.0, 500.0, 400.0, "center", "#9b59b6"),
-    ];
+    // 添加五个区域：北、南、东、西、中
+    // 约束格式：Rectangle::new(x, y, width, height)
+    // - height < 0 → North
+    // - height > 0 → South
+    // - width < 0 → West
+    // - width > 0 → East
+    // - 其他 → Center
 
-    for (x, y, w, h, _name, color) in border_config {
-        let rect =
-            novadraw::RectangleFigure::new_with_color(0.0, 0.0, w, h, novadraw::Color::hex(color));
-        let child_id = scene.add_child_to(container_id, Box::new(rect));
+    // North (顶部，红色)
+    let north = novadraw::RectangleFigure::new_with_color(
+        0.0, 0.0, 100.0, 50.0, novadraw::Color::hex("#e74c3c"),
+    );
+    let north_id = scene.add_child_to(container_id, Box::new(north));
+    // height < 0 表示 North
+    scene.set_constraint(north_id, novadraw::Rectangle::new(0.0, 0.0, 0.0, -60.0));
 
-        let constraint = novadraw::Rectangle::new(x, y, w, h);
-        scene.set_constraint(child_id, constraint);
-    }
+    // South (底部，绿色)
+    let south = novadraw::RectangleFigure::new_with_color(
+        0.0, 0.0, 100.0, 50.0, novadraw::Color::hex("#2ecc71"),
+    );
+    let south_id = scene.add_child_to(container_id, Box::new(south));
+    // height > 0 表示 South
+    scene.set_constraint(south_id, novadraw::Rectangle::new(0.0, 0.0, 0.0, 60.0));
+
+    // West (左侧，蓝色)
+    let west = novadraw::RectangleFigure::new_with_color(
+        0.0, 0.0, 50.0, 100.0, novadraw::Color::hex("#3498db"),
+    );
+    let west_id = scene.add_child_to(container_id, Box::new(west));
+    // width < 0 表示 West
+    scene.set_constraint(west_id, novadraw::Rectangle::new(0.0, 0.0, -100.0, 0.0));
+
+    // East (右侧，黄色)
+    let east = novadraw::RectangleFigure::new_with_color(
+        0.0, 0.0, 50.0, 100.0, novadraw::Color::hex("#f1c40f"),
+    );
+    let east_id = scene.add_child_to(container_id, Box::new(east));
+    // width > 0 表示 East
+    scene.set_constraint(east_id, novadraw::Rectangle::new(0.0, 0.0, 100.0, 0.0));
+
+    // Center (中间，紫色)
+    let center = novadraw::RectangleFigure::new_with_color(
+        0.0, 0.0, 100.0, 100.0, novadraw::Color::hex("#9b59b6"),
+    );
+    let center_id = scene.add_child_to(container_id, Box::new(center));
+    // 默认 Center
+    scene.set_constraint(center_id, novadraw::Rectangle::new(0.0, 0.0, 0.0, 0.0));
 
     if let Some(contents) = scene.get_contents() {
         scene.revalidate(contents);
