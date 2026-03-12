@@ -283,3 +283,91 @@ impl LayoutManager for BorderLayout {
         self.cached_preferred_size = None;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_border_region_from_str() {
+        assert_eq!(BorderRegion::from_str("north"), BorderRegion::North);
+        assert_eq!(BorderRegion::from_str("N"), BorderRegion::North);
+        assert_eq!(BorderRegion::from_str("south"), BorderRegion::South);
+        assert_eq!(BorderRegion::from_str("S"), BorderRegion::South);
+        assert_eq!(BorderRegion::from_str("east"), BorderRegion::East);
+        assert_eq!(BorderRegion::from_str("E"), BorderRegion::East);
+        assert_eq!(BorderRegion::from_str("west"), BorderRegion::West);
+        assert_eq!(BorderRegion::from_str("W"), BorderRegion::West);
+        assert_eq!(BorderRegion::from_str("center"), BorderRegion::Center);
+        assert_eq!(BorderRegion::from_str("unknown"), BorderRegion::Center);
+    }
+
+    #[test]
+    fn test_border_layout_creation() {
+        let layout = BorderLayout::new();
+        // 默认尺寸应该设置正确
+        let (w, h) = layout.get_preferred_size(
+            BlockId::from(slotmap::KeyData::from_ffi(0)),
+            800.0,
+            600.0,
+            &MockLayoutContext::new(),
+        );
+        // 默认尺寸 = west + east + 100 = 50 + 50 + 100 = 200
+        // 高度 = north + south + 100 = 50 + 50 + 100 = 200
+        assert!(w > 0.0);
+        assert!(h > 0.0);
+    }
+
+    #[test]
+    fn test_border_layout_with_sizes() {
+        let layout = BorderLayout::with_sizes(80.0, 80.0, 100.0, 100.0);
+        assert_eq!(layout.north_height, 80.0);
+        assert_eq!(layout.south_height, 80.0);
+        assert_eq!(layout.west_width, 100.0);
+        assert_eq!(layout.east_width, 100.0);
+    }
+}
+
+/// Mock LayoutContext for testing
+struct MockLayoutContext {
+    children: Vec<(BlockId, Rectangle)>,
+    container_bounds: Rectangle,
+}
+
+impl MockLayoutContext {
+    fn new() -> Self {
+        Self {
+            children: Vec::new(),
+            container_bounds: Rectangle::new(0.0, 0.0, 800.0, 600.0),
+        }
+    }
+
+    fn with_children(children: Vec<(BlockId, Rectangle)>) -> Self {
+        Self {
+            children,
+            container_bounds: Rectangle::new(0.0, 0.0, 800.0, 600.0),
+        }
+    }
+}
+
+impl super::LayoutContext for MockLayoutContext {
+    fn get_children(&self, _parent_id: BlockId) -> Vec<(BlockId, Rectangle)> {
+        self.children.clone()
+    }
+
+    fn get_constraint(&self, _child_id: BlockId) -> Option<Rectangle> {
+        None
+    }
+
+    fn get_preferred_size(&self, _block_id: BlockId) -> (f64, f64) {
+        (100.0, 100.0)
+    }
+
+    fn set_child_bounds(&mut self, _child_id: BlockId, _bounds: Rectangle) {
+        // No-op for testing
+    }
+
+    fn get_container_bounds(&self, _container_id: BlockId) -> Rectangle {
+        self.container_bounds
+    }
+}
