@@ -119,6 +119,51 @@ fn create_scene_fill_layout() -> novadraw::SceneGraph {
     scene
 }
 
+/// 创建 FlowLayout 场景
+/// 演示流式布局：按顺序排列，自动换行
+fn create_scene_flow_layout() -> novadraw::SceneGraph {
+    let mut scene = novadraw::SceneGraph::new();
+
+    // 创建容器（浅灰色背景）
+    let container = novadraw::RectangleFigure::new_with_color(
+        0.0,
+        0.0,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
+        novadraw::Color::hex("#eeeeee"),
+    );
+    let container_id = scene.set_contents(Box::new(container));
+
+    // 设置 FlowLayout
+    let flow_layout = Arc::new(novadraw::FlowLayout::new().with_spacing(15.0).with_row_spacing(15.0));
+    scene.set_block_layout_manager(container_id, flow_layout);
+
+    // 添加多个小方块，会自动换行
+    let colors = [
+        "#e74c3c", "#2ecc71", "#3498db", "#f1c40f", "#9b59b6", "#1abc9c", "#e67e22", "#ecf0f1",
+    ];
+
+    for (i, color) in colors.iter().enumerate() {
+        let w = 80.0 + (i % 3) as f64 * 20.0; // 不同宽度
+        let h = 60.0 + (i % 2) as f64 * 15.0; // 不同高度
+
+        let rect = novadraw::RectangleFigure::new_with_color(
+            0.0,
+            0.0,
+            w,
+            h,
+            novadraw::Color::hex(color),
+        );
+        let _child_id = scene.add_child_to(container_id, Box::new(rect));
+    }
+
+    if let Some(contents) = scene.get_contents() {
+        scene.revalidate(contents);
+    }
+
+    scene
+}
+
 /// 创建嵌套布局场景
 /// 外层使用 XYLayout，内层使用 FillLayout
 fn create_scene_nested_layout() -> novadraw::SceneGraph {
@@ -413,6 +458,7 @@ fn main() {
             "FillLayout (First Fills)",
             Box::new(|| create_scene_fill_layout()),
         ),
+        ("FlowLayout", Box::new(|| create_scene_flow_layout())),
         ("Nested Layouts", Box::new(|| create_scene_nested_layout())),
         (
             "Constraint Update",

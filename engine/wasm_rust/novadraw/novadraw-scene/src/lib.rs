@@ -22,7 +22,10 @@ pub use figure::{
     Bounded, EllipseFigure, Figure, PolygonFigure, PolylineFigure, RectangleFigure, RootFigure,
     RoundedRectangleFigure,
 };
-pub use layout::{BorderLayout, BorderRegion, FillLayout, LayoutContext, LayoutManager, XYLayout};
+pub use layout::{
+    BorderLayout, BorderRegion, FillLayout, FlowDirection, FlowLayout, LayoutContext, LayoutManager,
+    XYLayout,
+};
 pub use novadraw_geometry::{Point, Rectangle};
 pub use scene::{BlockId, FigureRenderer, RuntimeBlock, SceneGraph};
 pub use viewport::Viewport;

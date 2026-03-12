@@ -4,10 +4,12 @@
 
 mod border_layout;
 mod fill_layout;
+mod flow_layout;
 mod xy_layout;
 
 pub use border_layout::{BorderLayout, BorderRegion};
 pub use fill_layout::FillLayout;
+pub use flow_layout::{FlowDirection, FlowLayout};
 pub use xy_layout::XYLayout;
 
 use novadraw_geometry::Rectangle;
