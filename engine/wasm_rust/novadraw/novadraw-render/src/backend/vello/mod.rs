@@ -411,10 +411,15 @@ impl VelloRenderer {
                 }
             }
 
-            crate::command::RenderCommandKind::FillPath(path) => {
+            crate::command::RenderCommandKind::FillPath { path, color } => {
                 let affine =
                     Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
-                let vello_color = VelloColor::new([1.0, 0.0, 0.0, 1.0]); // TODO: 从 path 获取颜色
+                let vello_color = VelloColor::new([
+                    color.r as f32,
+                    color.g as f32,
+                    color.b as f32,
+                    color.a as f32,
+                ]);
 
                 // 构建填充路径
                 let mut bez_path = vello::kurbo::BezPath::new();
@@ -481,14 +486,35 @@ impl VelloRenderer {
                 );
             }
 
-            crate::command::RenderCommandKind::StrokePath(path) => {
+            crate::command::RenderCommandKind::StrokePath {
+                path,
+                color,
+                width,
+                line_cap,
+                line_join,
+            } => {
                 let affine =
                     Self::transform_to_affine(&self.current_state().transform, self.scale_factor);
-                let vello_color = VelloColor::new([1.0, 0.0, 0.0, 1.0]); // TODO: 从 path 获取颜色
+                let vello_color = VelloColor::new([
+                    color.r as f32,
+                    color.g as f32,
+                    color.b as f32,
+                    color.a as f32,
+                ]);
 
-                let stroke = Stroke::new(1.0 * self.scale_factor)
-                    .with_caps(Cap::Butt)
-                    .with_join(Join::Miter);
+                let cap = match line_cap {
+                    crate::command::LineCap::Butt => Cap::Butt,
+                    crate::command::LineCap::Round => Cap::Round,
+                    crate::command::LineCap::Square => Cap::Square,
+                };
+                let join = match line_join {
+                    crate::command::LineJoin::Miter => Join::Miter,
+                    crate::command::LineJoin::Round => Join::Round,
+                    crate::command::LineJoin::Bevel => Join::Bevel,
+                };
+                let stroke = Stroke::new(width * self.scale_factor)
+                    .with_caps(cap)
+                    .with_join(join);
 
                 // 构建描边路径
                 let mut bez_path = vello::kurbo::BezPath::new();

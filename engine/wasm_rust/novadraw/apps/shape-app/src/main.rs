@@ -1115,9 +1115,90 @@ fn create_scene_9_zorder() -> novadraw::SceneGraph {
     scene
 }
 
+/// Scene 10: 三角形图形 - 验证 TriangleFigure
+/// MECE: 验证等边三角形、直角三角形、描边宽度、纯填充/纯描边
+fn create_scene_10_triangle() -> novadraw::SceneGraph {
+    let mut scene = novadraw::SceneGraph::new();
+
+    let container = novadraw::RectangleFigure::new_with_color(
+        0.0,
+        0.0,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
+        novadraw::Color::hex("#eeeeee"),
+    );
+    let container_id = scene.set_contents(Box::new(container));
+
+    // 等边三角形（不同大小，黑色描边）
+    let tri_1 = novadraw::TriangleFigure::new(50.0, 50.0, 80.0)
+        .with_fill_color(novadraw::Color::hex("#e74c3c"))
+        .with_stroke_color(novadraw::Color::BLACK)
+        .with_stroke_width(3.0);
+    let tri_2 = novadraw::TriangleFigure::new(180.0, 50.0, 100.0)
+        .with_fill_color(novadraw::Color::hex("#2ecc71"))
+        .with_stroke_color(novadraw::Color::BLACK)
+        .with_stroke_width(3.0);
+    let tri_3 = novadraw::TriangleFigure::new(330.0, 50.0, 120.0)
+        .with_fill_color(novadraw::Color::hex("#3498db"))
+        .with_stroke_color(novadraw::Color::BLACK)
+        .with_stroke_width(3.0);
+
+    // 直角三角形（黑色描边）
+    let tri_right_1 = novadraw::TriangleFigure::new_right(50.0, 200.0, 100.0, 80.0)
+        .with_fill_color(novadraw::Color::hex("#9b59b6"))
+        .with_stroke_color(novadraw::Color::BLACK)
+        .with_stroke_width(3.0);
+    let tri_right_2 = novadraw::TriangleFigure::new_right(200.0, 200.0, 80.0, 100.0)
+        .with_fill_color(novadraw::Color::hex("#f39c12"))
+        .with_stroke_color(novadraw::Color::BLACK)
+        .with_stroke_width(3.0);
+    let tri_right_3 = novadraw::TriangleFigure::new_right(330.0, 200.0, 120.0, 60.0)
+        .with_fill_color(novadraw::Color::hex("#1abc9c"))
+        .with_stroke_color(novadraw::Color::BLACK)
+        .with_stroke_width(3.0);
+
+    // 不同方向的等边三角形
+    let tri_sw_1 = novadraw::TriangleFigure::new(50.0, 350.0, 80.0)
+        .with_fill_color(novadraw::Color::hex("#e67e22"))
+        .with_stroke_color(novadraw::Color::hex("#d35400"))
+        .with_stroke_width(4.0);
+    let tri_sw_2 = novadraw::TriangleFigure::new(180.0, 350.0, 80.0)
+        .with_fill_color(novadraw::Color::hex("#e67e22"))
+        .with_stroke_color(novadraw::Color::hex("#d35400"))
+        .with_stroke_width(4.0);
+    let tri_sw_3 = novadraw::TriangleFigure::new(310.0, 350.0, 80.0)
+        .with_fill_color(novadraw::Color::hex("#e67e22"))
+        .with_stroke_color(novadraw::Color::hex("#d35400"))
+        .with_stroke_width(4.0);
+
+    // 纯填充和纯描边
+    let tri_fill = novadraw::TriangleFigure::new(450.0, 350.0, 80.0)
+        .with_fill_color(novadraw::Color::hex("#e91e63"))
+        .with_stroke_color(novadraw::Color::TRANSPARENT)
+        .with_stroke_width(0.0);
+    let tri_stroke = novadraw::TriangleFigure::new(580.0, 350.0, 80.0)
+        .with_fill_color(novadraw::Color::TRANSPARENT)
+        .with_stroke_color(novadraw::Color::hex("#e91e63"))
+        .with_stroke_width(3.0);
+
+    scene.add_child_to(container_id, Box::new(tri_1));
+    scene.add_child_to(container_id, Box::new(tri_2));
+    scene.add_child_to(container_id, Box::new(tri_3));
+    scene.add_child_to(container_id, Box::new(tri_right_1));
+    scene.add_child_to(container_id, Box::new(tri_right_2));
+    scene.add_child_to(container_id, Box::new(tri_right_3));
+    scene.add_child_to(container_id, Box::new(tri_sw_1));
+    scene.add_child_to(container_id, Box::new(tri_sw_2));
+    scene.add_child_to(container_id, Box::new(tri_sw_3));
+    scene.add_child_to(container_id, Box::new(tri_fill));
+    scene.add_child_to(container_id, Box::new(tri_stroke));
+
+    scene
+}
+
 /// Scene 9: 父子嵌套结构
 /// MECE: 验证 Figure 嵌套渲染
-fn create_scene_10_parent_child() -> novadraw::SceneGraph {
+fn create_scene_11_parent_child() -> novadraw::SceneGraph {
     let mut scene = novadraw::SceneGraph::new();
 
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -1232,9 +1313,10 @@ fn main() {
         // 维度3: 组合验证
         ("8:Mixed Shapes", Box::new(|| create_scene_8_mixed_shapes())),
         ("9:Z-Order", Box::new(|| create_scene_9_zorder())),
+        ("10:Triangle", Box::new(|| create_scene_10_triangle())),
         (
-            "10:Parent-Child",
-            Box::new(|| create_scene_10_parent_child()),
+            "11:Parent-Child",
+            Box::new(|| create_scene_11_parent_child()),
         ),
     ];
 

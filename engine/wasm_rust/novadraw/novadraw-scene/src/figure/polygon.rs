@@ -139,6 +139,25 @@ impl Shape for PolygonFigure {
     }
 
     fn outline_shape(&self, gc: &mut NdCanvas) {
-        self.polyline.outline_shape(gc);
+        let points = self.polyline.get_points();
+        if points.len() < 2 {
+            return;
+        }
+
+        // 使用 path API 构建闭合路径（与 fill_shape 统一）
+        gc.begin_path();
+        if let Some(first) = points.first() {
+            gc.move_to(first.0.x, first.0.y);
+        }
+        for point in points.iter().skip(1) {
+            gc.line_to(point.0.x, point.0.y);
+        }
+        gc.close_path();
+
+        gc.stroke_style(self.polyline.stroke_color);
+        gc.line_width(self.polyline.stroke_width);
+        gc.line_cap(self.polyline.line_cap);
+        gc.line_join(self.polyline.line_join);
+        gc.stroke();
     }
 }

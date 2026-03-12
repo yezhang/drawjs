@@ -138,10 +138,26 @@ pub enum RenderCommandKind {
     },
 
     /// 填充路径
-    FillPath(Path),
+    FillPath {
+        /// 路径数据
+        path: Path,
+        /// 填充颜色
+        color: Color,
+    },
 
     /// 描边路径
-    StrokePath(Path),
+    StrokePath {
+        /// 路径数据
+        path: Path,
+        /// 描边颜色
+        color: Color,
+        /// 描边宽度
+        width: f64,
+        /// 线帽样式
+        line_cap: LineCap,
+        /// 线连接样式
+        line_join: LineJoin,
+    },
 
     /// 绘制图像
     Image {

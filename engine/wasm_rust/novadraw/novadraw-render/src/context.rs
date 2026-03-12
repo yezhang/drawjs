@@ -300,7 +300,7 @@ impl NdCanvas {
     pub fn fill(&mut self) {
         if let Some(path) = self.current_path.take() {
             if let Some(color) = self.fill_color {
-                self.create_command(RenderCommandKind::FillPath(path));
+                self.create_command(RenderCommandKind::FillPath { path, color });
                 // 保存颜色供后续使用
                 self.fill_color = Some(color);
             }
@@ -311,8 +311,17 @@ impl NdCanvas {
     #[allow(clippy::collapsible_if)]
     pub fn stroke(&mut self) {
         if let Some(path) = self.current_path.take() {
-            if self.stroke_color.is_some() {
-                self.create_command(RenderCommandKind::StrokePath(path));
+            if let Some(color) = self.stroke_color {
+                let width = self.stroke_width;
+                let line_cap = self.line_cap;
+                let line_join = self.line_join;
+                self.create_command(RenderCommandKind::StrokePath {
+                    path,
+                    color,
+                    width,
+                    line_cap,
+                    line_join,
+                });
             }
         }
     }
@@ -320,11 +329,23 @@ impl NdCanvas {
     /// 填充并描边当前路径
     pub fn fill_and_stroke(&mut self) {
         if let Some(path) = self.current_path.take() {
-            if let Some(_fill_color) = self.fill_color {
-                self.create_command(RenderCommandKind::FillPath(path.clone()));
+            if let Some(color) = self.fill_color {
+                self.create_command(RenderCommandKind::FillPath {
+                    path: path.clone(),
+                    color,
+                });
             }
-            if self.stroke_color.is_some() {
-                self.create_command(RenderCommandKind::StrokePath(path));
+            if let Some(color) = self.stroke_color {
+                let width = self.stroke_width;
+                let line_cap = self.line_cap;
+                let line_join = self.line_join;
+                self.create_command(RenderCommandKind::StrokePath {
+                    path,
+                    color,
+                    width,
+                    line_cap,
+                    line_join,
+                });
             }
         }
     }
