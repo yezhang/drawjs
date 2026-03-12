@@ -1,454 +1,449 @@
 //! Layout App - 布局管理器验证
 //!
 //! 验证各种布局管理器的正确性。
+//! 使用新的 LayoutManager 架构进行实际布局测试。
 
-use novadraw_apps::run_demo_app;
+use novadraw_apps::{
+    run_demo_app, run_demo_app_with_scene_screenshot, run_demo_app_with_screenshot,
+};
+use std::io::Write;
+use std::sync::Arc;
 
 const WINDOW_WIDTH: f64 = 800.0;
 const WINDOW_HEIGHT: f64 = 600.0;
 
-fn create_scene_0_flow_horizontal() -> novadraw::SceneGraph {
+/// 创建使用 XYLayout 的场景
+/// 演示基于约束的定位
+fn create_scene_xy_layout() -> novadraw::SceneGraph {
     let mut scene = novadraw::SceneGraph::new();
-    let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+    // 创建容器（浅灰色背景）
+    let container = novadraw::RectangleFigure::new_with_color(
+        0.0,
+        0.0,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
+        novadraw::Color::hex("#eeeeee"),
+    );
     let container_id = scene.set_contents(Box::new(container));
 
-    let rect1 = novadraw::RectangleFigure::new_with_color(
-        50.0,
-        50.0,
-        100.0,
-        60.0,
-        novadraw::Color::rgba(0.9, 0.3, 0.3, 1.0),
-    );
-    let rect2 = novadraw::RectangleFigure::new_with_color(
-        160.0,
-        50.0,
-        120.0,
-        60.0,
-        novadraw::Color::rgba(0.3, 0.9, 0.3, 1.0),
-    );
-    let rect3 = novadraw::RectangleFigure::new_with_color(
-        290.0,
-        50.0,
-        80.0,
-        60.0,
-        novadraw::Color::rgba(0.3, 0.3, 0.9, 1.0),
-    );
-    let rect4 = novadraw::RectangleFigure::new_with_color(
-        380.0,
-        50.0,
-        100.0,
-        60.0,
-        novadraw::Color::rgba(0.9, 0.9, 0.3, 1.0),
-    );
+    // 设置 XYLayout
+    let xy_layout = Arc::new(novadraw::XYLayout::new());
+    scene.set_block_layout_manager(container_id, xy_layout);
 
-    let _r1 = scene.add_child_to(container_id, Box::new(rect1));
-    let _r2 = scene.add_child_to(container_id, Box::new(rect2));
-    let _r3 = scene.add_child_to(container_id, Box::new(rect3));
-    let _r4 = scene.add_child_to(container_id, Box::new(rect4));
-
-    scene
-}
-
-fn create_scene_1_flow_vertical() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
-    let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
-    let container_id = scene.set_contents(Box::new(container));
-
-    let rect1 = novadraw::RectangleFigure::new_with_color(
-        300.0,
-        50.0,
-        200.0,
-        50.0,
-        novadraw::Color::rgba(0.9, 0.5, 0.1, 1.0),
-    );
-    let rect2 = novadraw::RectangleFigure::new_with_color(
-        300.0,
-        110.0,
-        200.0,
-        70.0,
-        novadraw::Color::rgba(0.1, 0.5, 0.9, 1.0),
-    );
-    let rect3 = novadraw::RectangleFigure::new_with_color(
-        300.0,
-        190.0,
-        200.0,
-        60.0,
-        novadraw::Color::rgba(0.5, 0.1, 0.9, 1.0),
-    );
-    let rect4 = novadraw::RectangleFigure::new_with_color(
-        300.0,
-        260.0,
-        200.0,
-        80.0,
-        novadraw::Color::rgba(0.6, 0.8, 0.2, 1.0),
-    );
-
-    let _r1 = scene.add_child_to(container_id, Box::new(rect1));
-    let _r2 = scene.add_child_to(container_id, Box::new(rect2));
-    let _r3 = scene.add_child_to(container_id, Box::new(rect3));
-    let _r4 = scene.add_child_to(container_id, Box::new(rect4));
-
-    scene
-}
-
-fn create_scene_2_flow_wrap() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
-    let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
-    let container_id = scene.set_contents(Box::new(container));
-
-    for i in 0..8 {
-        let rect = novadraw::RectangleFigure::new_with_color(
-            50.0 + (i % 4) as f64 * 170.0,
-            50.0 + (i / 4) as f64 * 100.0,
-            100.0 + i as f64 * 5.0,
-            50.0 + i as f64 * 3.0,
-            novadraw::Color::rgba((i as f64 * 0.15) % 1.0, 0.5, 0.7, 1.0),
-        );
-        let _rect = scene.add_child_to(container_id, Box::new(rect));
-    }
-
-    scene
-}
-
-fn create_scene_3_border_layout() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
-    let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
-    let container_id = scene.set_contents(Box::new(container));
-
-    let north = novadraw::RectangleFigure::new_with_color(
-        150.0,
-        20.0,
-        500.0,
-        80.0,
-        novadraw::Color::rgba(0.9, 0.3, 0.3, 1.0),
-    );
-    let _north = scene.add_child_to(container_id, Box::new(north));
-
-    let south = novadraw::RectangleFigure::new_with_color(
-        150.0,
-        500.0,
-        500.0,
-        80.0,
-        novadraw::Color::rgba(0.3, 0.9, 0.3, 1.0),
-    );
-    let _south = scene.add_child_to(container_id, Box::new(south));
-
-    let west = novadraw::RectangleFigure::new_with_color(
-        20.0,
-        110.0,
-        120.0,
-        380.0,
-        novadraw::Color::rgba(0.3, 0.3, 0.9, 1.0),
-    );
-    let _west = scene.add_child_to(container_id, Box::new(west));
-
-    let east = novadraw::RectangleFigure::new_with_color(
-        660.0,
-        110.0,
-        120.0,
-        380.0,
-        novadraw::Color::rgba(0.9, 0.9, 0.3, 1.0),
-    );
-    let _east = scene.add_child_to(container_id, Box::new(east));
-
-    let center = novadraw::RectangleFigure::new_with_color(
-        150.0,
-        110.0,
-        500.0,
-        380.0,
-        novadraw::Color::rgba(0.6, 0.4, 0.7, 1.0),
-    );
-    let _center = scene.add_child_to(container_id, Box::new(center));
-
-    scene
-}
-
-fn create_scene_4_border_nested() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
-    let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
-    let container_id = scene.set_contents(Box::new(container));
-
-    let north = novadraw::RectangleFigure::new_with_color(
-        100.0,
-        10.0,
-        600.0,
-        60.0,
-        novadraw::Color::rgba(0.8, 0.4, 0.4, 1.0),
-    );
-    let _north = scene.add_child_to(container_id, Box::new(north));
-
-    let south = novadraw::RectangleFigure::new_with_color(
-        100.0,
-        490.0,
-        600.0,
-        60.0,
-        novadraw::Color::rgba(0.8, 0.8, 0.4, 1.0),
-    );
-    let _south = scene.add_child_to(container_id, Box::new(south));
-
-    let west = novadraw::RectangleFigure::new_with_color(
-        100.0,
-        80.0,
-        100.0,
-        400.0,
-        novadraw::Color::rgba(0.4, 0.8, 0.4, 1.0),
-    );
-    let _west = scene.add_child_to(container_id, Box::new(west));
-
-    let east = novadraw::RectangleFigure::new_with_color(
-        600.0,
-        80.0,
-        100.0,
-        400.0,
-        novadraw::Color::rgba(0.4, 0.4, 0.8, 1.0),
-    );
-    let _east = scene.add_child_to(container_id, Box::new(east));
-
-    let center = novadraw::RectangleFigure::new_with_color(
-        210.0,
-        80.0,
-        380.0,
-        400.0,
-        novadraw::Color::rgba(0.6, 0.6, 0.6, 1.0),
-    );
-    let center_id = scene.add_child_to(container_id, Box::new(center));
-
-    for i in 0..4 {
-        let rect = novadraw::RectangleFigure::new_with_color(
-            220.0 + i as f64 * 90.0,
-            90.0,
-            80.0,
-            40.0,
-            novadraw::Color::rgba((i as f64 * 0.2) % 1.0, 0.6, 0.8, 1.0),
-        );
-        let _rect = scene.add_child_to(center_id, Box::new(rect));
-    }
-
-    scene
-}
-
-fn create_scene_5_stack_layout() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
-    let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
-    let container_id = scene.set_contents(Box::new(container));
-
-    let card1 = novadraw::RectangleFigure::new_with_color(
-        250.0,
-        150.0,
-        300.0,
-        250.0,
-        novadraw::Color::rgba(0.9, 0.3, 0.3, 1.0),
-    );
-    let card2 = novadraw::RectangleFigure::new_with_color(
-        270.0,
-        170.0,
-        300.0,
-        250.0,
-        novadraw::Color::rgba(0.3, 0.9, 0.3, 1.0),
-    );
-    let card3 = novadraw::RectangleFigure::new_with_color(
-        290.0,
-        190.0,
-        300.0,
-        250.0,
-        novadraw::Color::rgba(0.3, 0.3, 0.9, 1.0),
-    );
-    let card4 = novadraw::RectangleFigure::new_with_color(
-        310.0,
-        210.0,
-        300.0,
-        250.0,
-        novadraw::Color::rgba(0.9, 0.9, 0.3, 1.0),
-    );
-
-    let _c1 = scene.add_child_to(container_id, Box::new(card1));
-    let _c2 = scene.add_child_to(container_id, Box::new(card2));
-    let _c3 = scene.add_child_to(container_id, Box::new(card3));
-    let _c4 = scene.add_child_to(container_id, Box::new(card4));
-
-    scene
-}
-
-fn create_scene_6_xy_layout() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
-    let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
-    let container_id = scene.set_contents(Box::new(container));
-
+    // 创建子元素并设置约束
     let positions = [
-        (
-            50.0,
-            50.0,
-            150.0,
-            100.0,
-            novadraw::Color::rgba(0.9, 0.3, 0.3, 1.0),
-        ),
-        (
-            250.0,
-            100.0,
-            200.0,
-            80.0,
-            novadraw::Color::rgba(0.3, 0.9, 0.3, 1.0),
-        ),
-        (
-            500.0,
-            50.0,
-            120.0,
-            120.0,
-            novadraw::Color::rgba(0.3, 0.3, 0.9, 1.0),
-        ),
-        (
-            100.0,
-            300.0,
-            180.0,
-            150.0,
-            novadraw::Color::rgba(0.9, 0.9, 0.3, 1.0),
-        ),
-        (
-            350.0,
-            250.0,
-            250.0,
-            200.0,
-            novadraw::Color::rgba(0.9, 0.5, 0.1, 1.0),
-        ),
-        (
-            150.0,
-            480.0,
-            200.0,
-            70.0,
-            novadraw::Color::rgba(0.5, 0.1, 0.9, 1.0),
-        ),
+        (50.0, 50.0, 150.0, 100.0, "red"),
+        (250.0, 100.0, 200.0, 80.0, "green"),
+        (500.0, 50.0, 120.0, 120.0, "purple"),
+        (100.0, 300.0, 180.0, 150.0, "yellow"),
     ];
 
-    for (x, y, w, h, color) in positions {
-        let rect = novadraw::RectangleFigure::new_with_color(x, y, w, h, color);
-        let _rect = scene.add_child_to(container_id, Box::new(rect));
+    for (x, y, w, h, _name) in positions {
+        let rect = novadraw::RectangleFigure::new_with_color(
+            0.0, // 初始位置由布局器设置
+            0.0,
+            w,
+            h,
+            novadraw::Color::hex(match _name {
+                "red" => "#e74c3c",
+                "green" => "#2ecc71",
+                "purple" => "#9b59b6",
+                "yellow" => "#f1c40f",
+                _ => "#95a5a6",
+            }),
+        );
+        let child_id = scene.add_child_to(container_id, Box::new(rect));
+
+        // 设置约束（位置和尺寸）
+        let constraint = novadraw::Rectangle::new(x, y, w, h);
+        scene.set_constraint(child_id, constraint);
+    }
+
+    // 执行布局
+    if let Some(contents) = scene.get_contents() {
+        scene.revalidate(contents);
     }
 
     scene
 }
 
-fn create_scene_7_grid_layout() -> novadraw::SceneGraph {
+/// 创建使用 FillLayout 的场景
+/// 演示第一个子元素填充容器
+fn create_scene_fill_layout() -> novadraw::SceneGraph {
     let mut scene = novadraw::SceneGraph::new();
-    let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+    // 创建容器（浅灰色背景）
+    let container = novadraw::RectangleFigure::new_with_color(
+        0.0,
+        0.0,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
+        novadraw::Color::hex("#eeeeee"),
+    );
     let container_id = scene.set_contents(Box::new(container));
 
+    // 设置 FillLayout
+    let fill_layout = Arc::new(novadraw::FillLayout::new());
+    scene.set_block_layout_manager(container_id, fill_layout);
+
+    // 第一个子元素会填充容器（设置约束为容器大小）
+    let first = novadraw::RectangleFigure::new_with_color(
+        0.0,
+        0.0,
+        100.0,
+        100.0,
+        novadraw::Color::rgba(0.9, 0.3, 0.3, 1.0),
+    );
+    let first_id = scene.add_child_to(container_id, Box::new(first));
+    // 设置约束让第一个子元素填充容器
+    scene.set_constraint(
+        first_id,
+        novadraw::Rectangle::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT),
+    );
+
+    // 其他子元素保持原位
+    let second = novadraw::RectangleFigure::new_with_color(
+        100.0,
+        100.0,
+        50.0,
+        50.0,
+        novadraw::Color::rgba(0.3, 0.9, 0.3, 1.0),
+    );
+    let _second = scene.add_child_to(container_id, Box::new(second));
+
+    if let Some(contents) = scene.get_contents() {
+        scene.revalidate(contents);
+    }
+
+    scene
+}
+
+/// 创建嵌套布局场景
+/// 外层使用 XYLayout，内层使用 FillLayout
+fn create_scene_nested_layout() -> novadraw::SceneGraph {
+    let mut scene = novadraw::SceneGraph::new();
+
+    // 创建容器（浅灰色背景）
+    let container = novadraw::RectangleFigure::new_with_color(
+        0.0,
+        0.0,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
+        novadraw::Color::hex("#eeeeee"),
+    );
+    let container_id = scene.set_contents(Box::new(container));
+
+    // 外层：XYLayout
+    let outer_layout = Arc::new(novadraw::XYLayout::new());
+    scene.set_block_layout_manager(container_id, outer_layout);
+
+    // 创建四个区域容器
+    let regions = [
+        (50.0, 50.0, 300.0, 200.0, "top-left"),
+        (400.0, 50.0, 350.0, 200.0, "top-right"),
+        (50.0, 300.0, 300.0, 250.0, "bottom-left"),
+        (400.0, 300.0, 350.0, 250.0, "bottom-right"),
+    ];
+
+    for (x, y, w, h, _name) in regions {
+        let rect = novadraw::RectangleFigure::new_with_color(
+            0.0,
+            0.0,
+            w,
+            h,
+            novadraw::Color::rgba(0.9, 0.9, 0.9, 1.0),
+        );
+        let region_id = scene.add_child_to(container_id, Box::new(rect));
+
+        // 设置约束（外层 XYLayout）
+        let constraint = novadraw::Rectangle::new(x, y, w, h);
+        scene.set_constraint(region_id, constraint);
+
+        // 为区域设置布局管理器（这样子元素才会应用约束）
+        let region_layout = Arc::new(novadraw::XYLayout::new());
+        scene.set_block_layout_manager(region_id, region_layout);
+
+        // 添加子元素（填充整个区域）
+        let child = novadraw::RectangleFigure::new_with_color(
+            0.0,
+            0.0,
+            w,
+            h,
+            novadraw::Color::rgba(0.2, 0.5, 0.9, 1.0),
+        );
+        let child_id = scene.add_child_to(region_id, Box::new(child));
+
+        // 为子元素设置约束，让它填充整个区域
+        let child_constraint = novadraw::Rectangle::new(0.0, 0.0, w, h);
+        scene.set_constraint(child_id, child_constraint);
+    }
+
+    if let Some(contents) = scene.get_contents() {
+        scene.revalidate(contents);
+    }
+
+    scene
+}
+
+/// 创建测试约束动态更新的场景
+/// 可以通过重新设置约束来测试布局重算
+fn create_scene_constraint_update() -> novadraw::SceneGraph {
+    let mut scene = novadraw::SceneGraph::new();
+
+    // 创建容器（浅灰色背景）
+    let container = novadraw::RectangleFigure::new_with_color(
+        0.0,
+        0.0,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
+        novadraw::Color::hex("#eeeeee"),
+    );
+    let container_id = scene.set_contents(Box::new(container));
+
+    // 设置 XYLayout
+    let xy_layout = Arc::new(novadraw::XYLayout::new());
+    scene.set_block_layout_manager(container_id, xy_layout);
+
+    // 创建三个可移动的方块
+    let colors = ["#e74c3c", "#2ecc71", "#3498db"];
+    let mut child_ids = Vec::new();
+
+    for i in 0..3 {
+        let rect = novadraw::RectangleFigure::new_with_color(
+            50.0 + i as f64 * 100.0,
+            50.0,
+            80.0,
+            80.0,
+            novadraw::Color::hex(colors[i]),
+        );
+        let child_id = scene.add_child_to(container_id, Box::new(rect));
+        child_ids.push(child_id);
+    }
+
+    // 设置初始约束
+    for (i, child_id) in child_ids.iter().enumerate() {
+        let x = 50.0 + i as f64 * 200.0;
+        let constraint = novadraw::Rectangle::new(x, 100.0, 80.0, 80.0);
+        scene.set_constraint(*child_id, constraint);
+    }
+
+    if let Some(contents) = scene.get_contents() {
+        scene.revalidate(contents);
+    }
+
+    scene
+}
+
+/// 创建网格布局场景（使用 XYLayout + 约束模拟）
+fn create_scene_grid_layout() -> novadraw::SceneGraph {
+    let mut scene = novadraw::SceneGraph::new();
+
+    // 创建容器（浅灰色背景）
+    let container = novadraw::RectangleFigure::new_with_color(
+        0.0,
+        0.0,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
+        novadraw::Color::hex("#eeeeee"),
+    );
+    let container_id = scene.set_contents(Box::new(container));
+
+    let xy_layout = Arc::new(novadraw::XYLayout::new());
+    scene.set_block_layout_manager(container_id, xy_layout);
+
+    // 创建 3x3 网格
     for row in 0..3 {
         for col in 0..3 {
+            let x = 100.0 + col as f64 * 200.0;
+            let y = 80.0 + row as f64 * 150.0;
+            let w = 150.0;
+            let h = 120.0;
+
             let rect = novadraw::RectangleFigure::new_with_color(
-                150.0 + col as f64 * 170.0,
-                100.0 + row as f64 * 130.0,
-                150.0,
-                110.0,
-                novadraw::Color::rgba((col as f64 * 0.3) % 1.0, (row as f64 * 0.3) % 1.0, 0.5, 1.0),
+                0.0,
+                0.0,
+                w,
+                h,
+                novadraw::Color::rgba((col as f64 * 0.3) % 1.0, (row as f64 * 0.3) % 1.0, 0.6, 1.0),
             );
-            let _rect = scene.add_child_to(container_id, Box::new(rect));
+            let child_id = scene.add_child_to(container_id, Box::new(rect));
+
+            let constraint = novadraw::Rectangle::new(x, y, w, h);
+            scene.set_constraint(child_id, constraint);
         }
     }
 
-    scene
-}
-
-fn create_scene_8_layout_nesting() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
-    let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
-    let container_id = scene.set_contents(Box::new(container));
-
-    let outer = novadraw::RectangleFigure::new_with_color(
-        100.0,
-        50.0,
-        600.0,
-        500.0,
-        novadraw::Color::rgba(0.7, 0.7, 0.7, 1.0),
-    );
-    let outer_id = scene.add_child_to(container_id, Box::new(outer));
-
-    for i in 0..4 {
-        let rect = novadraw::RectangleFigure::new_with_color(
-            120.0 + i as f64 * 140.0,
-            70.0,
-            120.0,
-            80.0,
-            novadraw::Color::rgba((i as f64 * 0.25) % 1.0, 0.6, 0.8, 1.0),
-        );
-        let _rect = scene.add_child_to(outer_id, Box::new(rect));
+    if let Some(contents) = scene.get_contents() {
+        scene.revalidate(contents);
     }
 
     scene
 }
 
-fn create_scene_9_layout_constraints() -> novadraw::SceneGraph {
+/// 创建没有布局器的场景（对比测试）
+/// 子元素保持原始位置
+fn create_scene_no_layout() -> novadraw::SceneGraph {
     let mut scene = novadraw::SceneGraph::new();
-    let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+    // 创建容器（浅灰色背景）
+    let container = novadraw::RectangleFigure::new_with_color(
+        0.0,
+        0.0,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
+        novadraw::Color::hex("#eeeeee"),
+    );
     let container_id = scene.set_contents(Box::new(container));
 
-    let fixed = novadraw::RectangleFigure::new_with_color(
-        50.0,
-        50.0,
+    // 不设置布局器，子元素保持原位
+    let rect1 = novadraw::RectangleFigure::new_with_color(
+        100.0,
+        100.0,
         150.0,
         100.0,
         novadraw::Color::rgba(0.9, 0.3, 0.3, 1.0),
     );
-    let flexible = novadraw::RectangleFigure::new_with_color(
-        250.0,
-        50.0,
+    let rect2 = novadraw::RectangleFigure::new_with_color(
         300.0,
+        150.0,
+        150.0,
         100.0,
         novadraw::Color::rgba(0.3, 0.9, 0.3, 1.0),
     );
-    let min_size = novadraw::RectangleFigure::new_with_color(
-        600.0,
-        50.0,
-        100.0,
-        60.0,
-        novadraw::Color::rgba(0.3, 0.3, 0.9, 1.0),
-    );
-    let max_size = novadraw::RectangleFigure::new_with_color(
-        50.0,
-        200.0,
+    let rect3 = novadraw::RectangleFigure::new_with_color(
+        500.0,
         200.0,
         150.0,
-        novadraw::Color::rgba(0.9, 0.9, 0.3, 1.0),
+        100.0,
+        novadraw::Color::rgba(0.3, 0.3, 0.9, 1.0),
     );
 
-    let _fixed = scene.add_child_to(container_id, Box::new(fixed));
-    let _flex = scene.add_child_to(container_id, Box::new(flexible));
-    let _min = scene.add_child_to(container_id, Box::new(min_size));
-    let _max = scene.add_child_to(container_id, Box::new(max_size));
+    let _r1 = scene.add_child_to(container_id, Box::new(rect1));
+    let _r2 = scene.add_child_to(container_id, Box::new(rect2));
+    let _r3 = scene.add_child_to(container_id, Box::new(rect3));
+
+    scene
+}
+
+/// 创建边界布局模拟场景
+fn create_scene_border_layout() -> novadraw::SceneGraph {
+    let mut scene = novadraw::SceneGraph::new();
+
+    // 创建容器（浅灰色背景）
+    let container = novadraw::RectangleFigure::new_with_color(
+        0.0,
+        0.0,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
+        novadraw::Color::hex("#eeeeee"),
+    );
+    let container_id = scene.set_contents(Box::new(container));
+
+    let xy_layout = Arc::new(novadraw::XYLayout::new());
+    scene.set_block_layout_manager(container_id, xy_layout);
+
+    // 模拟边界布局：北、南、东、西、中
+    let border_config = [
+        (150.0, 20.0, 500.0, 60.0, "north", "#e74c3c"),
+        (150.0, 500.0, 500.0, 60.0, "south", "#2ecc71"),
+        (20.0, 90.0, 120.0, 400.0, "west", "#3498db"),
+        (660.0, 90.0, 120.0, 400.0, "east", "#f1c40f"),
+        (150.0, 90.0, 500.0, 400.0, "center", "#9b59b6"),
+    ];
+
+    for (x, y, w, h, _name, color) in border_config {
+        let rect =
+            novadraw::RectangleFigure::new_with_color(0.0, 0.0, w, h, novadraw::Color::hex(color));
+        let child_id = scene.add_child_to(container_id, Box::new(rect));
+
+        let constraint = novadraw::Rectangle::new(x, y, w, h);
+        scene.set_constraint(child_id, constraint);
+    }
+
+    if let Some(contents) = scene.get_contents() {
+        scene.revalidate(contents);
+    }
 
     scene
 }
 
 fn main() {
-    run_demo_app(
-        "Layout App - 布局管理器验证 (按数字键 0-9 切换场景)",
-        "layout-app",
-        vec![
-            (
-                "FlowLayout_horizontal",
-                Box::new(|| create_scene_0_flow_horizontal()),
-            ),
-            (
-                "FlowLayout_vertical",
-                Box::new(|| create_scene_1_flow_vertical()),
-            ),
-            ("FlowLayout_wrap", Box::new(|| create_scene_2_flow_wrap())),
-            ("BorderLayout", Box::new(|| create_scene_3_border_layout())),
-            (
-                "BorderLayout_nested",
-                Box::new(|| create_scene_4_border_nested()),
-            ),
-            ("StackLayout", Box::new(|| create_scene_5_stack_layout())),
-            ("XYLayout", Box::new(|| create_scene_6_xy_layout())),
-            ("GridLayout", Box::new(|| create_scene_7_grid_layout())),
-            (
-                "layout_nesting",
-                Box::new(|| create_scene_8_layout_nesting()),
-            ),
-            (
-                "layout_constraints",
-                Box::new(|| create_scene_9_layout_constraints()),
-            ),
-        ],
-    )
-    .expect("Failed to run app");
+    let title = "Layout App - 布局管理器验证";
+    let app_name = "layout-app";
+
+    let scenes: Vec<(&str, Box<dyn FnMut() -> novadraw::SceneGraph>)> = vec![
+        (
+            "XYLayout + Constraints",
+            Box::new(|| create_scene_xy_layout()),
+        ),
+        (
+            "FillLayout (First Fills)",
+            Box::new(|| create_scene_fill_layout()),
+        ),
+        ("Nested Layouts", Box::new(|| create_scene_nested_layout())),
+        (
+            "Constraint Update",
+            Box::new(|| create_scene_constraint_update()),
+        ),
+        ("Grid Layout (XY)", Box::new(|| create_scene_grid_layout())),
+        ("No Layout (Raw)", Box::new(|| create_scene_no_layout())),
+        (
+            "Border Layout (XY)",
+            Box::new(|| create_scene_border_layout()),
+        ),
+    ];
+
+    // 解析命令行参数
+    let args: Vec<String> = std::env::args().collect();
+
+    if args.len() > 1 {
+        match args[1].as_str() {
+            "--screenshot-all" => {
+                // 截图所有场景
+                println!("截图所有场景...");
+                std::io::stdout().flush().ok();
+                run_demo_app_with_screenshot(title, app_name, scenes, true)
+                    .expect("Failed to run app with screenshot");
+            }
+            arg if arg.starts_with("--screenshot=") => {
+                // 截图指定场景，例如 --screenshot=0 或 --screenshot=5
+                let scene_idx = arg
+                    .strip_prefix("--screenshot=")
+                    .and_then(|s| s.parse::<usize>().ok());
+                match scene_idx {
+                    Some(idx) => {
+                        run_demo_app_with_scene_screenshot(title, app_name, scenes, idx)
+                            .expect("Failed to run app with scene screenshot");
+                    }
+                    None => {
+                        eprintln!("无效的场景索引: {}", &arg[12..]);
+                        eprintln!(
+                            "用法: cargo run --package layout-app -- --screenshot=<0-{}>",
+                            scenes.len() - 1
+                        );
+                        std::process::exit(1);
+                    }
+                }
+            }
+            "--help" | "-h" => {
+                println!("用法: cargo run --package layout-app -- [选项]");
+                println!("选项:");
+                println!("  --screenshot-all    截图所有场景");
+                println!("  --screenshot=<N>   截图指定场景 (0-{})", scenes.len() - 1);
+                println!("  --help, -h         显示此帮助信息");
+                return;
+            }
+            _ => {
+                eprintln!("未知选项: {}", args[1]);
+                eprintln!(
+                    "用法: cargo run --package layout-app -- --screenshot=<0-{}>",
+                    scenes.len() - 1
+                );
+                std::process::exit(1);
+            }
+        }
+    } else {
+        run_demo_app(title, app_name, scenes).expect("Failed to run app");
+    }
 }

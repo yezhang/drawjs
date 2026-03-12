@@ -37,6 +37,8 @@ pub struct RuntimeBlock {
     pub parent: Option<BlockId>,
     /// 图形
     pub figure: Box<dyn super::Figure>,
+    /// 布局管理器（可选），只有需要布局的容器才设置
+    pub layout_manager: Option<Arc<dyn super::layout::LayoutManager>>,
     /// 是否选中
     pub is_selected: bool,
     /// 是否可见
@@ -60,6 +62,7 @@ impl RuntimeBlock {
             children: Vec::new(),
             parent: None,
             figure,
+            layout_manager: None,
             is_selected: false,
             is_visible: true,
             is_enabled: true,
@@ -197,6 +200,7 @@ impl SceneGraph {
             children: Vec::new(),
             parent: None,
             figure: Box::new(super::figure::RootFigure::new(0.0, 0.0, 0.0, 0.0)),
+            layout_manager: None,
             is_selected: false,
             is_visible: true,
             is_enabled: true,
@@ -281,6 +285,7 @@ impl SceneGraph {
             children: Vec::new(),
             parent: Some(parent_id),
             figure,
+            layout_manager: None,
             is_selected: false,
             is_visible: true,
             is_enabled: true,
@@ -299,8 +304,63 @@ impl SceneGraph {
         self.layout_valid = false;
     }
 
-    /// 重新验证布局，如果布局无效则重新计算
-    pub fn revalidate(&mut self, container_bounds: Rectangle) {
+    /// 重新验证布局（递归），如果布局无效则重新计算
+    ///
+    /// 从指定容器开始，递归执行布局。
+    /// 只有设置了布局管理器的容器才会执行布局。
+    /// 参考 d2: Figure.layout() { if (layoutManager != null) layoutManager.layout() }
+    pub fn revalidate(&mut self, container_id: BlockId) {
+        // 1. 获取该容器的布局器
+        let layout_manager = self
+            .blocks
+            .get(container_id)
+            .and_then(|b| b.layout_manager.clone());
+
+        if layout_manager.is_none() {
+            // 没有布局器，不执行任何布局，参考 d2：layoutManager == null 时什么都不做
+            // 但仍然递归处理子容器
+            self.revalidate_children(container_id);
+            return;
+        }
+
+        // 2. 执行布局：调用 LayoutManager.layout()
+        layout_manager.unwrap().layout(container_id, self);
+
+        // 3. 递归处理子容器
+        self.revalidate_children(container_id);
+
+        // 标记布局有效
+        self.layout_valid = true;
+    }
+
+    /// 递归验证子容器的布局
+    fn revalidate_children(&mut self, parent_id: BlockId) {
+        // 先收集子元素 ID，避免在迭代过程中同时持有不可变和可变引用
+        let children: Vec<BlockId> = self
+            .blocks
+            .get(parent_id)
+            .map(|b| b.children.clone())
+            .unwrap_or_default();
+
+        for child_id in children {
+            self.revalidate(child_id);
+        }
+    }
+
+    /// 获取子元素 ID 列表
+    #[allow(dead_code)]
+    fn get_children_ids(&self, parent_id: BlockId) -> Vec<BlockId> {
+        self.blocks
+            .get(parent_id)
+            .map(|b| b.children.clone())
+            .unwrap_or_default()
+    }
+
+    /// 重新验证布局（兼容旧 API）
+    ///
+    /// 如果布局无效则重新计算。
+    /// 使用内容块作为根容器。
+    pub fn revalidate_with_bounds(&mut self, container_bounds: Rectangle) {
         if !self.layout_valid {
             self.apply_layout(container_bounds);
             self.layout_valid = true;
@@ -591,6 +651,25 @@ impl SceneGraph {
         self.layout_manager.as_deref()
     }
 
+    /// 设置指定块的布局管理器
+    pub fn set_block_layout_manager(
+        &mut self,
+        block_id: BlockId,
+        layout_manager: Arc<dyn LayoutManager>,
+    ) {
+        if let Some(block) = self.blocks.get_mut(block_id) {
+            block.layout_manager = Some(layout_manager);
+            self.invalidate();
+        }
+    }
+
+    /// 获取指定块的布局管理器
+    pub fn get_block_layout_manager(&self, block_id: BlockId) -> Option<Arc<dyn LayoutManager>> {
+        self.blocks
+            .get(block_id)
+            .and_then(|b| b.layout_manager.clone())
+    }
+
     /// 设置子元素的布局约束
     ///
     /// 对应 d2: setConstraint(IFigure, Object)
@@ -598,7 +677,8 @@ impl SceneGraph {
     pub fn set_constraint(&mut self, child_id: BlockId, constraint: Rectangle) {
         // 使用 child_id 的索引作为约束的 key
         // 在实际布局时，通过遍历 children 来匹配
-        self.constraints.insert(child_id.data().as_ffi() as usize, constraint);
+        self.constraints
+            .insert(child_id.data().as_ffi() as usize, constraint);
         self.invalidate();
     }
 
@@ -606,14 +686,17 @@ impl SceneGraph {
     ///
     /// 对应 d2: getConstraint(IFigure)
     pub fn get_constraint(&self, child_id: BlockId) -> Option<Rectangle> {
-        self.constraints.get(&(child_id.data().as_ffi() as usize)).cloned()
+        self.constraints
+            .get(&(child_id.data().as_ffi() as usize))
+            .cloned()
     }
 
     /// 移除子元素的布局约束
     ///
     /// 对应 d2: LayoutManager.remove(IFigure)
     pub fn remove_constraint(&mut self, child_id: BlockId) {
-        self.constraints.remove(&(child_id.data().as_ffi() as usize));
+        self.constraints
+            .remove(&(child_id.data().as_ffi() as usize));
         self.invalidate();
     }
 
@@ -893,6 +976,56 @@ impl SceneGraph {
                     }
                 }
             }
+        }
+    }
+}
+
+impl super::layout::LayoutContext for SceneGraph {
+    fn get_children(&self, parent_id: BlockId) -> Vec<(BlockId, Rectangle)> {
+        if let Some(block) = self.blocks.get(parent_id) {
+            block
+                .children
+                .iter()
+                .filter_map(|&child_id| {
+                    self.blocks
+                        .get(child_id)
+                        .map(|child| (child_id, child.figure_bounds()))
+                })
+                .collect()
+        } else {
+            Vec::new()
+        }
+    }
+
+    fn get_constraint(&self, child_id: BlockId) -> Option<Rectangle> {
+        let key = child_id.data().as_ffi() as usize;
+        self.constraints.get(&key).cloned()
+    }
+
+    fn get_preferred_size(&self, block_id: BlockId) -> (f64, f64) {
+        if let Some(block) = self.blocks.get(block_id) {
+            block.preferred_size.unwrap_or_else(|| {
+                let bounds = block.figure_bounds();
+                (bounds.width, bounds.height)
+            })
+        } else {
+            (0.0, 0.0)
+        }
+    }
+
+    fn set_child_bounds(&mut self, child_id: BlockId, bounds: Rectangle) {
+        if let Some(block) = self.blocks.get_mut(child_id) {
+            block
+                .figure
+                .set_bounds(bounds.x, bounds.y, bounds.width, bounds.height);
+        }
+    }
+
+    fn get_container_bounds(&self, container_id: BlockId) -> Rectangle {
+        if let Some(block) = self.blocks.get(container_id) {
+            block.figure_bounds()
+        } else {
+            Rectangle::new(0.0, 0.0, 0.0, 0.0)
         }
     }
 }

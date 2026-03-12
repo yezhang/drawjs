@@ -152,7 +152,23 @@ impl<'a> FigureRenderer<'a> {
     /// 绘制子元素
     ///
     /// 对应 d2 Figure.paintChildren()。
-    /// 为每个子节点设置裁剪 + 绘制 + 恢复
+    /// 为每个子节点设置裁剪 + 绘制 + 恢复。
+    ///
+    /// d2 逻辑：
+    /// ```text
+    /// for (IFigure child : children) {
+    ///   if (child.isVisible()) {
+    ///     Rectangle[] clipping = new Rectangle[] { child.getBounds() };
+    ///     for (Rectangle element : clipping) {
+    ///       if (element.intersects(graphics.getClip())) {
+    ///         graphics.clipRect(element);
+    ///         child.paint(graphics);
+    ///         graphics.restoreState();
+    ///       }
+    ///     }
+    ///   }
+    /// }
+    /// ```
     fn paint_children(&mut self, block_id: BlockId) {
         let children: Vec<BlockId> = {
             let block = match self.scene.get(block_id) {
@@ -164,21 +180,26 @@ impl<'a> FigureRenderer<'a> {
 
         // 正序遍历（与 d2 一致）
         for &child_id in &children {
-            // 获取子节点 bounds
             let child_block = match self.scene.get(child_id) {
                 Some(b) if b.is_visible => b,
                 _ => continue,
             };
+
+            // 获取子元素的 bounds 作为裁剪区域
             let child_bounds = child_block.figure.bounds();
 
-            // clipRect(child_bounds) + paint(child) + restoreState()
+            // 裁剪到子元素 bounds
             self.gc.clip_rect(
                 child_bounds.x,
                 child_bounds.y,
                 child_bounds.width,
                 child_bounds.height,
             );
+
+            // 绘制子元素
             self.paint(child_id);
+
+            // 恢复裁剪区域（恢复到 paint 之前的状态）
             self.gc.restore_state();
         }
     }

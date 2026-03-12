@@ -11,14 +11,14 @@ use super::{Point, Rectangle, Size};
 /// 对应 d2: org.eclipse.draw2d.geometry.Insets
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Insets {
-    /// 左边距
-    pub left: f64,
     /// 上边距
     pub top: f64,
-    /// 右边距
-    pub right: f64,
+    /// 左边距
+    pub left: f64,
     /// 下边距
     pub bottom: f64,
+    /// 右边距
+    pub right: f64,
 }
 
 impl Insets {

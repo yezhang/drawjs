@@ -195,8 +195,15 @@ npx markdownlint-cli2 doc/**/*.md 2>/dev/null || true
 ### 调试技巧
 
 - 分析截图/图像时，使用 MCP 的 `understand_image` 工具获取客观描述，避免主观臆测
+- GUI 应用调试时，使用 `--screenshot` 参数保存渲染结果，然后使用 `understand_image` 分析
 - 只有当处理渲染主循环时才分析 `render_iterative.rs`，其他渲染问题优先检查递归渲染流程
 - **不要分析迭代实现的逻辑正确性**（如 render_iterative.rs 的算法），除非用户明确要求
+
+### 测试场景设计
+
+- **背景色避免原则**: 编写 app 测试场景时，图形颜色不应与背景色重复
+  - 当前背景色: 浅灰色 RGB(238, 238, 238)，即 `#eeeeee`
+  - 原因：图形与背景色重复会导致无法区分图形边界，影响截图分析的准确性
 
 ## 禁止事项
 
@@ -224,13 +231,27 @@ npx markdownlint-cli2 doc/**/*.md 2>/dev/null || true
 
 ## MCP 工具使用规范
 
-### understand_image 工具
+### 图片/截图分析
 
-用于分析截图、UI 效果图等图像：
+使用 MCP 的 `understand_image` 工具分析渲染结果：
 
-- 分析渲染输出是否正确
-- 验证 UI 布局是否符合预期
-- **注意**: 获取客观描述，避免主观臆测
+- **适用场景**：
+  - GUI 应用运行结果截图分析
+  - 渲染输出正确性验证
+  - UI 布局效果确认
+  - 调试渲染问题时获取客观描述
+
+- **使用方式**：
+  ```bash
+  # 截图命令（GUI 应用）
+  cargo run --package <app> -- --screenshot=<场景编号>
+  cargo run --package <app> -- --screenshot-all
+
+  # 分析截图
+  mcp__MiniMax__understand_image --image_source <截图路径> --prompt "描述图片中的内容"
+  ```
+
+- **注意**：获取客观描述，避免主观臆测
 
 ### web_search 工具
 

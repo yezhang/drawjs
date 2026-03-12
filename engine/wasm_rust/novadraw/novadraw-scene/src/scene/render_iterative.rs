@@ -86,7 +86,8 @@ impl<'a> FigureRendererIter<'a> {
     /// 执行：
     /// 1. 初始化本地属性
     /// 2. `push_state()`
-    /// 3. `paint_figure()`
+    /// 3. 裁剪到子元素 bounds（对应 d2 paintChildren 中的 clipRect）
+    /// 4. `paint_figure()`
     ///
     /// 压栈顺序（后进先出，确保正确执行顺序）：
     /// - `ExitFigure` - 最后执行
@@ -105,7 +106,13 @@ impl<'a> FigureRendererIter<'a> {
         // 2. 保存状态
         self.gc.push_state();
 
-        // 3. 绘制自身（背景）
+        // 3. 裁剪到子元素 bounds（对应 d2 paintChildren 中的 clipRect）
+        // d2 逻辑：graphics.clipRect(child.getBounds());
+        let bounds = Bounded::bounds(block.figure.as_ref());
+        self.gc
+            .clip_rect(bounds.x, bounds.y, bounds.width, bounds.height);
+
+        // 4. 绘制自身（背景）
         #[allow(clippy::needless_borrow)]
         block.figure.paint_figure(&mut self.gc);
 

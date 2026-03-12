@@ -3,7 +3,9 @@
 //! 参考 d2: XYLayout
 //! 使用约束（Rectangle）定位每个子元素。
 
+use super::LayoutContext;
 use super::LayoutManager;
+use crate::scene::BlockId;
 use novadraw_geometry::Rectangle;
 
 /// XY 布局约束
@@ -46,7 +48,12 @@ impl XYConstraint {
 
     /// 创建指定位置的约束
     pub fn at_size(x: f64, y: f64, width: f64, height: f64) -> Self {
-        Self { x, y, width, height }
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 }
 
@@ -87,54 +94,78 @@ impl Default for XYLayout {
 }
 
 impl LayoutManager for XYLayout {
-    fn get_constraint(&self, _child_id: usize) -> Option<Rectangle> {
+    fn get_constraint(&self, _child_id: BlockId) -> Option<Rectangle> {
         // XYLayout 不存储约束，由外部（如 SceneGraph）管理
         None
     }
 
-    fn set_constraint(&mut self, _child_id: usize, _constraint: Rectangle) {
+    fn set_constraint(&mut self, _child_id: BlockId, _constraint: Rectangle) {
         // XYLayout 不存储约束，由外部管理
         self.invalidate();
     }
 
-    fn remove_constraint(&mut self, _child_id: usize) {
+    fn remove_constraint(&mut self, _child_id: BlockId) {
         self.invalidate();
     }
 
     fn get_preferred_size(
         &self,
-        container: Rectangle,
+        _container: BlockId,
         _w_hint: f64,
         _h_hint: f64,
+        _ctx: &dyn LayoutContext,
     ) -> (f64, f64) {
-        // 简化实现：直接返回容器的首选大小
+        // 简化实现：直接返回缓存或默认大小
         // 实际应该根据子元素的约束计算
         if let Some(cached) = self.cached_preferred_size {
             return cached;
         }
-        (container.width, container.height)
+        (0.0, 0.0)
     }
 
     fn get_minimum_size(
         &self,
-        container: Rectangle,
+        container: BlockId,
         w_hint: f64,
         h_hint: f64,
+        ctx: &dyn LayoutContext,
     ) -> (f64, f64) {
         // 默认等于首选大小
-        self.get_preferred_size(container, w_hint, h_hint)
+        self.get_preferred_size(container, w_hint, h_hint, ctx)
     }
 
-    fn layout(&mut self, container: Rectangle, children: &mut [(usize, Rectangle)]) {
-        // 计算偏移量（client area 的起始位置）
-        let offset_x = container.x;
-        let offset_y = container.y;
+    fn layout(&self, container: BlockId, ctx: &mut dyn LayoutContext) {
+        // 获取容器的 bounds
+        let children = ctx.get_children(container);
+        if children.is_empty() {
+            return;
+        }
 
-        for (_, child_bounds) in children.iter_mut() {
-            // XYLayout：子元素的 bounds 直接就是约束
-            // 将子元素移到相对于容器的位置
-            child_bounds.x += offset_x;
-            child_bounds.y += offset_y;
+        // 获取容器的 bounds（用于计算 client area）
+        let container_bounds = ctx.get_container_bounds(container);
+
+        // d2: getOrigin(parent) 返回 parent.getClientArea().getLocation()
+        // 在 d2 中，useLocalCoordinates() 默认返回 false
+        // client area = bounds - insets，默认 insets 为 0
+        // 所以 origin = bounds.location()
+        let offset_x = container_bounds.x;
+        let offset_y = container_bounds.y;
+
+        // XYLayout：将约束从"相对于 client area"转换为"相对于 bounds"
+        // d2: bounds = bounds.getTranslated(offset)
+        for (child_id, _) in children {
+            // 获取约束（相对于 client area）
+            if let Some(constraint) = ctx.get_constraint(child_id) {
+                // 将约束平移 offset，得到相对于 bounds 的坐标
+                let new_bounds = Rectangle::new(
+                    constraint.x + offset_x,
+                    constraint.y + offset_y,
+                    constraint.width,
+                    constraint.height,
+                );
+                // 应用约束作为新的 bounds
+                ctx.set_child_bounds(child_id, new_bounds);
+            }
         }
     }
 

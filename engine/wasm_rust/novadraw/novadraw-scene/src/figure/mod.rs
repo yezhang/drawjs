@@ -101,7 +101,12 @@ pub trait Bounded: Send + Sync {
     fn client_area(&self) -> Rectangle {
         let b = self.bounds();
         let (top, left, bottom, right) = self.insets();
-        Rectangle::new(b.x + left, b.y + top, b.width - left - right, b.height - top - bottom)
+        Rectangle::new(
+            b.x + left,
+            b.y + top,
+            b.width - left - right,
+            b.height - top - bottom,
+        )
     }
 
     /// 获取首选大小

@@ -3,7 +3,9 @@
 //! 参考 d2: FlowLayout 或 FillLayout
 //! 第一个子元素填充容器，其他子元素保持原位。
 
+use super::LayoutContext;
 use super::LayoutManager;
+use crate::scene::BlockId;
 use novadraw_geometry::Rectangle;
 
 /// Fill 布局器
@@ -31,52 +33,58 @@ impl Default for FillLayout {
 }
 
 impl LayoutManager for FillLayout {
-    fn get_constraint(&self, _child_id: usize) -> Option<Rectangle> {
+    fn get_constraint(&self, _child_id: BlockId) -> Option<Rectangle> {
         None
     }
 
-    fn set_constraint(&mut self, _child_id: usize, _constraint: Rectangle) {
+    fn set_constraint(&mut self, _child_id: BlockId, _constraint: Rectangle) {
         self.invalidate();
     }
 
-    fn remove_constraint(&mut self, _child_id: usize) {
+    fn remove_constraint(&mut self, _child_id: BlockId) {
         self.invalidate();
     }
 
     fn get_preferred_size(
         &self,
-        container: Rectangle,
+        _container: BlockId,
         _w_hint: f64,
         _h_hint: f64,
+        _ctx: &dyn LayoutContext,
     ) -> (f64, f64) {
         if let Some(cached) = self.cached_preferred_size {
             return cached;
         }
-        (container.width, container.height)
+        (0.0, 0.0)
     }
 
     fn get_minimum_size(
         &self,
-        container: Rectangle,
+        container: BlockId,
         w_hint: f64,
         h_hint: f64,
+        ctx: &dyn LayoutContext,
     ) -> (f64, f64) {
-        self.get_preferred_size(container, w_hint, h_hint)
+        self.get_preferred_size(container, w_hint, h_hint, ctx)
     }
 
-    fn layout(&mut self, container: Rectangle, children: &mut [(usize, Rectangle)]) {
+    fn layout(&self, container: BlockId, ctx: &mut dyn LayoutContext) {
+        let children = ctx.get_children(container);
         if children.is_empty() {
             return;
         }
 
-        // 第一个子元素填充容器
-        let (_, first_rect) = children.first_mut().unwrap();
-        first_rect.x = container.x;
-        first_rect.y = container.y;
-        first_rect.width = container.width;
-        first_rect.height = container.height;
-
-        // 其他子元素保持原位（在外部坐标系中）
+        // 获取第一个子元素
+        if let Some((first_child_id, _)) = children.first() {
+            // 获取容器的 bounds
+            // FillLayout：第一个子元素填充容器
+            // 需要获取容器的 bounds，这需要从场景图中获取
+            // 简化实现：假设容器占据所有可用空间
+            // 实际应该从 ctx 获取容器的 bounds
+            let (width, height) = ctx.get_preferred_size(container);
+            let bounds = Rectangle::new(0.0, 0.0, width, height);
+            ctx.set_child_bounds(*first_child_id, bounds);
+        }
     }
 
     fn invalidate(&mut self) {

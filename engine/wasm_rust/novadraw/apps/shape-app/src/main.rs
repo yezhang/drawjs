@@ -1223,15 +1223,9 @@ fn main() {
         ),
         ("1:Ellipse Fill", Box::new(|| create_scene_1_ellipse_fill())),
         ("2:Rounded Rect", Box::new(|| create_scene_2_rounded_rect())),
-        (
-            "3:Polyline",
-            Box::new(|| create_scene_3_polyline()),
-        ),
+        ("3:Polyline", Box::new(|| create_scene_3_polyline())),
         // 维度2: 属性验证
-        (
-            "4:Stroke Width",
-            Box::new(|| create_scene_4_stroke_width()),
-        ),
+        ("4:Stroke Width", Box::new(|| create_scene_4_stroke_width())),
         ("5:Stroke Color", Box::new(|| create_scene_5_stroke_color())),
         ("6:LineJoin", Box::new(|| create_scene_6_line_join())),
         ("7:Alpha", Box::new(|| create_scene_7_alpha())),
