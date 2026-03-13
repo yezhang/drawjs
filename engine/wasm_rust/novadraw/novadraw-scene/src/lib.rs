@@ -19,8 +19,8 @@ pub mod viewport;
 
 pub use border::{Border, LineBorder, MarginBorder, RectangleBorder};
 pub use figure::{
-    Bounded, EllipseFigure, Figure, PolygonFigure, PolylineFigure, RectangleFigure, RootFigure,
-    RoundedRectangleFigure,
+    Bounded, Direction, EllipseFigure, Figure, PolygonFigure, PolylineFigure, RectangleFigure, RootFigure,
+    RoundedRectangleFigure, TriangleFigure,
 };
 pub use layout::{
     BorderLayout, BorderRegion, FillLayout, FlowDirection, FlowLayout, LayoutContext, LayoutManager,

@@ -21,6 +21,7 @@ mod polyline;
 mod rectangle;
 mod root;
 mod rounded_rectangle;
+mod triangle;
 
 pub use ellipse::EllipseFigure;
 pub use polygon::PolygonFigure;
@@ -28,6 +29,7 @@ pub use polyline::PolylineFigure;
 pub use rectangle::RectangleFigure;
 pub use root::RootFigure;
 pub use rounded_rectangle::RoundedRectangleFigure;
+pub use triangle::{Direction, TriangleFigure};
 
 use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
