@@ -139,11 +139,11 @@ impl Shape for RoundedRectangleFigure {
     }
 
     fn fill_enabled(&self) -> bool {
-        true
+        self.fill_color.a > 0.0
     }
 
     fn outline_enabled(&self) -> bool {
-        self.stroke_color.is_some()
+        self.stroke_color.map(|c| c.a > 0.0).unwrap_or(false)
     }
 
     fn fill_shape(&self, gc: &mut NdCanvas) {
@@ -173,7 +173,7 @@ impl Shape for RoundedRectangleFigure {
                 corner_radius: radius,
                 fill_color: Color::TRANSPARENT,
                 stroke_color: Some(color),
-                stroke_width: 0.0,
+                stroke_width: self.stroke_width, // 使用原始描边宽度
                 line_cap: self.line_cap,
                 line_join: self.line_join,
             };

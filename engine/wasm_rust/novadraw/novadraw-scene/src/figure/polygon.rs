@@ -110,11 +110,11 @@ impl Shape for PolygonFigure {
     }
 
     fn fill_enabled(&self) -> bool {
-        true
+        self.fill_color.a > 0.0
     }
 
     fn outline_enabled(&self) -> bool {
-        true
+        self.polyline.stroke_color.a > 0.0
     }
 
     fn fill_shape(&self, gc: &mut NdCanvas) {

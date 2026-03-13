@@ -300,9 +300,12 @@ impl NdCanvas {
     pub fn fill(&mut self) {
         if let Some(path) = self.current_path.take() {
             if let Some(color) = self.fill_color {
-                self.create_command(RenderCommandKind::FillPath { path, color });
-                // 保存颜色供后续使用
-                self.fill_color = Some(color);
+                // 跳过完全透明的颜色
+                if color.a > 0.0 {
+                    self.create_command(RenderCommandKind::FillPath { path, color });
+                    // 保存颜色供后续使用
+                    self.fill_color = Some(color);
+                }
             }
         }
     }

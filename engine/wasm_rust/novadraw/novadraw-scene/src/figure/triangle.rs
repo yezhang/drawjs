@@ -184,7 +184,7 @@ impl Shape for TriangleFigure {
     }
 
     fn fill_enabled(&self) -> bool {
-        true
+        self.fill_color.a > 0.0
     }
 
     fn outline_enabled(&self) -> bool {

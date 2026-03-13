@@ -142,11 +142,11 @@ impl Shape for EllipseFigure {
     }
 
     fn fill_enabled(&self) -> bool {
-        true
+        self.fill_color.a > 0.0
     }
 
     fn outline_enabled(&self) -> bool {
-        self.stroke_color.is_some()
+        self.stroke_color.map(|c| c.a > 0.0).unwrap_or(false)
     }
 
     fn fill_shape(&self, gc: &mut NdCanvas) {
