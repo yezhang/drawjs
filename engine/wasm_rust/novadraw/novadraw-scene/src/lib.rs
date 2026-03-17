@@ -14,6 +14,7 @@
 pub mod border;
 pub mod figure;
 pub mod layout;
+pub mod log;
 pub mod scene;
 pub mod viewport;
 

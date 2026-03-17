@@ -3,6 +3,8 @@
 //! 参考 d2: FlowLayout 或 FillLayout
 //! 第一个子元素填充容器，其他子元素保持原位。
 
+use tracing::debug;
+
 use super::LayoutContext;
 use super::LayoutManager;
 use crate::scene::BlockId;
@@ -74,6 +76,8 @@ impl LayoutManager for FillLayout {
             return;
         }
 
+        debug!("FillLayout: container={:?}, children count: {}", container, children.len());
+
         // 获取第一个子元素
         if let Some((first_child_id, _)) = children.first() {
             // 获取容器的 bounds
@@ -83,6 +87,7 @@ impl LayoutManager for FillLayout {
             // 实际应该从 ctx 获取容器的 bounds
             let (width, height) = ctx.get_preferred_size(container);
             let bounds = Rectangle::new(0.0, 0.0, width, height);
+            debug!("FillLayout: first child bounds={:?}", bounds);
             ctx.set_child_bounds(*first_child_id, bounds);
         }
     }

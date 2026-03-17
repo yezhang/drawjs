@@ -3,6 +3,8 @@
 //! 参考 d2: FlowLayout
 //! 按顺序排列子元素，自动换行。
 
+use tracing::debug;
+
 use super::LayoutContext;
 use super::LayoutManager;
 use crate::scene::BlockId;
@@ -82,11 +84,15 @@ impl FlowLayout {
             return;
         }
 
+        debug!("FlowLayout: container={:?}, children count: {}", container, children.len());
+
         let container_bounds = ctx.get_container_bounds(container);
         let cx = container_bounds.x;
         let cy = container_bounds.y;
         let cw = container_bounds.width;
         let ch = container_bounds.height;
+
+        debug!("FlowLayout: container bounds=({}, {}, {}, {})", cx, cy, cw, ch);
 
         match self.direction {
             FlowDirection::Horizontal => {

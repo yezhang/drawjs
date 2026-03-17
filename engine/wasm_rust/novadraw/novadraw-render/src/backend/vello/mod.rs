@@ -8,6 +8,7 @@ use std::sync::Arc;
 use glam::DVec2;
 use image::ImageBuffer;
 use novadraw_geometry::Transform;
+use tracing::{debug, info};
 use vello::kurbo::{Cap, Join, Stroke};
 use vello::peniko::Color as VelloColor;
 use vello::util::{RenderContext, RenderSurface};
@@ -130,6 +131,7 @@ impl VelloRenderer {
         match &cmd.kind {
             // ===== 状态管理命令 =====
             crate::command::RenderCommandKind::PushState => {
+                debug!("PushState, stack depth: {}", self.state_stack.len());
                 // 保存当前状态到栈
                 self.state_stack.push(self.current_state().clone());
 
@@ -140,6 +142,7 @@ impl VelloRenderer {
             }
 
             crate::command::RenderCommandKind::RestoreState => {
+                debug!("RestoreState, stack depth: {}", self.state_stack.len());
                 // 恢复到最近保存状态，不弹出
                 // 恢复到栈顶-2（即最近一次 pushState 保存的状态）
                 if self.state_stack.len() >= 2 {
@@ -156,6 +159,7 @@ impl VelloRenderer {
             }
 
             crate::command::RenderCommandKind::PopState => {
+                debug!("PopState, stack depth: {}", self.state_stack.len());
                 // 弹出并恢复状态
                 if self.state_stack.len() > 1 {
                     if self.current_state().clip.is_some() {
@@ -167,6 +171,7 @@ impl VelloRenderer {
             }
 
             crate::command::RenderCommandKind::ConcatTransform { matrix } => {
+                debug!("ConcatTransform: {:?}", matrix);
                 // 叠加变换
                 let new_transform = self.current_state().transform.then_transform(*matrix);
 
@@ -174,6 +179,7 @@ impl VelloRenderer {
             }
 
             crate::command::RenderCommandKind::Clip { rect } => {
+                debug!("Clip: {:?}", rect);
                 self.current_state_mut().clip = Some(*rect);
                 self.push_clip_layer(rect);
             }
@@ -615,6 +621,8 @@ impl RenderBackend for VelloRenderer {
     }
 
     fn render(&mut self, commands: &[RenderCommand]) {
+        info!("开始渲染, 命令数: {}", commands.len());
+
         // self.scene.reset();
         self.scene = vello::Scene::new();
 
@@ -626,6 +634,8 @@ impl RenderBackend for VelloRenderer {
         for cmd in commands {
             self.render_command(cmd);
         }
+
+        debug!("渲染命令执行完成");
 
         // 确保截图纹理存在（带 COPY_SRC 权限）
         self.ensure_screenshot_texture();

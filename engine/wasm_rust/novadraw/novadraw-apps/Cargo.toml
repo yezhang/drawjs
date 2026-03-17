@@ -16,7 +16,7 @@ novadraw-render = { path = "../novadraw-render" }
 vello.workspace = true
 
 # 工具库
-env_logger.workspace = true
-log.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
 glam.workspace = true
 pollster.workspace = true

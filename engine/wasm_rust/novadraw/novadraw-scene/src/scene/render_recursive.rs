@@ -5,6 +5,7 @@
 use novadraw_render::NdCanvas;
 
 use super::BlockId;
+use crate::debug_render;
 
 /// 场景图引用（用于渲染）
 pub struct SceneGraphRenderRef<'a> {
@@ -32,6 +33,8 @@ impl<'a> Clone for SceneGraphRenderRef<'a> {
 pub struct FigureRenderer<'a> {
     scene: SceneGraphRenderRef<'a>,
     gc: &'a mut NdCanvas,
+    /// 调试计数器
+    counter: usize,
 }
 
 impl<'a> FigureRenderer<'a> {
@@ -42,6 +45,7 @@ impl<'a> FigureRenderer<'a> {
                 blocks: scene.blocks,
             },
             gc,
+            counter: 0,
         }
     }
 
@@ -75,6 +79,11 @@ impl<'a> FigureRenderer<'a> {
             _ => return,
         };
 
+        self.counter += 1;
+        let id = self.counter;
+        let bounds = block.figure.bounds();
+        debug_render!("[RECUR] #{:02} paint bounds={:?}", id, bounds);
+
         // 1. 设置本地属性
         block.figure.init_properties(self.gc);
 
@@ -85,6 +94,7 @@ impl<'a> FigureRenderer<'a> {
         block.figure.paint_figure(self.gc);
 
         // 4. 恢复上下文状态 → 直接调用 gc
+        debug_render!("[RECUR] #{:02}   paint_figure done, restore_state", id);
         self.gc.restore_state();
 
         // 5. 绘制子元素区域（paintClientArea 负责 translate + clip）
@@ -99,6 +109,7 @@ impl<'a> FigureRenderer<'a> {
         block.figure.paint_border(self.gc);
 
         // 7. 恢复初始状态 → 直接调用 gc
+        debug_render!("[RECUR] #{:02}   pop_state", id);
         self.gc.pop_state();
     }
 
@@ -121,9 +132,14 @@ impl<'a> FigureRenderer<'a> {
             _ => return,
         };
 
+        self.counter += 1;
+        let id = self.counter;
+
         if block.figure.use_local_coordinates() {
             let bounds = block.figure.bounds();
             let (top, left, bottom, right) = block.figure.insets();
+            debug_render!("[RECUR] #{:02} paintClientArea use_local=true, translate({}, {}) clip(0,0,{},{})",
+                id, bounds.x + left, bounds.y + top, bounds.width - left - right, bounds.height - top - bottom);
             self.gc.translate(bounds.x + left, bounds.y + top);
             // clip 到 client area = bounds - insets
             self.gc.clip_rect(
@@ -133,6 +149,9 @@ impl<'a> FigureRenderer<'a> {
                 bounds.height - top - bottom,
             );
         } else {
+            let bounds = block.figure.bounds();
+            debug_render!("[RECUR] #{:02} paintClientArea use_local=false, clip({},{},{},{})",
+                id, bounds.x, bounds.y, bounds.width, bounds.height);
             self.gc.clip_rect(
                 block.figure.bounds().x,
                 block.figure.bounds().y,
@@ -146,6 +165,7 @@ impl<'a> FigureRenderer<'a> {
         self.gc.pop_state();
 
         // 恢复 paintClientArea 设置的裁剪区域
+        debug_render!("[RECUR] #{:02}   restore_state (client area)", id);
         self.gc.restore_state();
     }
 
@@ -178,6 +198,8 @@ impl<'a> FigureRenderer<'a> {
             block.children.to_vec()
         };
 
+        debug_render!("[RECUR]     paint_children, children count: {}", children.len());
+
         // 正序遍历（与 d2 一致）
         for &child_id in &children {
             let child_block = match self.scene.get(child_id) {
@@ -187,6 +209,8 @@ impl<'a> FigureRenderer<'a> {
 
             // 获取子元素的 bounds 作为裁剪区域
             let child_bounds = child_block.figure.bounds();
+
+            debug_render!("[RECUR]     -> clip to child bounds={:?}", child_bounds);
 
             // 裁剪到子元素 bounds
             self.gc.clip_rect(

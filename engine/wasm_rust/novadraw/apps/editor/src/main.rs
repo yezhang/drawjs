@@ -1,17 +1,20 @@
 mod app_window;
 mod scene_manager;
 
-use env_logger;
+use tracing_subscriber::{fmt, EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::app_window::start_app;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init();
+    // 初始化 tracing
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| "novadraw=info".into());
+
+    tracing_subscriber::registry()
+        .with(fmt::layer().with_target(false))
+        .with(filter)
+        .init();
+
     let _ = start_app();
     Ok(())
 }
-
-//fn main() {
-//    let num = novadraw::add(1, 2);
-//    println!("Hello, world! {num:?}");
-//}

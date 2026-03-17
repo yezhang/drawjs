@@ -6,7 +6,6 @@ edition.workspace = true
 [features]
 default = ["vello"]
 vello = ["novadraw-render/vello", "novadraw-scene/vello"]
-debug_render = ["novadraw-scene/debug_render"]
 
 [dependencies]
 glam.workspace = true

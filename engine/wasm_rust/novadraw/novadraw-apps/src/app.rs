@@ -14,6 +14,8 @@ pub use winit::keyboard::{KeyCode, PhysicalKey};
 pub use winit::window::WindowAttributes;
 pub use winit::{application::ApplicationHandler, window::WindowId};
 
+use tracing::{info, warn, error};
+
 /// 演示应用
 ///
 /// 提供通用的演示应用框架，自动处理：
@@ -163,7 +165,7 @@ impl DemoApp {
         // 使用 VelloRenderer 捕获渲染结果
         if let Some(renderer) = &self.renderer {
             renderer.screenshot(&output_path)?;
-            log::info!("截图已保存: {}", output_path.display());
+            info!("截图已保存: {}", output_path.display());
             Ok(output_path)
         } else {
             Err(std::io::Error::new(
@@ -184,7 +186,7 @@ impl DemoApp {
             vec![mode]
         };
 
-        log::info!(
+        info!(
             "截图模式: {:?}, 场景数量: {}",
             scenes_to_capture,
             self.scenes.len()
@@ -193,11 +195,11 @@ impl DemoApp {
         // 截图每个场景
         for idx in scenes_to_capture {
             if idx >= self.scenes.len() {
-                log::warn!("场景索引 {} 超出范围", idx);
+                warn!("场景索引 {} 超出范围", idx);
                 continue;
             }
 
-            log::info!("截图场景 {}...", idx);
+            info!("截图场景 {}...", idx);
 
             // 切换到目标场景
             self.switch_scene(idx);
@@ -212,24 +214,24 @@ impl DemoApp {
             let scene_name = self.scenes[idx].0;
             match self.screenshot(scene_name) {
                 Ok(path) => {
-                    log::info!("截图成功: {}", path.display());
+                    info!("截图成功: {}", path.display());
                     // 分析截图
                     self.analyze_screenshot(&path, scene_name);
                 }
                 Err(e) => {
-                    log::error!("截图失败: {}", e);
+                    error!("截图失败: {}", e);
                 }
             }
         }
 
-        log::info!("截图完成，应用退出");
+        info!("截图完成，应用退出");
         // 截图完成后退出应用
         std::process::exit(0);
     }
 
     /// 分析截图结果
     fn analyze_screenshot(&self, path: &std::path::Path, scene_name: &str) {
-        log::info!("分析截图: {} - {}", scene_name, path.display());
+        info!("分析截图: {} - {}", scene_name, path.display());
         // 这里可以添加图像分析逻辑
         // 例如：检查图像是否存在、尺寸等
     }
@@ -269,7 +271,7 @@ impl ApplicationHandler<()> for DemoApp {
             self.handle_screenshot_mode(screenshot_mode);
         }
 
-        log::info!("应用启动: {}", self.title);
+        info!("应用启动: {}", self.title);
     }
 
     fn window_event(
@@ -330,7 +332,7 @@ impl ApplicationHandler<()> for DemoApp {
                     PhysicalKey::Code(KeyCode::KeyI) => {
                         // 切换渲染模式
                         self.use_iterative_render = !self.use_iterative_render;
-                        log::info!(
+                        info!(
                             "渲染模式: {}",
                             if self.use_iterative_render {
                                 "迭代渲染"
@@ -344,7 +346,7 @@ impl ApplicationHandler<()> for DemoApp {
                         // 截图
                         let scene_name = self.current_scene_name().unwrap_or("unknown");
                         if let Err(e) = self.screenshot(scene_name) {
-                            log::error!("截图失败: {}", e);
+                            error!("截图失败: {}", e);
                         }
                     }
                     // 左右方向键 / PageUp/PageDown 循环切换场景

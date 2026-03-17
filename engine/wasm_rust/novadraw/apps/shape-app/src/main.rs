@@ -1129,65 +1129,73 @@ fn create_scene_10_triangle() -> novadraw::SceneGraph {
     );
     let container_id = scene.set_contents(Box::new(container));
 
-    // 不同朝向的三角形（参考 d2 Triangle，direction 属性）
-    // NORTH - 顶点朝上
-    let tri_north = novadraw::TriangleFigure::new_with_direction(50.0, 50.0, 80.0, 80.0, novadraw::Direction::North)
+    // 不同线宽的三角形测试
+    let tri_w1 = novadraw::TriangleFigure::new_with_direction(50.0, 30.0, 60.0, 60.0, novadraw::Direction::North)
         .with_fill_color(novadraw::Color::hex("#e74c3c"))
         .with_stroke_color(novadraw::Color::BLACK)
-        .with_stroke_width(3.0);
+        .with_stroke_width(1.0);
 
-    // SOUTH - 顶点朝下
-    let tri_south = novadraw::TriangleFigure::new_with_direction(180.0, 50.0, 80.0, 80.0, novadraw::Direction::South)
+    let tri_w3 = novadraw::TriangleFigure::new_with_direction(150.0, 30.0, 60.0, 60.0, novadraw::Direction::North)
         .with_fill_color(novadraw::Color::hex("#2ecc71"))
         .with_stroke_color(novadraw::Color::BLACK)
         .with_stroke_width(3.0);
 
-    // EAST - 顶点朝右
-    let tri_east = novadraw::TriangleFigure::new_with_direction(310.0, 50.0, 80.0, 80.0, novadraw::Direction::East)
+    let tri_w5 = novadraw::TriangleFigure::new_with_direction(250.0, 30.0, 60.0, 60.0, novadraw::Direction::North)
+        .with_fill_color(novadraw::Color::hex("#3498db"))
+        .with_stroke_color(novadraw::Color::BLACK)
+        .with_stroke_width(5.0);
+
+    let tri_w10 = novadraw::TriangleFigure::new_with_direction(350.0, 30.0, 60.0, 60.0, novadraw::Direction::North)
+        .with_fill_color(novadraw::Color::hex("#9b59b6"))
+        .with_stroke_color(novadraw::Color::BLACK)
+        .with_stroke_width(10.0);
+
+    let tri_w20 = novadraw::TriangleFigure::new_with_direction(450.0, 30.0, 60.0, 60.0, novadraw::Direction::North)
+        .with_fill_color(novadraw::Color::hex("#f39c12"))
+        .with_stroke_color(novadraw::Color::BLACK)
+        .with_stroke_width(20.0);
+
+    // 不同方向的三角形
+    let tri_north = novadraw::TriangleFigure::new_with_direction(50.0, 150.0, 60.0, 60.0, novadraw::Direction::North)
+        .with_fill_color(novadraw::Color::hex("#e74c3c"))
+        .with_stroke_color(novadraw::Color::BLACK)
+        .with_stroke_width(3.0);
+
+    let tri_south = novadraw::TriangleFigure::new_with_direction(150.0, 150.0, 60.0, 60.0, novadraw::Direction::South)
+        .with_fill_color(novadraw::Color::hex("#2ecc71"))
+        .with_stroke_color(novadraw::Color::BLACK)
+        .with_stroke_width(3.0);
+
+    let tri_east = novadraw::TriangleFigure::new_with_direction(250.0, 150.0, 60.0, 60.0, novadraw::Direction::East)
         .with_fill_color(novadraw::Color::hex("#3498db"))
         .with_stroke_color(novadraw::Color::BLACK)
         .with_stroke_width(3.0);
 
-    // WEST - 顶点朝左
-    let tri_west = novadraw::TriangleFigure::new_with_direction(440.0, 50.0, 80.0, 80.0, novadraw::Direction::West)
+    let tri_west = novadraw::TriangleFigure::new_with_direction(350.0, 150.0, 60.0, 60.0, novadraw::Direction::West)
         .with_fill_color(novadraw::Color::hex("#9b59b6"))
         .with_stroke_color(novadraw::Color::BLACK)
         .with_stroke_width(3.0);
 
-    // 不同尺寸
-    let tri_small = novadraw::TriangleFigure::new(50.0, 180.0, 40.0, 40.0)
-        .with_fill_color(novadraw::Color::hex("#f39c12"))
-        .with_stroke_color(novadraw::Color::BLACK)
-        .with_stroke_width(2.0);
-
-    let tri_medium = novadraw::TriangleFigure::new(120.0, 180.0, 80.0, 80.0)
-        .with_fill_color(novadraw::Color::hex("#f39c12"))
-        .with_stroke_color(novadraw::Color::BLACK)
-        .with_stroke_width(2.0);
-
-    let tri_large = novadraw::TriangleFigure::new(240.0, 180.0, 120.0, 120.0)
-        .with_fill_color(novadraw::Color::hex("#f39c12"))
-        .with_stroke_color(novadraw::Color::BLACK)
-        .with_stroke_width(2.0);
-
     // 纯填充和纯描边
-    let tri_fill = novadraw::TriangleFigure::new_with_direction(400.0, 180.0, 60.0, 60.0, novadraw::Direction::North)
+    let tri_fill = novadraw::TriangleFigure::new_with_direction(450.0, 150.0, 60.0, 60.0, novadraw::Direction::North)
         .with_fill_color(novadraw::Color::hex("#e91e63"))
         .with_stroke_color(novadraw::Color::TRANSPARENT)
         .with_stroke_width(0.0);
 
-    let tri_stroke = novadraw::TriangleFigure::new_with_direction(500.0, 180.0, 60.0, 60.0, novadraw::Direction::North)
+    let tri_stroke = novadraw::TriangleFigure::new_with_direction(550.0, 150.0, 60.0, 60.0, novadraw::Direction::North)
         .with_fill_color(novadraw::Color::TRANSPARENT)
         .with_stroke_color(novadraw::Color::hex("#e91e63"))
         .with_stroke_width(3.0);
 
+    scene.add_child_to(container_id, Box::new(tri_w1));
+    scene.add_child_to(container_id, Box::new(tri_w3));
+    scene.add_child_to(container_id, Box::new(tri_w5));
+    scene.add_child_to(container_id, Box::new(tri_w10));
+    scene.add_child_to(container_id, Box::new(tri_w20));
     scene.add_child_to(container_id, Box::new(tri_north));
     scene.add_child_to(container_id, Box::new(tri_south));
     scene.add_child_to(container_id, Box::new(tri_east));
     scene.add_child_to(container_id, Box::new(tri_west));
-    scene.add_child_to(container_id, Box::new(tri_small));
-    scene.add_child_to(container_id, Box::new(tri_medium));
-    scene.add_child_to(container_id, Box::new(tri_large));
     scene.add_child_to(container_id, Box::new(tri_fill));
     scene.add_child_to(container_id, Box::new(tri_stroke));
 

@@ -12,9 +12,8 @@ glam.workspace = true
 slotmap.workspace = true
 uuid.workspace = true
 serde.workspace = true
-log.workspace = true
+tracing.workspace = true
 
 [features]
 default = []
 vello = ["novadraw-render/vello"]
-debug_render = []
