@@ -120,55 +120,97 @@ impl TriangleFigure {
     /// 计算三角形的三个顶点
     ///
     /// 参考 d2 Triangle.validate():
-    /// - r.shrink(getInsets()) - 收缩 insets
-    /// - r.resize(-1, -1) - 向外扩展 1px，为描边预留空间
+    /// - r.shrink(getInsets()) - 收缩 insets (novadraw 暂不支持 insets)
+    /// - r.resize(-1, -1) - 向内收缩，为描边预留空间
+    /// - r.y/r.x += (height/width - size) / 2 - 居中调整
+    ///
+    /// 关键点：
+    /// 1. 描边向内收缩，填充区域缩小
+    /// 2. 主尖角完整，不被裁剪（在收缩后的边界内，考虑描边向外扩展）
+    /// 3. 底部两角的裁剪由渲染器的 line join 行为自然产生
     fn compute_points(&self) -> [(f64, f64); 3] {
-        // 参考 d2: 先收缩 insets，再向外扩展 1px
         let mut r = self.bounds.clone();
-
-        // 向外扩展 1px，为描边预留空间 (d2: r.resize(-1, -1))
-        let inset = 1.0_f64.max(self.stroke_width) / 2.0;
-        r.x -= inset;
-        r.y -= inset;
-        r.width += inset * 2.0;
-        r.height += inset * 2.0;
 
         if r.width <= 0.0 || r.height <= 0.0 {
             return [(0.0, 0.0), (0.0, 0.0), (0.0, 0.0)];
         }
 
-        let (head_x, head_y, size, p2_base, p3_base) = match self.direction {
-            Direction::North => {
-                // 顶点朝上
-                let size = r.height.min(r.width / 2.0);
-                let head_x = r.x + r.width / 2.0;
-                let head_y = r.y;
-                (head_x, head_y, size, (head_x - size, head_y + size), (head_x + size, head_y + size))
+        // 向内收缩 1px (对应 d2 的 r.resize(-1, -1))
+        r.x += 1.0;
+        r.y += 1.0;
+        r.width = (r.width - 2.0).max(0.0);
+        r.height = (r.height - 2.0).max(0.0);
+
+        if r.width <= 0.0 || r.height <= 0.0 {
+            return [(0.0, 0.0), (0.0, 0.0), (0.0, 0.0)];
+        }
+
+        // 计算 size 并居中 (对应 d2 的逻辑)
+        // 使用 f64::min 明确指定类型
+        let size: f64 = match self.direction {
+            Direction::North | Direction::South => {
+                // 垂直方向：size = min(height, width / 2)
+                let half_width = r.width / 2.0;
+                let size = if r.height < half_width { r.height } else { half_width };
+                // 垂直居中：r.y += (r.height - size) / 2
+                r.y += (r.height - size) / 2.0;
+                size
             }
-            Direction::South => {
-                // 顶点朝下
-                let size = r.height.min(r.width / 2.0);
-                let head_x = r.x + r.width / 2.0;
-                let head_y = r.y + r.height;
-                (head_x, head_y, size, (head_x - size, head_y - size), (head_x + size, head_y - size))
-            }
-            Direction::West => {
-                // 顶点朝左
-                let size = r.width.min(r.height / 2.0);
-                let head_x = r.x;
-                let head_y = r.y + r.height / 2.0;
-                (head_x, head_y, size, (head_x + size, head_y - size), (head_x + size, head_y + size))
-            }
-            Direction::East => {
-                // 顶点朝右
-                let size = r.width.min(r.height / 2.0);
-                let head_x = r.x + r.width;
-                let head_y = r.y + r.height / 2.0;
-                (head_x, head_y, size, (head_x - size, head_y - size), (head_x - size, head_y + size))
+            Direction::West | Direction::East => {
+                // 水平方向：size = min(height / 2, width)
+                let half_height = r.height / 2.0;
+                let size = if half_height < r.width { half_height } else { r.width };
+                // 水平居中：r.x += (r.width - size) / 2
+                r.x += (r.width - size) / 2.0;
+                size
             }
         };
 
-        [(head_x, head_y), p2_base, p3_base]
+        // 最小尺寸保护 (对应 d2 的 Math.max(size, 1))
+        let size = size.max(1.0);
+
+        match self.direction {
+            Direction::North => {
+                // 顶点朝上
+                let head_x = r.x + r.width / 2.0;
+                let head_y = r.y;
+                let p2_x = head_x - size;
+                let p3_x = head_x + size;
+                let bottom_y = head_y + size;
+
+                [(head_x, head_y), (p2_x, bottom_y), (p3_x, bottom_y)]
+            }
+            Direction::South => {
+                // 顶点朝下
+                let head_x = r.x + r.width / 2.0;
+                let head_y = r.y + size;
+                let p2_x = head_x - size;
+                let p3_x = head_x + size;
+                let bottom_y = head_y - size;
+
+                [(head_x, head_y), (p2_x, bottom_y), (p3_x, bottom_y)]
+            }
+            Direction::West => {
+                // 顶点朝左
+                let head_x = r.x;
+                let head_y = r.y + r.height / 2.0;
+                let right_x = head_x + size;
+                let p2_y = head_y - size;
+                let p3_y = head_y + size;
+
+                [(head_x, head_y), (right_x, p2_y), (right_x, p3_y)]
+            }
+            Direction::East => {
+                // 顶点朝右
+                let head_x = r.x + size;
+                let head_y = r.y + r.height / 2.0;
+                let left_x = head_x - size;
+                let p2_y = head_y - size;
+                let p3_y = head_y + size;
+
+                [(head_x, head_y), (left_x, p2_y), (left_x, p3_y)]
+            }
+        }
     }
 }
 
@@ -195,9 +237,10 @@ fn compute_bounds(points: &[(f64, f64)]) -> Rectangle {
 
 impl Bounded for TriangleFigure {
     fn bounds(&self) -> Rectangle {
-        let points = self.compute_points();
-        let points_ref: Vec<(f64, f64)> = points.to_vec();
-        compute_bounds(&points_ref)
+        // 返回原始 bounds，与 d2 保持一致
+        // d2 中 Figure.bounds 保持为用户设置的原始值，不受 validate() 中收缩的影响
+        // paintChildren() 使用原始 bounds 作为裁剪区域
+        self.bounds
     }
 
     fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
