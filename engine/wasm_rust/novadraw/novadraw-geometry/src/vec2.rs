@@ -71,7 +71,10 @@ impl Vec2 {
         self.0.x * other.0.y - self.0.y * other.0.x
     }
 
-    /// 旋转向量
+    /// 旋转向量（顺时针，Y轴向下坐标系）
+    ///
+    /// 使用标准旋转矩阵，在 Y 轴向下的坐标系中表现为顺时针旋转。
+    /// 角度为正时，向量向顺时针方向旋转。
     #[inline]
     pub fn rotate(self, angle: f64) -> Self {
         let (s, c) = angle.sin_cos();
