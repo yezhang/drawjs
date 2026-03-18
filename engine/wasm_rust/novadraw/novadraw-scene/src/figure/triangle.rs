@@ -28,6 +28,11 @@ pub enum Direction {
 /// 参考 Eclipse Draw2D 的 Triangle 设计。
 /// 预定义的等腰三角形，根据 bounds 和 direction 动态计算顶点。
 /// 主要用于箭头指向标（Connection Anchors）。
+///
+/// # 顶点计算
+///
+/// 顶点在 `validate()` 阶段计算并缓存，参考 d2: Figure.validate()。
+/// 渲染时使用缓存的顶点，避免重复计算。
 #[derive(Clone, Debug, PartialEq)]
 pub struct TriangleFigure {
     /// 边界矩形
@@ -44,6 +49,10 @@ pub struct TriangleFigure {
     pub line_cap: novadraw_render::command::LineCap,
     /// 连接样式
     pub line_join: novadraw_render::command::LineJoin,
+    /// 缓存的顶点（validate 后有效）
+    cached_points: Option<[(f64, f64); 3]>,
+    /// 缓存的 bounds（用于检测是否需要重新计算）
+    cached_bounds: Option<Rectangle>,
 }
 
 impl TriangleFigure {
@@ -64,6 +73,8 @@ impl TriangleFigure {
             direction: Direction::North,
             line_cap: novadraw_render::command::LineCap::Butt,
             line_join: novadraw_render::command::LineJoin::Miter,
+            cached_points: None,
+            cached_bounds: None,
         }
     }
 
@@ -82,6 +93,8 @@ impl TriangleFigure {
             direction,
             line_cap: novadraw_render::command::LineCap::Butt,
             line_join: novadraw_render::command::LineJoin::Miter,
+            cached_points: None,
+            cached_bounds: None,
         }
     }
 
@@ -253,6 +266,18 @@ impl Bounded for TriangleFigure {
 }
 
 impl Shape for TriangleFigure {
+    /// 布局验证：计算并缓存顶点
+    ///
+    /// 对应 d2: Triangle.validate()
+    /// 在布局完成后被调用，预计算三角形的顶点位置。
+    fn validate(&mut self) {
+        // 检查 bounds 是否变化，变化则重新计算顶点
+        if self.cached_bounds != Some(self.bounds.clone()) {
+            self.cached_points = Some(self.compute_points());
+            self.cached_bounds = Some(self.bounds.clone());
+        }
+    }
+
     fn stroke_color(&self) -> Option<Color> {
         if self.stroke_color.a > 0.0 {
             Some(self.stroke_color)
@@ -290,7 +315,8 @@ impl Shape for TriangleFigure {
     }
 
     fn fill_shape(&self, gc: &mut NdCanvas) {
-        let points = self.compute_points();
+        // 使用缓存的顶点，如果没有缓存则计算
+        let points = self.cached_points.unwrap_or_else(|| self.compute_points());
 
         gc.begin_path();
         gc.move_to(points[0].0, points[0].1);
@@ -303,7 +329,8 @@ impl Shape for TriangleFigure {
     }
 
     fn outline_shape(&self, gc: &mut NdCanvas) {
-        let points = self.compute_points();
+        // 使用缓存的顶点，如果没有缓存则计算
+        let points = self.cached_points.unwrap_or_else(|| self.compute_points());
 
         gc.begin_path();
         gc.move_to(points[0].0, points[0].1);

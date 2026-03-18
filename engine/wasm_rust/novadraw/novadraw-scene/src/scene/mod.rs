@@ -412,7 +412,12 @@ impl SceneGraph {
     /// 只有设置了布局管理器的容器才会执行布局。
     /// 参考 d2: Figure.layout() { if (layoutManager != null) layoutManager.layout() }
     pub fn revalidate(&mut self, container_id: BlockId) {
-        // 1. 获取该容器的布局器
+        // 1. 调用容器的 Figure.validate()（布局后验证钩子）
+        if let Some(block) = self.blocks.get_mut(container_id) {
+            block.figure.validate();
+        }
+
+        // 2. 获取该容器的布局器
         let layout_manager = self
             .blocks
             .get(container_id)
@@ -425,10 +430,10 @@ impl SceneGraph {
             return;
         }
 
-        // 2. 执行布局：调用 LayoutManager.layout()
+        // 3. 执行布局：调用 LayoutManager.layout()
         layout_manager.unwrap().layout(container_id, self);
 
-        // 3. 递归处理子容器
+        // 4. 递归处理子容器
         self.revalidate_children(container_id);
 
         // 标记布局有效

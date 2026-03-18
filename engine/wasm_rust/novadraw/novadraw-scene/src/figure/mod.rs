@@ -168,6 +168,16 @@ pub trait Figure: Bounded + Send + Sync {
         // 默认空实现，子类可覆盖
     }
 
+    /// ===== 布局验证方法 =====
+    /// 布局验证（对应 d2: IFigure.validate()）
+    ///
+    /// 在布局计算完成后被调用，用于：
+    /// - 预计算依赖布局的几何属性（如 Triangle 顶点）
+    /// - 缓存布局相关的计算结果
+    ///
+    /// 默认空实现，子类可覆盖。
+    fn validate(&mut self) {}
+
     /// ===== PaintSelf 阶段方法 =====
     /// 绘制自身（背景）
     ///
@@ -254,6 +264,15 @@ pub trait Shape: Figure {
     fn outline_enabled(&self) -> bool {
         true
     }
+
+    /// ===== 布局验证方法 =====
+    /// 布局验证（覆盖 Figure trait 的默认实现）
+    ///
+    /// 对应 d2: IFigure.validate()
+    /// 在布局计算完成后被调用，用于预计算依赖布局的几何属性。
+    ///
+    /// 默认空实现，子类可覆盖。
+    fn validate(&mut self) {}
 
     /// 获取透明度 (0.0 - 1.0)
     fn alpha(&self) -> f64 {
