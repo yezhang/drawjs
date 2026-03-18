@@ -8,6 +8,7 @@
 //! - [`border`] - Border 边框系统
 //! - [`scene`] - 场景图管理
 //! - [`viewport`] - 视口管理
+//! - [`update`] - 更新管理器
 
 #![allow(missing_docs)]
 
@@ -16,6 +17,7 @@ pub mod figure;
 pub mod layout;
 pub mod log;
 pub mod scene;
+pub mod update;
 pub mod viewport;
 
 pub use border::{Border, LineBorder, MarginBorder, RectangleBorder};
@@ -29,4 +31,5 @@ pub use layout::{
 };
 pub use novadraw_geometry::{Point, Rectangle};
 pub use scene::{BlockId, FigureRenderer, RuntimeBlock, SceneGraph};
+pub use update::{SceneUpdateManager, UpdateEvent, UpdateListener};
 pub use viewport::Viewport;

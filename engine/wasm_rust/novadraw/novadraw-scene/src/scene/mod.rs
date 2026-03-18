@@ -21,6 +21,9 @@ pub use render_recursive::{FigureRenderer, SceneGraphRenderRef};
 #[cfg(test)]
 pub mod bounds_test;
 
+#[cfg(test)]
+pub mod update_integration_test;
+
 slotmap::new_key_type! { pub struct BlockId; }
 
 /// 运行时块
@@ -186,6 +189,8 @@ pub struct SceneGraph {
     pub layout_valid: bool,
     /// 子元素的布局约束 (child_id -> Rectangle constraint)
     constraints: std::collections::HashMap<usize, Rectangle>,
+    /// 更新管理器
+    pub update_manager: super::update::SceneUpdateManager,
 }
 
 impl SceneGraph {
@@ -217,6 +222,7 @@ impl SceneGraph {
             layout_manager: None,
             layout_valid: true,
             constraints: std::collections::HashMap::new(),
+            update_manager: super::update::SceneUpdateManager::new(),
         }
     }
 
@@ -300,8 +306,104 @@ impl SceneGraph {
     }
 
     /// 使布局失效，下次渲染时将重新计算布局
+    ///
+    /// 对应 d2: Figure.invalidate()
     pub fn invalidate(&mut self) {
         self.layout_valid = false;
+    }
+
+    /// 标记块需要重新布局
+    ///
+    /// 对应 d2: Figure.revalidate() -> UpdateManager.addInvalidFigure()
+    /// 将块添加到更新管理器的失效队列中。
+    ///
+    /// # Arguments
+    ///
+    /// * `block_id` - 需要重新布局的块 ID
+    pub fn mark_invalid(&mut self, block_id: BlockId) {
+        self.update_manager.add_invalid_figure(block_id);
+    }
+
+    /// 请求重绘指定块
+    ///
+    /// 对应 d2: Figure.repaint() -> UpdateManager.addDirtyRegion()
+    /// 将块添加到更新管理器的脏区域队列中。
+    ///
+    /// # Arguments
+    ///
+    /// * `block_id` - 需要重绘的块 ID
+    /// * `rect` - 脏区域（局部坐标），如果为 None 则使用块的 bounds
+    pub fn repaint(&mut self, block_id: BlockId, rect: Option<Rectangle>) {
+        // 获取块并检查可见性
+        if let Some(block) = self.blocks.get(block_id) {
+            if !block.is_visible {
+                return;
+            }
+
+            // 使用传入的区域或块的 bounds
+            let dirty_rect = rect.unwrap_or_else(|| block.figure_bounds());
+            self.update_manager.add_dirty_region(block_id, dirty_rect);
+        }
+    }
+
+    /// 请求重绘整个场景
+    ///
+    /// 对应 d2: Figure.repaint() 使用整个 bounds
+    pub fn repaint_all(&mut self) {
+        if let Some(contents_id) = self.contents {
+            self.repaint(contents_id, None);
+        }
+    }
+
+    /// 检查是否有待处理的更新
+    ///
+    /// 对应 d2: UpdateManager.hasPendingUpdates()
+    pub fn has_pending_updates(&self) -> bool {
+        self.update_manager.has_pending_updates()
+    }
+
+    /// 执行更新（两阶段：布局 + 重绘）
+    ///
+    /// 对应 d2: UpdateManager.performUpdate()
+    ///
+    /// 1. Phase 1: 布局失效的块
+    /// 2. Phase 2: 合并脏区域并重绘
+    pub fn perform_update(&mut self) {
+        // Phase 1: 处理失效块布局
+        if self.update_manager.has_pending_layout() {
+            // 收集所有失效块并执行布局
+            let invalid_blocks: Vec<BlockId> = self.update_manager.invalid_blocks.clone();
+
+            for block_id in invalid_blocks {
+                if let Some(block) = self.blocks.get(block_id) {
+                    if block.is_visible && block.is_enabled {
+                        self.revalidate(block_id);
+                    }
+                }
+            }
+
+            // 清空失效块队列
+            self.update_manager.invalid_blocks.clear();
+        }
+
+        // Phase 2: 清空脏区域（渲染完成后应由外部调用方清空）
+        // 这里我们清空脏区域，因为 perform_update 表示"更新已完成"
+        self.update_manager.dirty_regions.clear();
+        self.update_manager.update_queued = false;
+    }
+
+    /// 获取合并后的脏区域
+    ///
+    /// 返回所有脏区域合并后的大区域，用于视口裁剪。
+    pub fn get_damage_region(&self) -> Rectangle {
+        self.update_manager.compute_damage()
+    }
+
+    /// 清空更新队列
+    ///
+    /// 对应 d2: UpdateManager.clear()
+    pub fn clear_updates(&mut self) {
+        self.update_manager.clear();
     }
 
     /// 重新验证布局（递归），如果布局无效则重新计算
