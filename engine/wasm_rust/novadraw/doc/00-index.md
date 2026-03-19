@@ -22,6 +22,7 @@ doc/
 │   ├── figure_tree_position.md       # Figure 树父子位置
 │   ├── ifigure_interface.md          # g2 IFigure 接口分析
 │   ├── figure_implementation.md      # g2 Figure 实现分析
+│   ├── figure_tree_operations.md     # g2 Figure 树操作机制分析
 │   ├── figure_box_model.md           # 盒模型分析
 │   └── layout-constraints.md         # 布局约束机制
 │
@@ -64,6 +65,7 @@ doc/
 | `figure_tree_position.md` | 父子位置 | 坐标系转换、translateToParent/useLocalCoordinates、嵌套变换 |
 | `ifigure_interface.md` | IFigure 接口 | 接口方法分类、设计意图、上帝接口模式分析 |
 | `figure_implementation.md` | Figure 实现 | 核心数据结构、paint/setBounds 实现、关键设计模式 |
+| `figure_tree_operations.md` | 树操作机制 | 树遍历方法分类、递归/迭代机制、传播方向分析 |
 | `figure_box_model.md` | 盒模型 | Bounds/Insets/ClientArea/Border/Outline 关系 |
 | `layout-constraints.md` | 布局约束 | 约束系统、LayoutManager 接口、布局约束机制 |
 
