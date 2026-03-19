@@ -146,9 +146,9 @@ pub trait Bounded: Send + Sync {
 /// 定义图形验证和更新的接口，参考 Eclipse Draw2D 的 IFigure 设计。
 /// 负责布局后的验证、失效标记等生命周期管理。
 ///
-/// # 与 SceneGraph 的关系
+/// # 与 FigureGraph 的关系
 ///
-/// - SceneGraph.revalidate() 会调用 Figure.validate()
+/// - FigureGraph.revalidate() 会调用 Figure.validate()
 /// - UpdateManager 跟踪需要验证的块
 pub trait Updatable: Send + Sync {
     /// 布局验证
@@ -158,7 +158,7 @@ pub trait Updatable: Send + Sync {
     /// - 预计算依赖布局的几何属性（如 Triangle 顶点）
     /// - 缓存布局相关的计算结果
     ///
-    /// 注意：本方法在 SceneGraph.revalidate() 流程中被调用。
+    /// 注意：本方法在 FigureGraph.revalidate() 流程中被调用。
     fn validate(&mut self);
 
     /// 标记为无效
@@ -166,7 +166,7 @@ pub trait Updatable: Send + Sync {
     /// 对应 draw2d: IFigure.invalidate()
     /// 标记图形需要重新验证。通常由 setBounds() 等操作触发。
     ///
-    /// 默认实现为空，子类可覆盖以通知 SceneGraph。
+    /// 默认实现为空，子类可覆盖以通知 FigureGraph。
     fn invalidate(&mut self) {}
 }
 

@@ -13,8 +13,8 @@ const WINDOW_HEIGHT: f64 = 600.0;
 // ============================================================================
 
 /// 场景 0: Stroke 基础 - 不同线宽和颜色
-fn create_scene_0_stroke_basic() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_0_stroke_basic() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -43,8 +43,8 @@ fn create_scene_0_stroke_basic() -> novadraw::SceneGraph {
 }
 
 /// 场景 1: Stroke 嵌套 - 多层边框
-fn create_scene_1_stroke_nested() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_1_stroke_nested() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -92,8 +92,8 @@ fn create_scene_1_stroke_nested() -> novadraw::SceneGraph {
 }
 
 /// 场景 2: Stroke 同心矩形
-fn create_scene_2_stroke_concentric() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_2_stroke_concentric() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -127,8 +127,8 @@ fn create_scene_2_stroke_concentric() -> novadraw::SceneGraph {
 }
 
 /// 场景 3: Stroke 颜色对比
-fn create_scene_3_stroke_colors() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_3_stroke_colors() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -159,8 +159,8 @@ fn create_scene_3_stroke_colors() -> novadraw::SceneGraph {
 // ============================================================================
 
 /// 场景 4: RectangleBorder 装饰器
-fn create_scene_4_rectangle_border() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_4_rectangle_border() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -206,8 +206,8 @@ fn create_scene_4_rectangle_border() -> novadraw::SceneGraph {
 }
 
 /// 场景 5: Border 装饰器 + insets
-fn create_scene_5_border_with_insets() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_5_border_with_insets() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -255,8 +255,8 @@ fn create_scene_5_border_with_insets() -> novadraw::SceneGraph {
 }
 
 /// 场景 6: LineBorder 装饰器
-fn create_scene_6_line_border() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_6_line_border() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -302,8 +302,8 @@ fn create_scene_6_line_border() -> novadraw::SceneGraph {
 }
 
 /// 场景 7: MarginBorder 装饰器
-fn create_scene_7_margin_border() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_7_margin_border() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -354,8 +354,8 @@ fn create_scene_7_margin_border() -> novadraw::SceneGraph {
 // ============================================================================
 
 /// 场景 8: Stroke vs Border 对比
-fn create_scene_8_stroke_vs_border() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_8_stroke_vs_border() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -478,7 +478,7 @@ fn create_scene_8_stroke_vs_border() -> novadraw::SceneGraph {
 
 fn main() {
     // 创建场景列表
-    let scenes: Vec<(&'static str, Box<dyn FnMut() -> novadraw::SceneGraph>)> = vec![
+    let scenes: Vec<(&'static str, Box<dyn FnMut() -> novadraw::FigureGraph>)> = vec![
         ("Stroke基础", Box::new(|| create_scene_0_stroke_basic())),
         ("Stroke嵌套", Box::new(|| create_scene_1_stroke_nested())),
         (

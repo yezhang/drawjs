@@ -19,7 +19,7 @@ use novadraw::{
 
 /// Winit 平台的 SceneHost 实现
 ///
-/// 持有 winit 窗口引用和更新标记，协调 SceneGraph 和渲染器之间的更新流程。
+/// 持有 winit 窗口引用和更新标记，协调 FigureGraph 和渲染器之间的更新流程。
 ///
 /// 对应 draw2d: DeferredUpdateManager 编排 update + LightweightSystem 持有 root。
 pub struct WinitSceneHost {

@@ -119,12 +119,12 @@ pub struct SceneUpdateManager {
 }
 ```
 
-### SceneGraph 集成
+### FigureGraph 集成
 
 ```rust
 // novadraw-scene/src/scene/mod.rs
 
-pub struct SceneGraph {
+pub struct FigureGraph {
     // ... 其他字段
     pub update_manager: super::update::SceneUpdateManager,
 }
@@ -133,7 +133,7 @@ pub struct SceneGraph {
 ### 公开 API
 
 ```rust
-impl SceneGraph {
+impl FigureGraph {
     /// 标记块需要重新布局
     pub fn mark_invalid(&mut self, block_id: BlockId);
 
@@ -179,17 +179,17 @@ pub fn add_dirty_region(&mut self, block_id: BlockId, rect: Rectangle) {
 }
 ```
 
-### 决策 2: SceneUpdateManager 作为 SceneGraph 的内部状态
+### 决策 2: SceneUpdateManager 作为 FigureGraph 的内部状态
 
 **g2 方式**：`UpdateManager` 是独立对象，通过 `setRoot(IFigure)` 关联根 Figure。
 
-**本项目方式**：`SceneUpdateManager` 直接作为 `SceneGraph` 的字段。
+**本项目方式**：`SceneUpdateManager` 直接作为 `FigureGraph` 的字段。
 
 **原因**：
 
 - Rust 的所有权模型更适合内部状态
 - 避免复杂的生命周期管理
-- 直接访问 SceneGraph 的 blocks
+- 直接访问 FigureGraph 的 blocks
 
 ### 决策 3: 不实现异步更新机制
 
@@ -262,10 +262,10 @@ if scene.has_pending_updates() {
 ### 基本使用
 
 ```rust
-use novadraw_scene::{SceneGraph, RectangleFigure};
+use novadraw_scene::{FigureGraph, RectangleFigure};
 
 // 创建场景
-let mut scene = SceneGraph::new();
+let mut scene = FigureGraph::new();
 let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
 let container_id = scene.set_contents(Box::new(container));
 

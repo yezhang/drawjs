@@ -77,7 +77,7 @@ draw2d 框架与 Novadraw 的组件映射关系：
 │                             Novadraw 框架架构                                        │
 ├─────────────────────────────────────────────────────────────────────────────────────┤
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    │
-│  │    Vello     │◀───│   SceneHost  │◀───│  SceneGraph  │◀───│  NdCanvas    │    │
+│  │    Vello     │◀───│   SceneHost  │◀───│  FigureGraph  │◀───│  NdCanvas    │    │
 │  │ (渲染后端)   │    │ (主循环)     │    │ (场景图)      │    │ (绘制 API)   │    │
 │  └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘    │
 │                            │                   │                   │              │
@@ -118,7 +118,7 @@ draw2d 框架与 Novadraw 的组件映射关系：
 | SWT GC | NdCanvas | 底层绘制 API |
 | LightweightSystem | SceneHost | 平台桥接 + 主循环 |
 | UpdateManager | SceneUpdateManager | 延迟批处理 + 两阶段更新 |
-| Figure Tree | SceneGraph + SlotMap | 树结构 + O(1) 查找 |
+| Figure Tree | FigureGraph + SlotMap | 树结构 + O(1) 查找 |
 | IFigure | Figure + Bounded | Trait 体系 |
 | Figure (基类) | Shape + 具体实现 | 描边/填充 |
 | Graphics | NdCanvas | 状态管理 + 变换栈 |

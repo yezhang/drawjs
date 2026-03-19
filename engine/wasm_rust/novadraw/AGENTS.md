@@ -100,7 +100,7 @@ cargo doc --open
   - Core types: Color
   - Math: Vec3, Mat3
   - Geometry: Vec2, Rect, Transform, Translatable
-  - Scene: SceneGraph, Viewport
+  - Scene: FigureGraph, Viewport
 
 ## Code Style Guidelines
 
@@ -161,14 +161,14 @@ fn visit(node: &Node) {
 
 **Rationale**: Prevent stack overflow from deep hierarchies.
 
-### 2. Child Propagation in SceneGraph
+### 2. Child Propagation in FigureGraph
 
-All child propagation operations must be implemented iteratively in `SceneGraph`, not in `FigureBlock` or `Figure`.
+All child propagation operations must be implemented iteratively in `FigureGraph`, not in `FigureBlock` or `Figure`.
 
 **Correct**:
 
 ```rust
-impl SceneGraph {
+impl FigureGraph {
     pub fn prim_translate(&mut self, block_id: BlockId, dx: f64, dy: f64) {
         let mut stack = vec![block_id];
         while let Some(id) = stack.pop() {

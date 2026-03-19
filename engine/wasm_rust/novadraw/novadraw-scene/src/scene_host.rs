@@ -17,7 +17,7 @@
 //! # 更新流程
 //!
 //! ```text
-//! SceneGraph.mark_invalid() / repaint()
+//! FigureGraph.mark_invalid() / repaint()
 //!         │
 //!         ▼ (内部调用 notify_update_requested)
 //! SceneHost.notify_update_requested()
@@ -37,8 +37,8 @@
 //!
 //! # 职责边界
 //!
-//! - **SceneHost**: 平台调度 + update 编排 + 渲染触发。不直接持有 SceneGraph。
-//! - **SceneGraph**: 块树管理 + 布局计算 + 渲染命令生成。平台无关。
+//! - **SceneHost**: 平台调度 + update 编排 + 渲染触发。不直接持有 FigureGraph。
+//! - **FigureGraph**: 块树管理 + 布局计算 + 渲染命令生成。平台无关。
 //! - **SceneUpdateManager**: 脏区域和失效块的纯数据管理。
 
 use novadraw_render::{NdCanvas, RenderBackend};
@@ -91,9 +91,9 @@ pub trait SceneHost: Send + Sync {
     fn viewport_size(&self) -> (f64, f64);
 }
 
-/// SceneUpdateTarget - SceneGraph 的更新相关操作子集
+/// SceneUpdateTarget - FigureGraph 的更新相关操作子集
 ///
-/// 用于 `execute_update` 的参数化，避免传递完整 SceneGraph。
+/// 用于 `execute_update` 的参数化，避免传递完整 FigureGraph。
 /// 对应 draw2d 中 UpdateManager 直接持有 root Figure 并调用其方法。
 pub trait SceneUpdateTarget {
     /// 执行布局验证

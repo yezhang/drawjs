@@ -89,7 +89,7 @@ pub trait LayoutManager: Send + Sync {
 
 ### 注意事项
 
-- 布局计算在 SceneGraph 层完成
+- 布局计算在 FigureGraph 层完成
 - 布局结果更新 Figure 的 bounds
 - 使用迭代而非递归处理子节点
 
@@ -120,7 +120,7 @@ pub struct NdCanvas {
 ### 添加新事件类型
 
 1. 在 `novadraw-scene/src/event.rs` 定义事件
-2. 在 `SceneGraph` 中添加事件队列
+2. 在 `FigureGraph` 中添加事件队列
 3. 在渲染循环中分发事件
 
 ## 测试策略

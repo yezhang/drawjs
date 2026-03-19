@@ -7,7 +7,7 @@ use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
 use crate::figure::{Bounded, Figure, RectangleFigure, Shape, Updatable};
-use crate::scene::SceneGraph;
+use crate::scene::FigureGraph;
 
 // ========== 测试用 Figure 类型 ==========
 
@@ -110,7 +110,7 @@ fn collect_clip_rects(gc: &novadraw_render::NdCanvas) -> Vec<[glam::DVec2; 2]> {
 /// 期望：所有 RenderCommand 使用 bounds 的绝对值
 #[test]
 fn test_bounds_absolute_coordinates() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     // parent bounds = (0, 0, 100, 100)
     let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
@@ -146,7 +146,7 @@ fn test_bounds_absolute_coordinates() {
 /// - child ClipRect: [10,10, 50,50]
 #[test]
 fn test_render_commands_coords() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
     let parent_id = scene.set_contents(Box::new(parent));
@@ -176,7 +176,7 @@ fn test_render_commands_coords() {
 /// 期望：渲染顺序 parent → child
 #[test]
 fn test_nested_structure_render_order() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     // root (内容容器)
     let root = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
@@ -216,7 +216,7 @@ fn test_nested_structure_render_order() {
 /// 期望：parent bounds = (5,10,100,100), child bounds = (15,20,50,50)
 #[test]
 fn test_prim_translate_propagates() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
     let parent_id = scene.set_contents(Box::new(parent));
@@ -252,7 +252,7 @@ fn test_prim_translate_propagates() {
 /// 期望：所有后代同步平移
 #[test]
 fn test_prim_translate_nested_propagation() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let root = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let root_id = scene.set_contents(Box::new(root));
@@ -286,7 +286,7 @@ fn test_prim_translate_nested_propagation() {
 /// 期望：RenderCommand 使用平移后的 bounds 绝对值
 #[test]
 fn test_render_commands_after_translate() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
     let parent_id = scene.set_contents(Box::new(parent));
@@ -323,7 +323,7 @@ fn test_render_commands_after_translate() {
 /// 期望：translate 生效，裁剪区在本地坐标 (0, 0)
 #[test]
 fn test_local_coordinates_mode() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     // 坐标根 (10, 10, 100, 100)
     let coord_root = TestCoordRootFigure::new(10.0, 10.0, 100.0, 100.0);
@@ -354,7 +354,7 @@ fn test_local_coordinates_mode() {
 /// 期望：所有节点的 bounds 都是有效值
 #[test]
 fn test_bounds_integrity() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     // root
     let root = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
@@ -401,7 +401,7 @@ fn test_bounds_integrity() {
 /// 期望：每个矩形的 ClipRect 反映其实际位置
 #[test]
 fn test_horizontal_layout_coords() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 400.0, 100.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -597,9 +597,9 @@ fn test_empty_bounds() {
     assert!(!rect.intersects(point_rect), "空矩形与任何矩形都不相交");
 }
 
-// ========== SceneGraph::set_bounds 测试 ==========
+// ========== FigureGraph::set_bounds 测试 ==========
 
-/// 测试：SceneGraph::set_bounds 基本功能
+/// 测试：FigureGraph::set_bounds 基本功能
 ///
 /// 场景：parent(0,0,100,100) + child(10,10,50,50)
 /// 动作：set_bounds(parent, 20, 30, 150, 100)
@@ -608,7 +608,7 @@ fn test_empty_bounds() {
 /// - child bounds = (30, 40, 50, 50)（位置传播）
 #[test]
 fn test_scene_set_bounds_basic() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
     let parent_id = scene.set_contents(Box::new(parent));
@@ -645,14 +645,14 @@ fn test_scene_set_bounds_basic() {
     assert_eq!(child_bounds.height, 50.0, "子节点 height 不变");
 }
 
-/// 测试：SceneGraph::set_bounds 仅位置变化
+/// 测试：FigureGraph::set_bounds 仅位置变化
 ///
 /// 场景：parent(0,0,100,100) + child(10,10,50,50)
 /// 动作：set_bounds(parent, 50, 60, 100, 100)（只变位置，不变尺寸）
 /// 期望：只传播位置偏移，尺寸不变
 #[test]
 fn test_scene_set_bounds_position_only() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
     let parent_id = scene.set_contents(Box::new(parent));
@@ -674,14 +674,14 @@ fn test_scene_set_bounds_position_only() {
     assert_eq!(child_bounds.y, 70.0, "子节点 y 应为 70 (10 + 60)");
 }
 
-/// 测试：SceneGraph::set_bounds 嵌套传播
+/// 测试：FigureGraph::set_bounds 嵌套传播
 ///
 /// 场景：root(0,0,200,200) → parent(50,50,100,100) → child(10,10,50,50)
 /// 动作：set_bounds(root, 10, 10, 200, 200)
 /// 期望：所有后代同步平移
 #[test]
 fn test_scene_set_bounds_nested_propagation() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let root = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let root_id = scene.set_contents(Box::new(root));
@@ -709,14 +709,14 @@ fn test_scene_set_bounds_nested_propagation() {
     assert_eq!(child_bounds.y, 20.0, "子节点 y 应为 20 (10 + 10)");
 }
 
-/// 测试：SceneGraph::set_bounds 仅尺寸变化
+/// 测试：FigureGraph::set_bounds 仅尺寸变化
 ///
 /// 场景：parent(0,0,100,100) + child(10,10,50,50)
 /// 动作：set_bounds(parent, 0, 0, 200, 150)（只变尺寸，不变位置）
 /// 期望：位置不变，尺寸更新，子节点位置不变
 #[test]
 fn test_scene_set_bounds_size_only() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
     let parent_id = scene.set_contents(Box::new(parent));
@@ -748,7 +748,7 @@ fn test_scene_set_bounds_size_only() {
 fn test_clip_test_scene_commands() {
     use novadraw_render::command::RenderCommandKind;
 
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     // Root
     let root =

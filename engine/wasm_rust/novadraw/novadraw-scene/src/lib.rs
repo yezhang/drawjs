@@ -31,7 +31,7 @@ pub use layout::{
     LayoutManager, XYLayout,
 };
 pub use novadraw_geometry::{Point, Rectangle};
-pub use scene::{BlockId, FigureBlock, FigureRenderer, SceneGraph};
+pub use scene::{BlockId, FigureBlock, FigureRenderer, FigureGraph};
 pub use scene_host::{SceneHost, SceneUpdateTarget};
 pub use update::{SceneUpdateManager, UpdateEvent, UpdateListener};
 pub use viewport::Viewport;

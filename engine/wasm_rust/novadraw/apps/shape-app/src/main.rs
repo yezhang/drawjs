@@ -20,8 +20,8 @@ const WINDOW_HEIGHT: f64 = 600.0;
 
 /// Scene 0: 矩形图形 - 验证 RectangleFigure
 /// MECE: 单独验证矩形填充
-fn create_scene_0_rectangle_fill() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_0_rectangle_fill() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
@@ -74,8 +74,8 @@ fn create_scene_0_rectangle_fill() -> novadraw::SceneGraph {
 
 /// Scene 1: 椭圆图形 - 验证 EllipseFigure
 /// MECE: 单独验证椭圆填充
-fn create_scene_1_ellipse_fill() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_1_ellipse_fill() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
@@ -127,8 +127,8 @@ fn create_scene_1_ellipse_fill() -> novadraw::SceneGraph {
 }
 
 /// Scene 2: 圆角矩形
-fn create_scene_2_rounded_rect() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_2_rounded_rect() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
@@ -253,8 +253,8 @@ fn create_scene_2_rounded_rect() -> novadraw::SceneGraph {
 
 /// Scene 3: 折线图形 - 验证 PolylineFigure
 /// MECE: 按折线属性分类（点数、线宽、线帽、连接样式、闭合）
-fn create_scene_3_polyline() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_3_polyline() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     let container = novadraw::RectangleFigure::new_with_color(
         0.0,
@@ -517,8 +517,8 @@ fn create_scene_3_polyline() -> novadraw::SceneGraph {
 
 /// Scene 3: 描边属性 - 验证 Stroke 属性
 /// MECE: 单独验证 Rectangle/Line 的描边
-fn create_scene_4_stroke_width() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_4_stroke_width() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
@@ -636,8 +636,8 @@ fn create_scene_4_stroke_width() -> novadraw::SceneGraph {
 /// MECE: 验证 RectangleFigure 的描边属性
 /// Scene 5: 描边属性
 /// MECE: 验证描边宽度和颜色
-fn create_scene_5_stroke_color() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_5_stroke_color() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     // 灰色背景
     let bg = novadraw::RectangleFigure::new_with_color(
@@ -713,8 +713,8 @@ fn create_scene_5_stroke_color() -> novadraw::SceneGraph {
 
 /// Scene 5: LineJoin 连接样式
 /// MECE: 验证 LineJoin (Miter, Round, Bevel)
-fn create_scene_6_line_join() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_6_line_join() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     // 灰色背景
     let bg = novadraw::RectangleFigure::new_with_color(
@@ -768,8 +768,8 @@ fn create_scene_6_line_join() -> novadraw::SceneGraph {
 
 /// Scene 6: 透明度验证
 /// MECE: 单独验证 Alpha 透明度
-fn create_scene_7_alpha() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_7_alpha() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
@@ -852,8 +852,8 @@ fn create_scene_7_alpha() -> novadraw::SceneGraph {
 
 /// Scene 7: 混合图形组合
 /// MECE: 验证多种图形在同一场景中正确渲染
-fn create_scene_8_mixed_shapes() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_8_mixed_shapes() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
@@ -1034,8 +1034,8 @@ fn create_scene_8_mixed_shapes() -> novadraw::SceneGraph {
 
 /// Scene 8: Z-order 遮挡关系
 /// MECE: 验证后添加的图形遮挡先添加的图形
-fn create_scene_9_zorder() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_9_zorder() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
@@ -1117,8 +1117,8 @@ fn create_scene_9_zorder() -> novadraw::SceneGraph {
 
 /// Scene 10: 三角形图形 - 验证 TriangleFigure
 /// MECE: 验证等边三角形、直角三角形、描边宽度、纯填充/纯描边
-fn create_scene_10_triangle() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_10_triangle() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     let container = novadraw::RectangleFigure::new_with_color(
         0.0,
@@ -1270,8 +1270,8 @@ fn create_scene_10_triangle() -> novadraw::SceneGraph {
 
 /// Scene 9: 父子嵌套结构
 /// MECE: 验证 Figure 嵌套渲染
-fn create_scene_11_parent_child() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_11_parent_child() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
@@ -1368,7 +1368,7 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     // 场景列表
-    let scenes: Vec<(&'static str, Box<dyn FnMut() -> novadraw::SceneGraph>)> = vec![
+    let scenes: Vec<(&'static str, Box<dyn FnMut() -> novadraw::FigureGraph>)> = vec![
         // 维度1: 图形类型验证
         (
             "0:Rectangle Fill",

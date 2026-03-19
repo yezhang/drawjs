@@ -207,7 +207,7 @@ pub enum PaintTask {
 
 ```rust
 pub struct FigureRenderer<'a> {
-    scene: &'a SceneGraph,      // 场景图引用
+    scene: &'a FigureGraph,      // 场景图引用
     gc: &'a mut NdCanvas,       // 渲染输出
     tasks: Vec<PaintTask>,      // 任务队列
 }
@@ -576,7 +576,7 @@ RootFigure.generate_paint_tasks()
 ## 7. 执行流程图
 
 ```
-SceneGraph.render()
+FigureGraph.render()
     │
     └── FigureRenderer.render(root_id)
             │
@@ -661,10 +661,10 @@ tasks.push(PaintTask::Save);
 tasks.push(PaintTask::Restore);
 ```
 
-## 10. 与现有 SceneGraph 集成
+## 10. 与现有 FigureGraph 集成
 
 ```rust
-impl SceneGraph {
+impl FigureGraph {
     pub fn render(&mut self) -> NdCanvas {
         let mut gc = NdCanvas::new();
         let mut renderer = FigureRenderer::new(self, &mut gc);

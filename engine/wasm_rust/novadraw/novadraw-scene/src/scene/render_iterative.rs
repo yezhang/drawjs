@@ -5,7 +5,7 @@
 
 use novadraw_render::NdCanvas;
 
-use super::{BlockId, SceneGraphRenderRef};
+use super::{BlockId, FigureGraphRenderRef};
 use crate::figure::Bounded;
 use crate::{debug_render, trace_render};
 
@@ -54,7 +54,7 @@ enum RenderTask {
 ///
 /// 使用显式栈实现迭代式深度优先遍历，避免递归栈溢出。
 pub struct FigureRendererIter<'a> {
-    scene: SceneGraphRenderRef<'a>,
+    scene: FigureGraphRenderRef<'a>,
     gc: &'a mut NdCanvas,
     /// 调试计数器
     counter: usize,
@@ -62,7 +62,7 @@ pub struct FigureRendererIter<'a> {
 
 impl<'a> FigureRendererIter<'a> {
     /// 创建渲染器
-    pub fn new(scene: &SceneGraphRenderRef<'a>, gc: &'a mut NdCanvas) -> Self {
+    pub fn new(scene: &FigureGraphRenderRef<'a>, gc: &'a mut NdCanvas) -> Self {
         Self {
             scene: scene.clone(),
             gc,

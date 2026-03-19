@@ -125,7 +125,7 @@ mod tests {
     fn test_parent_child_transform() {
         // 场景: parent(100,100) -> child(30,30)
         // 期望: child 实际位置 (130, 130)
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
         let parent = Rectangle::new(0.0, 0.0, 100.0, 100.0);
         let parent_id = scene.set_contents(Box::new(parent));
 
@@ -151,7 +151,7 @@ mod tests {
     #[test]
     fn test_render_order_z_order() {
         // 后添加的在上面（Z-order）
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
         let contents = scene.set_contents(Box::new(Rectangle::new(0.0, 0.0, 100.0, 100.0)));
 
         let rect1 = Rectangle::new(0.0, 0.0, 100.0, 100.0);
@@ -232,7 +232,7 @@ impl RendererTrait for VelloRenderer {
 ### 方法 1: 打印渲染命令
 
 ```rust
-// 在 SceneGraph 中添加
+// 在 FigureGraph 中添加
 pub fn debug_commands(&self) {
     let gc = self.render();
     eprintln!("=== 渲染命令列表 ===");
@@ -274,7 +274,7 @@ fn print_block(&self, block_id: BlockId, depth: usize) {
 #[test]
 fn test_end_to_end() {
     // 1. 创建场景图
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
     // ... 添加图形
 
     // 2. 生成命令

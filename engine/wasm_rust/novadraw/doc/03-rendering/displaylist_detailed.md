@@ -1537,7 +1537,7 @@ Cache Line: 64 bytes
 │                                                                          │
 │  novadraw-scene                                                          │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  SceneGraph.render()                                            │   │
+│  │  FigureGraph.render()                                            │   │
 │  │      │                                                          │   │
 │  │      ▼                                                          │   │
 │  │  FigureRenderer ──▶ DisplayListRecorder                        │   │

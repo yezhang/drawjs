@@ -17,7 +17,7 @@ pub mod render_iterative;
 pub mod render_recursive;
 
 pub use render_iterative::FigureRendererIter;
-pub use render_recursive::{FigureRenderer, SceneGraphRenderRef};
+pub use render_recursive::{FigureRenderer, FigureGraphRenderRef};
 
 #[cfg(test)]
 pub mod bounds_test;
@@ -155,7 +155,7 @@ impl FigureBlock {
     /// 设置图形边界（仅自身，不传播）
     ///
     /// 注意：此方法只更新自身的 bounds，不传播到子节点。
-    /// 需要传播到子节点的操作应在 SceneGraph 级别使用迭代实现。
+    /// 需要传播到子节点的操作应在 FigureGraph 级别使用迭代实现。
     pub fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
         self.figure.set_bounds(x, y, width, height);
     }
@@ -173,9 +173,9 @@ fn rect_intersects(a: &Rectangle, b: &Rectangle) -> bool {
 /// # 使用示例
 ///
 /// ```
-/// use novadraw_scene::{Figure, RectangleFigure, SceneGraph};
+/// use novadraw_scene::{Figure, RectangleFigure, FigureGraph};
 ///
-/// let mut scene = SceneGraph::new();
+/// let mut scene = FigureGraph::new();
 ///
 /// // 创建根内容块（类似 Draw2d 的 setContents）
 /// let contents = RectangleFigure::new(0.0, 0.0, 100.0, 50.0);
@@ -185,7 +185,7 @@ fn rect_intersects(a: &Rectangle, b: &Rectangle) -> bool {
 /// let child = RectangleFigure::new(10.0, 10.0, 80.0, 30.0);
 /// scene.add_child_to(contents_id, Box::new(child));
 /// ```
-pub struct SceneGraph {
+pub struct FigureGraph {
     pub blocks: SlotMap<BlockId, FigureBlock>,
     pub uuid_map: std::collections::HashMap<Uuid, BlockId>,
     /// 根块（内部使用）
@@ -201,7 +201,7 @@ pub struct SceneGraph {
     pub update_manager: super::update::SceneUpdateManager,
 }
 
-impl SceneGraph {
+impl FigureGraph {
     /// 创建新场景图
     pub fn new() -> Self {
         let mut blocks = SlotMap::with_key();
@@ -222,7 +222,7 @@ impl SceneGraph {
             maximum_size: None,
         });
 
-        SceneGraph {
+        FigureGraph {
             blocks,
             uuid_map: std::collections::HashMap::new(),
             root: root_id,
@@ -273,9 +273,9 @@ impl SceneGraph {
     ///
     /// ```
     /// use novadraw_core::Color;
-    /// use novadraw_scene::{figure::RectangleFigure, SceneGraph};
+    /// use novadraw_scene::{figure::RectangleFigure, FigureGraph};
     ///
-    /// let mut scene = SceneGraph::new();
+    /// let mut scene = FigureGraph::new();
     /// let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 100.0, 100.0)));
     /// let color = Color::hex("#3498db");
     /// // 添加子节点，bounds 是绝对坐标 (10, 10, 50, 50)
@@ -718,7 +718,7 @@ impl SceneGraph {
     /// 渲染到上下文（递归实现）
     fn render_to(&self, gc: &mut NdCanvas) {
         let start_id = self.contents.unwrap_or(self.root);
-        let scene_ref = SceneGraphRenderRef {
+        let scene_ref = FigureGraphRenderRef {
             blocks: &self.blocks,
         };
         let mut renderer = FigureRenderer::new(&scene_ref, gc);
@@ -741,7 +741,7 @@ impl SceneGraph {
     /// 渲染到上下文（迭代实现）
     fn render_to_iterative(&self, gc: &mut NdCanvas) {
         let start_id = self.contents.unwrap_or(self.root);
-        let scene_ref = SceneGraphRenderRef {
+        let scene_ref = FigureGraphRenderRef {
             blocks: &self.blocks,
         };
         let mut renderer = FigureRendererIter::new(&scene_ref, gc);
@@ -1173,7 +1173,7 @@ impl SceneGraph {
     }
 }
 
-impl super::layout::LayoutContext for SceneGraph {
+impl super::layout::LayoutContext for FigureGraph {
     fn get_children(&self, parent_id: BlockId) -> Vec<(BlockId, Rectangle)> {
         if let Some(block) = self.blocks.get(parent_id) {
             block
@@ -1223,7 +1223,7 @@ impl super::layout::LayoutContext for SceneGraph {
     }
 }
 
-impl Default for SceneGraph {
+impl Default for FigureGraph {
     fn default() -> Self {
         Self::new()
     }
@@ -1232,8 +1232,8 @@ impl Default for SceneGraph {
 #[cfg(test)]
 mod tests {
     use super::super::figure::{Bounded, RectangleFigure, Shape, Updatable};
-    use crate::scene::SceneGraphRenderRef;
-    use crate::{Rectangle, SceneGraph};
+    use crate::scene::FigureGraphRenderRef;
+    use crate::{Rectangle, FigureGraph};
     use novadraw_core::Color as NovadrawCoreColor;
     use novadraw_render::NdCanvas;
 
@@ -1394,7 +1394,7 @@ mod tests {
     ///       即先添加的在下面（被遮挡），后添加的在上面（遮挡别人）
     #[test]
     fn test_render_order_z_order() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         // 创建父容器（100x100）
         let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
@@ -1456,7 +1456,7 @@ mod tests {
     /// 期望渲染顺序：parent → child1 → grandchild1
     #[test]
     fn test_render_order_nested() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         // 根
         let root = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
@@ -1504,7 +1504,7 @@ mod tests {
     /// 期望：只渲染可见元素
     #[test]
     fn test_visibility_filter() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
         let parent_id = scene.set_contents(Box::new(parent));
@@ -1539,7 +1539,7 @@ mod tests {
     /// 期望：Trampoline 渲染能正确处理嵌套层次
     #[test]
     fn test_transform_accumulation() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
         let parent_id = scene.set_contents(Box::new(parent));
@@ -1591,7 +1591,7 @@ mod tests {
     /// 期望：父子节点的 bounds 都被平移相同的量
     #[test]
     fn test_prim_translate_basic() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         // 创建父子层次
         let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
@@ -1620,7 +1620,7 @@ mod tests {
     /// 期望：整棵子树的 bounds 都被平移
     #[test]
     fn test_prim_translate_nested() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         // 创建三层层次：root -> parent -> child
         let root = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
@@ -1655,7 +1655,7 @@ mod tests {
     /// 期望：默认返回 false，使用本地坐标返回 true
     #[test]
     fn test_is_coordinate_system() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
         let parent_id = scene.set_contents(Box::new(parent));
@@ -1676,7 +1676,7 @@ mod tests {
     /// 期望：本地坐标 (10, 20) 转换为父坐标 (10, 20)
     #[test]
     fn test_translate_to_parent_basic() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
@@ -1701,7 +1701,7 @@ mod tests {
     /// 期望：本地坐标 (10, 20) 转换为父坐标 (15, 25)，其中 insets = (5, 5, 0, 0)
     #[test]
     fn test_translate_to_parent_with_insets() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
@@ -1733,7 +1733,7 @@ mod tests {
     /// 期望：不进行转换，返回原坐标
     #[test]
     fn test_translate_to_parent_not_coordinate_root() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
@@ -1758,7 +1758,7 @@ mod tests {
     /// 期望：父坐标 (10, 20) 转换为本地坐标 (10, 20)
     #[test]
     fn test_translate_from_parent_basic() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
@@ -1783,7 +1783,7 @@ mod tests {
     /// 期望：父坐标 (15, 25) 转换为本地坐标 (10, 20)
     #[test]
     fn test_translate_from_parent_with_insets() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
@@ -1817,7 +1817,7 @@ mod tests {
     /// 期望：绝对坐标 (30, 40) 转换为本地坐标 (30, 40)
     #[test]
     fn test_translate_to_relative_basic() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
@@ -1842,7 +1842,7 @@ mod tests {
     /// 期望：正确累积转换
     #[test]
     fn test_translate_to_relative_nested() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
@@ -1877,7 +1877,7 @@ mod tests {
     /// 期望：Rectangle 的 x, y 被正确转换
     #[test]
     fn test_translate_to_relative_rect() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
@@ -1907,7 +1907,7 @@ mod tests {
     /// 期望：本地坐标 (10, 5) 转换为绝对坐标 (30, 35)
     #[test]
     fn test_translate_to_absolute_mut_basic() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
@@ -1935,7 +1935,7 @@ mod tests {
     /// 期望：正确累加多个坐标根的 bounds
     #[test]
     fn test_translate_to_absolute_mut_nested() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
@@ -1969,7 +1969,7 @@ mod tests {
     /// 期望：Rectangle 的 x, y 被正确转换
     #[test]
     fn test_translate_to_absolute_mut_rect() {
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
@@ -2001,7 +2001,7 @@ mod tests {
     fn test_iterative_render_nested() {
         use super::render_iterative::FigureRendererIter;
 
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         // 根
         let root = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
@@ -2021,7 +2021,7 @@ mod tests {
 
         // 迭代渲染
         let mut gc_iterative = novadraw_render::NdCanvas::new();
-        let scene_ref = SceneGraphRenderRef {
+        let scene_ref = FigureGraphRenderRef {
             blocks: &scene.blocks,
         };
         let mut renderer = FigureRendererIter::new(&scene_ref, &mut gc_iterative);
@@ -2049,7 +2049,7 @@ mod tests {
     fn test_iterative_render_z_order() {
         use super::render_iterative::FigureRendererIter;
 
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         // 创建父容器（100x100）
         let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
@@ -2071,7 +2071,7 @@ mod tests {
 
         // 迭代渲染
         let mut gc_iterative = novadraw_render::NdCanvas::new();
-        let scene_ref = SceneGraphRenderRef {
+        let scene_ref = FigureGraphRenderRef {
             blocks: &scene.blocks,
         };
         let mut renderer = FigureRendererIter::new(&scene_ref, &mut gc_iterative);
@@ -2099,7 +2099,7 @@ mod tests {
     fn test_iterative_render_visibility_filter() {
         use super::render_iterative::FigureRendererIter;
 
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         let parent = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
         let parent_id = scene.set_contents(Box::new(parent));
@@ -2117,7 +2117,7 @@ mod tests {
 
         // 迭代渲染
         let mut gc_iterative = novadraw_render::NdCanvas::new();
-        let scene_ref = SceneGraphRenderRef {
+        let scene_ref = FigureGraphRenderRef {
             blocks: &scene.blocks,
         };
         let mut renderer = FigureRendererIter::new(&scene_ref, &mut gc_iterative);
@@ -2140,7 +2140,7 @@ mod tests {
     fn test_iterative_render_deep_nesting() {
         use super::render_iterative::FigureRendererIter;
 
-        let mut scene = SceneGraph::new();
+        let mut scene = FigureGraph::new();
 
         // 创建根
         let root = RectangleFigure::new(0.0, 0.0, 100.0, 100.0);
@@ -2155,7 +2155,7 @@ mod tests {
 
         // 迭代渲染（不应栈溢出）
         let mut gc_iterative = novadraw_render::NdCanvas::new();
-        let scene_ref = SceneGraphRenderRef {
+        let scene_ref = FigureGraphRenderRef {
             blocks: &scene.blocks,
         };
         let mut renderer = FigureRendererIter::new(&scene_ref, &mut gc_iterative);
@@ -2171,12 +2171,12 @@ mod tests {
     }
 }
 
-impl crate::scene_host::SceneUpdateTarget for SceneGraph {
+impl crate::scene_host::SceneUpdateTarget for FigureGraph {
     fn perform_update(&mut self) -> novadraw_render::NdCanvas {
-        SceneGraph::perform_update(self)
+        FigureGraph::perform_update(self)
     }
 
     fn repair_damage(&mut self) -> novadraw_render::NdCanvas {
-        SceneGraph::repair_damage(self)
+        FigureGraph::repair_damage(self)
     }
 }

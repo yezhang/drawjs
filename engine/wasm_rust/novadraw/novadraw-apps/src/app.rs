@@ -5,7 +5,7 @@
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub use novadraw::{RenderBackend, SceneGraph, WindowProxy};
+pub use novadraw::{RenderBackend, FigureGraph, WindowProxy};
 pub use novadraw_render::backend::vello::{VelloRenderer, WinitWindowProxy};
 pub use winit::dpi::{LogicalSize, PhysicalSize};
 pub use winit::event::WindowEvent;
@@ -25,7 +25,7 @@ use tracing::{error, info, warn};
 /// - 事件处理
 ///
 // 场景创建函数类型
-type SceneCreator = Box<dyn FnMut() -> SceneGraph>;
+type SceneCreator = Box<dyn FnMut() -> FigureGraph>;
 
 pub struct DemoApp {
     /// 场景名称列表
@@ -34,7 +34,7 @@ pub struct DemoApp {
     /// 当前场景索引
     current_scene_idx: usize,
     /// 场景图
-    scene_graph: Option<SceneGraph>,
+    scene_graph: Option<FigureGraph>,
     /// 渲染器
     renderer: Option<VelloRenderer>,
     /// 窗口
@@ -475,7 +475,7 @@ impl AppBuilder {
     pub fn add_scene(
         mut self,
         name: &'static str,
-        creator: impl FnMut() -> SceneGraph + 'static,
+        creator: impl FnMut() -> FigureGraph + 'static,
     ) -> Self {
         self.scenes.push((name, Box::new(creator)));
         self
@@ -485,7 +485,7 @@ impl AppBuilder {
     #[allow(clippy::type_complexity)]
     pub fn with_scenes_boxed(
         mut self,
-        scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
+        scenes: Vec<(&'static str, Box<dyn FnMut() -> FigureGraph>)>,
     ) -> Self {
         self.scenes = scenes;
         self
@@ -543,8 +543,8 @@ impl AppBuilder {
 /// ```rust
 /// use novadraw_apps::run_demo_app;
 ///
-/// fn create_rect_scene() -> novadraw::SceneGraph {
-///     let mut scene = novadraw::SceneGraph::new();
+/// fn create_rect_scene() -> novadraw::FigureGraph {
+///     let mut scene = novadraw::FigureGraph::new();
 ///     let rect = novadraw::RectangleFigure::new(100.0, 100.0, 200.0, 150.0);
 ///     scene.set_contents(Box::new(rect));
 ///     scene
@@ -560,7 +560,7 @@ impl AppBuilder {
 pub fn run_demo_app(
     title: &str,
     app_name: &str,
-    scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
+    scenes: Vec<(&'static str, Box<dyn FnMut() -> FigureGraph>)>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     run_demo_app_with_options(title, app_name, scenes, false, None)
 }
@@ -569,7 +569,7 @@ pub fn run_demo_app(
 pub fn run_demo_app_with_screenshot(
     title: &str,
     app_name: &str,
-    scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
+    scenes: Vec<(&'static str, Box<dyn FnMut() -> FigureGraph>)>,
     screenshot_all: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     run_demo_app_with_options(title, app_name, scenes, screenshot_all, None)
@@ -579,7 +579,7 @@ pub fn run_demo_app_with_screenshot(
 pub fn run_demo_app_with_scene_screenshot(
     title: &str,
     app_name: &str,
-    scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
+    scenes: Vec<(&'static str, Box<dyn FnMut() -> FigureGraph>)>,
     scene_index: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
     run_demo_app_with_options(title, app_name, scenes, false, Some(scene_index))
@@ -589,7 +589,7 @@ pub fn run_demo_app_with_scene_screenshot(
 fn run_demo_app_with_options(
     title: &str,
     app_name: &str,
-    scenes: Vec<(&'static str, Box<dyn FnMut() -> SceneGraph>)>,
+    scenes: Vec<(&'static str, Box<dyn FnMut() -> FigureGraph>)>,
     screenshot_all: bool,
     screenshot_scene: Option<usize>,
 ) -> Result<(), Box<dyn std::error::Error>> {

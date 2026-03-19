@@ -8,18 +8,18 @@ use super::BlockId;
 use crate::debug_render;
 
 /// 场景图引用（用于渲染）
-pub struct SceneGraphRenderRef<'a> {
+pub struct FigureGraphRenderRef<'a> {
     pub(crate) blocks: &'a slotmap::SlotMap<BlockId, super::FigureBlock>,
 }
 
-impl<'a> SceneGraphRenderRef<'a> {
+impl<'a> FigureGraphRenderRef<'a> {
     /// 获取块
     pub fn get(&self, id: BlockId) -> Option<&super::FigureBlock> {
         self.blocks.get(id)
     }
 }
 
-impl<'a> Clone for SceneGraphRenderRef<'a> {
+impl<'a> Clone for FigureGraphRenderRef<'a> {
     fn clone(&self) -> Self {
         Self {
             blocks: self.blocks,
@@ -31,7 +31,7 @@ impl<'a> Clone for SceneGraphRenderRef<'a> {
 ///
 /// 直接递归实现，简洁直观。
 pub struct FigureRenderer<'a> {
-    scene: SceneGraphRenderRef<'a>,
+    scene: FigureGraphRenderRef<'a>,
     gc: &'a mut NdCanvas,
     /// 调试计数器
     counter: usize,
@@ -39,9 +39,9 @@ pub struct FigureRenderer<'a> {
 
 impl<'a> FigureRenderer<'a> {
     /// 创建渲染器
-    pub fn new(scene: &SceneGraphRenderRef<'a>, gc: &'a mut NdCanvas) -> Self {
+    pub fn new(scene: &FigureGraphRenderRef<'a>, gc: &'a mut NdCanvas) -> Self {
         Self {
-            scene: SceneGraphRenderRef {
+            scene: FigureGraphRenderRef {
                 blocks: scene.blocks,
             },
             gc,

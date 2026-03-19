@@ -24,7 +24,7 @@ pub use novadraw_scene::{
     BlockId, Border, BorderLayout, BorderRegion, Bounded, Direction, EllipseFigure, Figure,
     FigureBlock, FigureRenderer, FillLayout, FlowDirection, FlowLayout, LayoutManager, LineBorder,
     MarginBorder, Point, PolygonFigure, PolylineFigure, Rectangle, RectangleBorder, RectangleFigure,
-    RootFigure, RoundedRectangleFigure, SceneGraph, SceneHost, SceneUpdateTarget, TriangleFigure,
+    RootFigure, RoundedRectangleFigure, FigureGraph, SceneHost, SceneUpdateTarget, TriangleFigure,
     Updatable, Viewport, XYLayout,
 };
 

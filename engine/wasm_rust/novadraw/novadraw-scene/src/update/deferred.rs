@@ -30,12 +30,12 @@ use crate::scene::BlockId;
 /// - 脏区域使用 HashMap 合并，每个块最多一个脏区域
 /// - 失效块使用 Vec 存储，支持重复添加（去重）
 /// - 两阶段更新：先布局，再重绘
-/// - 纯数据管理：具体的验证和渲染由 SceneGraph 通过 trait 方法执行
+/// - 纯数据管理：具体的验证和渲染由 FigureGraph 通过 trait 方法执行
 ///
 /// # 与 draw2d 的差异
 ///
 /// draw2d 的 DeferredUpdateManager 直接持有 root Figure 引用并直接调用其方法。
-/// 本实现将数据管理（UM）和业务逻辑（SceneGraph）分离，
+/// 本实现将数据管理（UM）和业务逻辑（FigureGraph）分离，
 /// 通过 `UpdateManagerSource` trait 定义回调接口，保持解耦。
 #[derive(Default)]
 pub struct SceneUpdateManager {
@@ -170,7 +170,7 @@ impl SceneUpdateManager {
     /// 排空并返回所有待验证的块 ID
     ///
     /// 对应 draw2d: performValidation 中对 invalidFigures 的 drain。
-    /// SceneGraph 使用此方法获取需要验证的块列表。
+    /// FigureGraph 使用此方法获取需要验证的块列表。
     pub fn drain_invalid_blocks(&mut self) -> Vec<BlockId> {
         self.invalid_blocks.drain(..).collect()
     }
@@ -178,7 +178,7 @@ impl SceneUpdateManager {
     /// 清空脏区域和更新标记
     ///
     /// 对应 draw2d: performUpdate 完成后清空队列。
-    /// 由 SceneGraph 在 repairDamage 完成后调用。
+    /// 由 FigureGraph 在 repairDamage 完成后调用。
     pub fn clear_dirty_and_flag(&mut self) {
         self.dirty_regions.clear();
         self.update_queued = false;

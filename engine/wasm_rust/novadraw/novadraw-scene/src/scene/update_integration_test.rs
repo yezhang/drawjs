@@ -1,15 +1,15 @@
 //! Update Manager 集成测试
 //!
-//! 验证 SceneUpdateManager 与 SceneGraph 集成的正确性。
+//! 验证 SceneUpdateManager 与 FigureGraph 集成的正确性。
 
 use novadraw_geometry::Rectangle;
 
-use crate::{RectangleFigure, SceneGraph};
+use crate::{RectangleFigure, FigureGraph};
 
 /// 测试：add_child 后自动标记布局失效
 #[test]
 fn test_add_child_marks_layout_invalid() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     // 创建内容块
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
@@ -30,7 +30,7 @@ fn test_add_child_marks_layout_invalid() {
 /// 测试：mark_invalid 将块添加到失效队列
 #[test]
 fn test_mark_invalid_adds_to_queue() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -49,7 +49,7 @@ fn test_mark_invalid_adds_to_queue() {
 /// 测试：repaint 添加脏区域
 #[test]
 fn test_repaints_adds_dirty_region() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -68,7 +68,7 @@ fn test_repaints_adds_dirty_region() {
 /// 测试：repaint 使用指定区域而非整个块
 #[test]
 fn test_repaint_uses_specified_rect() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -88,7 +88,7 @@ fn test_repaint_uses_specified_rect() {
 /// 测试：多次 repaint 合并脏区域
 #[test]
 fn test_multiple_repaints_merge_regions() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -108,7 +108,7 @@ fn test_multiple_repaints_merge_regions() {
 /// 测试：不可见块不产生脏区域
 #[test]
 fn test_invisible_block_no_dirty_region() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -128,7 +128,7 @@ fn test_invisible_block_no_dirty_region() {
 /// 测试：perform_update 执行布局验证
 #[test]
 fn test_perform_update_two_phase() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -155,7 +155,7 @@ fn test_perform_update_two_phase() {
 /// 注意：这个测试验证的是 mark_invalid + perform_update 的流程
 #[test]
 fn test_perform_update_marks_layout_valid() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -178,7 +178,7 @@ fn test_perform_update_marks_layout_valid() {
 /// 测试：clear 清空所有更新
 #[test]
 fn test_clear_updates() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -199,7 +199,7 @@ fn test_clear_updates() {
 /// 测试：revalidate 内部调用 mark_invalid
 #[test]
 fn test_revalidate_marks_invalid() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -221,7 +221,7 @@ fn test_revalidate_marks_invalid() {
 /// 测试：get_damage_region 返回合并后的区域
 #[test]
 fn test_get_damage_region() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -239,7 +239,7 @@ fn test_get_damage_region() {
 /// 测试：repaint_all 重绘所有内容
 #[test]
 fn test_repaint_all() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     // 初始没有 contents，repaint_all 不产生效果
     scene.repaint_all();
@@ -256,7 +256,7 @@ fn test_repaint_all() {
 /// 测试：空区域被忽略
 #[test]
 fn test_empty_rect_ignored() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -281,7 +281,7 @@ fn test_empty_rect_ignored() {
 /// 测试：多个块独立跟踪脏区域
 #[test]
 fn test_multiple_blocks_independent_dirty_regions() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -308,7 +308,7 @@ fn test_multiple_blocks_independent_dirty_regions() {
 /// 测试：mark_invalid 与 repaint 组合
 #[test]
 fn test_mark_invalid_with_repaint() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -332,7 +332,7 @@ fn test_mark_invalid_with_repaint() {
 /// 测试：add_child 触发更新
 #[test]
 fn test_add_child_triggers_updates() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -353,7 +353,7 @@ fn test_add_child_triggers_updates() {
 /// 测试：repair_damage 渲染并清空脏区域
 #[test]
 fn test_repair_damage_clears_dirty_regions() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -372,7 +372,7 @@ fn test_repair_damage_clears_dirty_regions() {
 /// 测试：repair_damage 使用脏区域作为裁剪
 #[test]
 fn test_repair_damage_uses_damage_region() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -391,7 +391,7 @@ fn test_repair_damage_uses_damage_region() {
 /// 测试：批量构建不触发更新
 #[test]
 fn test_batch_construction_no_updates() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));
@@ -410,7 +410,7 @@ fn test_batch_construction_no_updates() {
 /// 测试：批量构建后手动触发更新
 #[test]
 fn test_batch_then_manual_update() {
-    let mut scene = SceneGraph::new();
+    let mut scene = FigureGraph::new();
 
     let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
     let container_id = scene.set_contents(Box::new(container));

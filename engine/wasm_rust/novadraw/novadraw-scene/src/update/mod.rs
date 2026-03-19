@@ -25,12 +25,12 @@
 //! # 架构设计
 //!
 //! [`SceneUpdateManager`] 是纯数据管理器，负责跟踪脏区域和失效块队列。
-//! [`SceneGraph`] 是 orchestrator，通过调用 SceneUpdateManager 的数据方法
+//! [`FigureGraph`] 是 orchestrator，通过调用 SceneUpdateManager 的数据方法
 //! 编排两阶段更新流程。
 //!
 //! 对应 draw2d 的 DeferredUpdateManager（持有 root + GraphicsSource + orchestrator），
-//! 本实现将数据管理（SceneUpdateManager）和场景编排（SceneGraph）分离，
-//! 通过 trait [`UpdateManagerSource`] 定义 SceneGraph 的回调接口，
+//! 本实现将数据管理（SceneUpdateManager）和场景编排（FigureGraph）分离，
+//! 通过 trait [`UpdateManagerSource`] 定义 FigureGraph 的回调接口，
 //! 支持未来替换不同的更新策略实现。
 
 mod deferred;
@@ -43,18 +43,18 @@ pub use listener::{UpdateEvent, UpdateListener};
 ///
 /// 对应 draw2d: DeferredUpdateManager 持有 root Figure 的方式。
 ///
-/// 定义 SceneGraph 作为 UpdateManager 数据源时需要实现的接口。
-/// 当 SceneUpdateManager 需要执行验证和渲染时，通过此 trait 回调 SceneGraph。
+/// 定义 FigureGraph 作为 UpdateManager 数据源时需要实现的接口。
+/// 当 SceneUpdateManager 需要执行验证和渲染时，通过此 trait 回调 FigureGraph。
 ///
 /// # 实现说明
 ///
-/// 目前 SceneGraph 直接编排两阶段更新，此 trait 主要起文档作用，
-/// 描述 SceneGraph 在更新流程中的回调接口。
+/// 目前 FigureGraph 直接编排两阶段更新，此 trait 主要起文档作用，
+/// 描述 FigureGraph 在更新流程中的回调接口。
 ///
 /// # 设计要点
 ///
 /// - draw2d 的 DeferredUpdateManager 直接持有 root Figure 引用并调用其方法
-/// - 本实现通过 trait 定义回调接口，保持 SceneUpdateManager 与 SceneGraph 解耦
+/// - 本实现通过 trait 定义回调接口，保持 SceneUpdateManager 与 FigureGraph 解耦
 pub trait UpdateManagerSource: Send + Sync {
     /// 执行单个块的布局验证
     ///

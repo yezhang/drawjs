@@ -14,8 +14,8 @@ const WINDOW_HEIGHT: f64 = 600.0;
 
 /// 创建使用 XYLayout 的场景
 /// 演示基于约束的定位
-fn create_scene_xy_layout() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_xy_layout() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     // 创建容器（浅灰色背景）
     let container = novadraw::RectangleFigure::new_with_color(
@@ -70,8 +70,8 @@ fn create_scene_xy_layout() -> novadraw::SceneGraph {
 
 /// 创建使用 FillLayout 的场景
 /// 演示第一个子元素填充容器
-fn create_scene_fill_layout() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_fill_layout() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     // 创建容器（浅灰色背景）
     let container = novadraw::RectangleFigure::new_with_color(
@@ -121,8 +121,8 @@ fn create_scene_fill_layout() -> novadraw::SceneGraph {
 
 /// 创建 FlowLayout 场景
 /// 演示流式布局：按顺序排列，自动换行
-fn create_scene_flow_layout() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_flow_layout() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     // 创建容器（浅灰色背景）
     let container = novadraw::RectangleFigure::new_with_color(
@@ -166,8 +166,8 @@ fn create_scene_flow_layout() -> novadraw::SceneGraph {
 
 /// 创建嵌套布局场景
 /// 外层使用 XYLayout，内层使用 FillLayout
-fn create_scene_nested_layout() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_nested_layout() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     // 创建容器（浅灰色背景）
     let container = novadraw::RectangleFigure::new_with_color(
@@ -233,8 +233,8 @@ fn create_scene_nested_layout() -> novadraw::SceneGraph {
 
 /// 创建测试约束动态更新的场景
 /// 可以通过重新设置约束来测试布局重算
-fn create_scene_constraint_update() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_constraint_update() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     // 创建容器（浅灰色背景）
     let container = novadraw::RectangleFigure::new_with_color(
@@ -281,8 +281,8 @@ fn create_scene_constraint_update() -> novadraw::SceneGraph {
 }
 
 /// 创建网格布局场景（使用 XYLayout + 约束模拟）
-fn create_scene_grid_layout() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_grid_layout() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     // 创建容器（浅灰色背景）
     let container = novadraw::RectangleFigure::new_with_color(
@@ -328,8 +328,8 @@ fn create_scene_grid_layout() -> novadraw::SceneGraph {
 
 /// 创建没有布局器的场景（对比测试）
 /// 子元素保持原始位置
-fn create_scene_no_layout() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_no_layout() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     // 创建容器（浅灰色背景）
     let container = novadraw::RectangleFigure::new_with_color(
@@ -373,8 +373,8 @@ fn create_scene_no_layout() -> novadraw::SceneGraph {
 
 /// 创建 BorderLayout 场景
 /// 演示 BorderLayout 的五个区域：北、南、东、西、中
-fn create_scene_border_layout() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_border_layout() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
 
     // 创建容器（浅灰色背景）
     let container = novadraw::RectangleFigure::new_with_color(
@@ -469,7 +469,7 @@ fn main() {
     let title = "Layout App - 布局管理器验证";
     let app_name = "layout-app";
 
-    let scenes: Vec<(&str, Box<dyn FnMut() -> novadraw::SceneGraph>)> = vec![
+    let scenes: Vec<(&str, Box<dyn FnMut() -> novadraw::FigureGraph>)> = vec![
         (
             "XYLayout + Constraints",
             Box::new(|| create_scene_xy_layout()),

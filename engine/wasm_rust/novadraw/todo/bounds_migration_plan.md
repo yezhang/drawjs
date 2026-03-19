@@ -10,7 +10,7 @@
 | ----------------------- | ---------------------------------------- | ------------------------ | ----------- |
 | **bounds 存储**         | Rectangle (x,y,width,height)             | Rect (x,y,width,height)  | ✅ 已实现   |
 | **bounds 含义**         | 绝对坐标（相对于坐标根）                 | 绝对坐标（相对于坐标根） | ✅ 已实现   |
-| **坐标传播**            | `primTranslate()` 自动传播到子节点       | ✅ SceneGraph 实现       | ✅ 已实现   |
+| **坐标传播**            | `primTranslate()` 自动传播到子节点       | ✅ FigureGraph 实现       | ✅ 已实现   |
 | **useLocalCoordinates** | 支持切换坐标模式                         | ✅ 已实现                 | ✅ 已实现   |
 | **坐标根概念**          | ScalableFreeformLayeredPane, Viewport 等 | ✅ 支持检测               | ⚠️ 部分实现 |
 | **translateFromParent** | 递归坐标转换                             | ⏳ 待实现                 | ❌ 未实现   |
@@ -25,13 +25,13 @@
 | `containsPoint()`               | ✅  | ✅     | 已实现       |
 | `hit_test()`                    | ✅  | ✅     | 已实现       |
 | `useLocalCoordinates()`         | ✅  | ✅     | 已实现       |
-| `translate(int,int)`            | ✅  | ✅     | SceneGraph   |
-| `primTranslate(int,int)`        | ✅  | ✅     | SceneGraph   |
+| `translate(int,int)`            | ✅  | ✅     | FigureGraph   |
+| `primTranslate(int,int)`        | ✅  | ✅     | FigureGraph   |
 | `translateFromParent()`         | ✅  | ⏳     | 待实现       |
 | `translateToParent()`           | ✅  | ⏳     | 待实现       |
-| `translateToAbsolute()`         | ✅  | ✅     | SceneGraph   |
+| `translateToAbsolute()`         | ✅  | ✅     | FigureGraph   |
 | `translateToRelative()`         | ✅  | ❌     | 未实现       |
-| `isCoordinateSystem()`          | ✅  | ✅     | SceneGraph   |
+| `isCoordinateSystem()`          | ✅  | ✅     | FigureGraph   |
 | `getClientArea()`               | ✅  | ✅     | 部分实现     |
 | `getInsets()`                   | ✅  | ✅     | 有定义       |
 | `isOpaque()`                    | ✅  | ✅     | 已实现       |
@@ -136,12 +136,12 @@
 
 **目标**：统一 bounds 含义为绝对坐标，父节点移动时自动传播到子节点
 
-**实现位置**：`SceneGraph::prim_translate(block_id, dx, dy)`
+**实现位置**：`FigureGraph::prim_translate(block_id, dx, dy)`
 
 **设计**：
 
 ```rust
-// SceneGraph 中实现
+// FigureGraph 中实现
 pub fn prim_translate(&mut self, block_id: BlockId, dx: f64, dy: f64) {
     // 使用显式栈迭代实现，避免递归栈溢出
     let mut stack = vec![block_id];
@@ -188,7 +188,7 @@ pub fn prim_translate(&mut self, block_id: BlockId, dx: f64, dy: f64) {
 
 **实现位置**：
 - `FigureBlock::set_bounds()` - `novadraw-scene/src/scene/mod.rs:158-164`
-- `SceneGraph::set_bounds()` - `novadraw-scene/src/scene/mod.rs:698-731`
+- `FigureGraph::set_bounds()` - `novadraw-scene/src/scene/mod.rs:698-731`
 
 **最小实现方案**：
 - 计算位置偏移 (dx, dy)

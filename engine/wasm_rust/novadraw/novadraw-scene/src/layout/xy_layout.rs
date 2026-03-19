@@ -95,7 +95,7 @@ impl Default for XYLayout {
 
 impl LayoutManager for XYLayout {
     fn get_constraint(&self, _child_id: BlockId) -> Option<Rectangle> {
-        // XYLayout 不存储约束，由外部（如 SceneGraph）管理
+        // XYLayout 不存储约束，由外部（如 FigureGraph）管理
         None
     }
 

@@ -97,13 +97,13 @@ fn visit(node: &Node) {
 
 ### 子节点传播
 
-- **所有涉及子节点传播的操作必须在 SceneGraph 中使用迭代实现**
+- **所有涉及子节点传播的操作必须在 FigureGraph 中使用迭代实现**
 - FigureBlock 和 Figure 只管理单个节点状态，不包含传播逻辑
-- 传播操作（translate、bounds 更新等）统一在 SceneGraph 层处理
+- 传播操作（translate、bounds 更新等）统一在 FigureGraph 层处理
 
 ```rust
-// 正确：在 SceneGraph 中使用迭代实现传播
-impl SceneGraph {
+// 正确：在 FigureGraph 中使用迭代实现传播
+impl FigureGraph {
     pub fn prim_translate(&mut self, block_id: BlockId, dx: f64, dy: f64) {
         let mut stack = vec![block_id];
         while let Some(id) = stack.pop() {

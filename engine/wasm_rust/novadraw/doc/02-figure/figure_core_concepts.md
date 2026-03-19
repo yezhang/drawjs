@@ -314,7 +314,7 @@ public boolean isCoordinateSystem() {
 
 ### 5.2 关键点
 
-1. **Figure 只负责自身**：PaintChildren 由外部（SceneGraph）控制调用
+1. **Figure 只负责自身**：PaintChildren 由外部（FigureGraph）控制调用
 2. **状态管理**：EnterState/ResetState 成对出现，管理 Graphics 状态
 3. **PaintBorder 在子节点之后**：确保边框绘制在最上层
 
@@ -510,7 +510,7 @@ public interface FigureListener {
 
 | 优先级 | 概念 | 说明 |
 |--------|------|------|
-| P0 | 树状结构 | SceneGraph、parent/children |
+| P0 | 树状结构 | FigureGraph、parent/children |
 | P1 | bounds 绝对坐标 | 统一坐标语义 |
 | P2 | primTranslate | 坐标传播 |
 | P3 | 七阶段渲染 | 渲染流程 |

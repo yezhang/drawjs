@@ -7,8 +7,8 @@ use novadraw_apps::run_demo_app;
 const WINDOW_WIDTH: f64 = 800.0;
 const WINDOW_HEIGHT: f64 = 600.0;
 
-fn create_scene_0_translate() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_0_translate() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -41,8 +41,8 @@ fn create_scene_0_translate() -> novadraw::SceneGraph {
     scene
 }
 
-fn create_scene_1_scale_center() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_1_scale_center() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -67,8 +67,8 @@ fn create_scene_1_scale_center() -> novadraw::SceneGraph {
     scene
 }
 
-fn create_scene_2_scale_anchor() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_2_scale_anchor() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -93,8 +93,8 @@ fn create_scene_2_scale_anchor() -> novadraw::SceneGraph {
     scene
 }
 
-fn create_scene_3_rotate() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_3_rotate() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -119,8 +119,8 @@ fn create_scene_3_rotate() -> novadraw::SceneGraph {
     scene
 }
 
-fn create_scene_4_transform_propagation() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_4_transform_propagation() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -154,8 +154,8 @@ fn create_scene_4_transform_propagation() -> novadraw::SceneGraph {
     scene
 }
 
-fn create_scene_5_local_coords() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_5_local_coords() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -181,8 +181,8 @@ fn create_scene_5_local_coords() -> novadraw::SceneGraph {
     scene
 }
 
-fn create_scene_6_transform_matrix() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_6_transform_matrix() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -198,8 +198,8 @@ fn create_scene_6_transform_matrix() -> novadraw::SceneGraph {
     scene
 }
 
-fn create_scene_7_scale_animation() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_7_scale_animation() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -215,8 +215,8 @@ fn create_scene_7_scale_animation() -> novadraw::SceneGraph {
     scene
 }
 
-fn create_scene_8_rotate_animation() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_8_rotate_animation() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
@@ -232,8 +232,8 @@ fn create_scene_8_rotate_animation() -> novadraw::SceneGraph {
     scene
 }
 
-fn create_scene_9_screen_to_world() -> novadraw::SceneGraph {
-    let mut scene = novadraw::SceneGraph::new();
+fn create_scene_9_screen_to_world() -> novadraw::FigureGraph {
+    let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
 
