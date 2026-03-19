@@ -91,10 +91,53 @@ public void paint(Graphics graphics) {
 ```
 
 **绘制顺序**：
+
+```text
+paint(Graphics)
+    │
+    ├── 1. 设置本地属性
+    │       setBackgroundColor()
+    │       setForegroundColor()
+    │       setFont()
+    │
+    ├── 2. pushState()          ── 保存完整状态
+    │
+    ├── 3. paintFigure()        ── 绘制自身（子类覆盖）
+    │       │
+    │       └── fillShape() / outlineShape()
+    │
+    ├── 4. restoreState()       ── 恢复颜色（保留变换）
+    │
+    ├── 5. paintClientArea()   ── 绘制子元素
+    │       ├── translate(bounds + insets)
+    │       ├── clipRect(clientArea)
+    │       ├── pushState()
+    │       └── for child in children
+    │               child.paint()  ── 递归
+    │
+    ├── 6. paintBorder()       ── 绘制装饰边框
+    │
+    └── 7. popState()          ── 恢复完整状态
 ```
-1. paintFigure()     - 绘制图形自身（背景）
-2. paintClientArea() - 绘制子元素（受 clip 限制）
-3. paintBorder()    - 绘制装饰边框
+
+**状态保护示意**:
+
+```text
+pushState()         popState()
+    │                   │
+    ▼                   ▲
+┌──────────────────────────────────────────┐
+│  ┌────────────────────────────────────┐  │
+│  │  完整状态 (变换+裁剪+颜色)          │  │  ← pop 恢复
+│  │  ┌──────────────────────────────┐  │  │
+│  │  │  应用状态 (当前生效)         │  │  │  ← restore 恢复
+│  │  │  ┌────────────────────────┐  │  │  │
+│  │  │  │  绘制操作              │  │  │  │
+│  │  │  └────────────────────────┘  │  │  │
+│  │  └──────────────────────────────┘  │  │
+│  └────────────────────────────────────┘  │
+└──────────────────────────────────────────┘
+        ▲ push 压入          ▼ pop 弹出
 ```
 
 **设计意图**：
@@ -352,21 +395,51 @@ public void revalidate() {
 
 ## 与 Shape 的关系
 
-```
-Figure
+```text
+IFigure (接口, 1089行)
     │
-    ├── bounds, children, parent, layoutManager
-    ├── paint()
-    │       ├── paintFigure()        ← Shape 覆盖
-    │       ├── paintClientArea()
-    │       └── paintBorder()
-    ├── containsPoint()              ← Shape 覆盖
-    ├── isOpaque()
+    ▼
+Figure (基类, ~2000行)
     │
-    └── Shape (extends Figure)
-            ├── lineWidth, lineStyle
-            ├── fillShape()         ← 子类实现
-            └── outlineShape()      ← 子类实现
+    ├── 字段
+    │   ├── bounds: Rectangle          // 边界
+    │   ├── parent: IFigure            // 父节点
+    │   ├── children: List<IFigure>   // 子节点
+    │   ├── layoutManager: LayoutManager
+    │   ├── border: Border
+    │   ├── bgColor, fgColor, font
+    │   └── prefSize, minSize, maxSize
+    │
+    ├── 模板方法
+    │   ├── paint(Graphics)            // 固定流程
+    │   ├── paintFigure()              // 子类覆盖
+    │   ├── paintClientArea()          // 绘制子节点
+    │   └── paintBorder()              // 绘制边框
+    │
+    ├── containsPoint()               // 子类可覆盖
+    ├── setBounds()                   // 位置变更+传播
+    ├── add() / remove()              // 树管理
+    └── invalidate() / revalidate()   // 验证
+            │
+            ▼
+    Shape (extends Figure)
+            │
+            ├── 字段
+            │   ├── lineWidth
+            │   ├── lineStyle
+            │   ├── lineCap, lineJoin
+            │   └── fillColor, strokeColor
+            │
+            └── 方法
+                ├── fillShape()      ← RectangleFigure 等实现
+                └── outlineShape()   ← RectangleFigure 等实现
+                        │
+                        ▼
+                ┌─────────────────┬──────────────────┐
+                │ RectangleFigure  │ EllipseFigure     │
+                │ PolylineFigure   │ PolygonFigure     │
+                │ RoundedRect...   │ TriangleFigure    │
+                └─────────────────┴──────────────────┘
 ```
 
 ## 性能优化
@@ -405,8 +478,8 @@ private List<IFigure> children = Collections.emptyList();
 ### 1. 覆盖 paintFigure()
 
 ```java
-classFigure extends Figure {
- My    @Override
+class MyFigure extends Figure {
+    @Override
     protected void paintFigure(Graphics g) {
         g.drawOval(getBounds());
     }
@@ -436,7 +509,7 @@ class MyFigure extends Figure {
 
 ## 与 Novadraw 对比
 
-| 方面 | d2 Figure | Novadraw 实现 |
+| 方面 | g2 Figure | Novadraw 实现 |
 |------|-----------|--------------|
 | 接口 | IFigure (1089行) | Figure trait (~200行) |
 | 实现 | Figure 类 (~2000行) | 多个 struct + impl |

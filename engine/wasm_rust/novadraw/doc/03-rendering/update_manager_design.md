@@ -2,13 +2,13 @@
 
 ## 概述
 
-本文档描述 Novadraw 的 UpdateManager 实现，参考 Eclipse Draw2D (d2) 的设计，并说明从 Java 到 Rust 的迁移决策。
+本文档描述 Novadraw 的 UpdateManager 实现，参考 Eclipse Draw2D (g2) 的设计，并说明从 Java 到 Rust 的迁移决策。
 
-## d2 UpdateManager 机制
+## g2 UpdateManager 机制
 
 ### 核心组件
 
-| 组件 | d2 类 | 职责 |
+| 组件 | g2 类 | 职责 |
 |------|-------|------|
 | 更新管理器 | `UpdateManager` | 抽象基类 |
 | 延迟更新管理器 | `DeferredUpdateManager` | 具体实现，批量处理更新 |
@@ -20,7 +20,7 @@
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         d2 UpdateManager 流程                                │
+│                         g2 UpdateManager 流程                                │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  Figure.repaint() ──────────► UpdateManager.addDirtyRegion()                │
@@ -60,10 +60,10 @@
 
 ### repairDamage 核心算法
 
-d2 的 `repairDamage` 有一个关键逻辑：**脏区域坐标变换到父节点**。
+g2 的 `repairDamage` 有一个关键逻辑：**脏区域坐标变换到父节点**。
 
 ```java
-// d2 DeferredUpdateManager.java
+// g2 DeferredUpdateManager.java
 protected void repairDamage() {
     oldRegions.forEach((figure, contribution) -> {
         IFigure walker = figure.getParent();
@@ -89,7 +89,7 @@ protected void repairDamage() {
 
 ### 核心概念映射
 
-| d2 概念 | 本项目实现 | 说明 |
+| g2 概念 | 本项目实现 | 说明 |
 |----------|-----------|------|
 | `UpdateManager` | `SceneUpdateManager` | 更新管理器 |
 | `dirtyRegions` (Map) | `dirty_regions` (HashMap) | 脏区域映射 |
@@ -161,7 +161,7 @@ impl SceneGraph {
 
 ### 决策 1: 脏区域不自动传播到父节点
 
-**d2 方式**：在 `repairDamage` 中自动将脏区域变换到父坐标并与父 bounds 取交集。
+**g2 方式**：在 `repairDamage` 中自动将脏区域变换到父坐标并与父 bounds 取交集。
 
 **本项目方式**：脏区域存储在块的局部坐标，不自动传播。
 
@@ -181,7 +181,7 @@ pub fn add_dirty_region(&mut self, block_id: BlockId, rect: Rectangle) {
 
 ### 决策 2: SceneUpdateManager 作为 SceneGraph 的内部状态
 
-**d2 方式**：`UpdateManager` 是独立对象，通过 `setRoot(IFigure)` 关联根 Figure。
+**g2 方式**：`UpdateManager` 是独立对象，通过 `setRoot(IFigure)` 关联根 Figure。
 
 **本项目方式**：`SceneUpdateManager` 直接作为 `SceneGraph` 的字段。
 
@@ -193,7 +193,7 @@ pub fn add_dirty_region(&mut self, block_id: BlockId, rect: Rectangle) {
 
 ### 决策 3: 不实现异步更新机制
 
-**d2 方式**：使用 `Display.asyncExec()` 异步执行更新。
+**g2 方式**：使用 `Display.asyncExec()` 异步执行更新。
 
 **本项目方式**：同步执行 `perform_update()`。
 
@@ -205,7 +205,7 @@ pub fn add_dirty_region(&mut self, block_id: BlockId, rect: Rectangle) {
 
 ### 决策 4: 合并脏区域的方式
 
-**d2 方式**：在 `repairDamage` 中合并所有脏区域为一个 `damage` 区域。
+**g2 方式**：在 `repairDamage` 中合并所有脏区域为一个 `damage` 区域。
 
 **本项目方式**：使用 `HashMap<BlockId, Rectangle>`，同一块的脏区域自动合并。
 
@@ -222,12 +222,12 @@ if let Some(existing) = self.dirty_regions.get_mut(&block_id) {
 
 **原因**：
 
-- d2 需要支持任意 Figure 的脏区域
+- g2 需要支持任意 Figure 的脏区域
 - 本项目以 Block 为单位，更简单
 
 ### 决策 5: 手动触发更新
 
-**d2 方式**：`figure.repaint()` 自动触发 UpdateManager。
+**g2 方式**：`figure.repaint()` 自动触发 UpdateManager。
 
 **本项目方式**：用户需要手动调用 `perform_update()`。
 
@@ -249,7 +249,7 @@ if scene.has_pending_updates() {
 
 ## API 对比
 
-| d2 API | 本项目 API | 差异 |
+| g2 API | 本项目 API | 差异 |
 |--------|-----------|------|
 | `figure.repaint()` | `scene.repaint(block_id, rect)` | 参数不同 |
 | `figure.revalidate()` | `scene.mark_invalid(block_id)` | 分离为两个操作 |
@@ -336,7 +336,7 @@ scene.repaint(block_id, Some(dirty_rect));
 
 ## 待增强功能
 
-| 功能 | d2 实现 | 当前状态 | 改进方向 |
+| 功能 | g2 实现 | 当前状态 | 改进方向 |
 |------|---------|---------|----------|
 | 脏区域坐标传播 | 自动向上传播并取交集 | 无 | 可在 render 时处理 |
 | 异步更新 | asyncExec | 同步 | Vello 渲染需要同步 |

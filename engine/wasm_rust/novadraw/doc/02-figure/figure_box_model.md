@@ -4,7 +4,7 @@
 
 ## 概述
 
-d2 Figure 的盒模型（Box Model）借鉴了 CSS 盒模型的概念，但有其特定的实现方式。该模型定义了图形元素的结构层次，用于布局和渲染。
+g2 Figure 的盒模型（Box Model）借鉴了 CSS 盒模型的概念，但有其特定的实现方式。该模型定义了图形元素的结构层次，用于布局和渲染。
 
 ## 盒模型层次结构
 
@@ -524,18 +524,18 @@ rect.setBorder(new LineBorder(Color.BLACK, 2));
 
 ## 与 CSS 盒模型对比
 
-| CSS 盒模型 | d2 Figure | 说明 |
+| CSS 盒模型 | g2 Figure | 说明 |
 |------------|-----------|------|
 | content | clientArea | 内容区域 |
-| padding | - | d2 无对应 |
+| padding | - | g2 无对应 |
 | border | Border + outline | 边框区域（在 bounds 内） |
-| margin | - | d2 无对应 |
-| box-sizing | - | d2 固定为 border-box 模式 |
+| margin | - | g2 无对应 |
+| box-sizing | - | g2 固定为 border-box 模式 |
 
 **关键区别**：
 
-- d2 使用 border-box 模式（bounds 包含所有）
-- d2 没有 margin（外边距由父容器管理）
+- g2 使用 border-box 模式（bounds 包含所有）
+- g2 没有 margin（外边距由父容器管理）
 - Border 和 Outline 都在 bounds 内部绘制
 - insets 只用于收缩 ClientArea，不决定 Border 绘制位置
 

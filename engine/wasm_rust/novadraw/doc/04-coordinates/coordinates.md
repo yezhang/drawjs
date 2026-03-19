@@ -166,10 +166,10 @@ pub struct RenderContext {
 
 ### 4.2 渲染时的坐标处理
 
-与 d2 一致，渲染时使用 Graphics 状态栈管理变换：
+与 g2 一致，渲染时使用 Graphics 状态栈管理变换：
 
 ```rust
-// 渲染遍历时（参考 d2 的 paint 流程）
+// 渲染遍历时（参考 g2 的 paint 流程）
 gc.push_state();              // 保存状态
 figure.paint_figure(gc);     // 绘制自身
 gc.pop_state();              // 恢复状态
@@ -194,7 +194,7 @@ fn paint_figure(&self, gc: &mut NdCanvas) {
 
 ## 5. 拖拽实现原理
 
-与 d2 一致，拖拽通过直接修改 Figure.bounds 实现，不使用独立的 transform 字段。
+与 g2 一致，拖拽通过直接修改 Figure.bounds 实现，不使用独立的 transform 字段。
 
 ### 5.1 拖拽状态记录
 
@@ -213,7 +213,7 @@ struct DragState {
 let dx = current_pos.x - drag_state.start_pos.x;
 let dy = current_pos.y - drag_state.start_pos.y;
 
-// 直接修改 Figure.bounds（与 d2 primTranslate 一致）
+// 直接修改 Figure.bounds（与 g2 primTranslate 一致）
 scene.prim_translate(block_id, dx, dy);
 ```
 
@@ -487,28 +487,30 @@ impl RenderContext {
 }
 ```
 
-### 8.3 RuntimeBlock（novadraw-scene/src/scene/mod.rs）
+### 8.3 FigureBlock（novadraw-scene/src/scene/mod.rs）
 
-与 d2 设计一致，RuntimeBlock 存储运行时状态，Figure 存储几何定义：
+与 g2 设计一致，FigureBlock 存储运行时状态，Figure 存储几何定义：
 
 ```rust
-pub struct RuntimeBlock {
+pub struct FigureBlock {
     pub id: BlockId,
     pub uuid: Uuid,
-    pub children: Vec<BlockId>,
-    pub parent: Option<BlockId>,
-    pub figure: Box<dyn Figure>,   // 存储几何定义
+    pub parent: Option<BlockId>,      // 父节点
+    pub children: Vec<BlockId>,      // 子节点（Z-order 由数组顺序决定）
+    pub figure: Box<dyn Figure>,      // 图形几何数据
+    pub layout_manager: Option<Arc<dyn LayoutManager>>, // 布局管理器
     pub is_selected: bool,
     pub is_visible: bool,
     pub is_enabled: bool,
-    // 注意：没有 transform 字段
-    // 位置信息存储在 Figure.bounds 中
+    pub preferred_size: Option<(f64, f64)>,
+    pub minimum_size: Option<(f64, f64)>,
+    pub maximum_size: Option<(f64, f64)>,
 }
 ```
 
 ### 8.4 Figure Trait（novadraw-scene/src/figure/mod.rs）
 
-Figure 存储几何定义（bounds），与 d2 Figure 一致：
+Figure 存储几何定义（bounds），与 g2 Figure 一致：
 
 ```rust
 pub trait Bounded {
@@ -764,7 +766,7 @@ impl VelloRenderer {
 
 ### 8.6 鼠标事件处理（apps/editor/src/app_window.rs）
 
-与 d2 一致，拖拽通过 prim_translate 直接修改 Figure.bounds：
+与 g2 一致，拖拽通过 prim_translate 直接修改 Figure.bounds：
 
 ```rust
 struct DragState {
@@ -786,7 +788,7 @@ WindowEvent::CursorMoved { position, .. } => {
             let dx = current_pos.x - drag_state.start_pos.x;
             let dy = current_pos.y - drag_state.start_pos.y;
 
-            // 直接修改 Figure.bounds（与 d2 primTranslate 一致）
+            // 直接修改 Figure.bounds（与 g2 primTranslate 一致）
             scene_manager.scene_mut().prim_translate(drag_state.block_id, dx, dy);
         } else if self.selection_state.is_some() {
             scene_manager.update_selection_box(current_pos);
@@ -868,7 +870,7 @@ A: 确保逆变换正确：
 
 **核心原则**：
 1. Figure 始终在局部坐标工作，直接使用 bounds 中的坐标
-2. 位置变更通过 Figure.set_bounds() 修改 bounds（与 d2 一致）
+2. 位置变更通过 Figure.set_bounds() 修改 bounds（与 g2 一致）
 3. 不使用独立的 transform 字段存储运行时变换
 4. 坐标转换使用 f64 双精度
 
@@ -876,7 +878,7 @@ A: 确保逆变换正确：
 
 ### 11.1 渲染流程中的坐标系
 
-与 d2 一致，渲染直接使用 Figure.bounds，无需额外的 transform：
+与 g2 一致，渲染直接使用 Figure.bounds，无需额外的 transform：
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -957,7 +959,7 @@ fn render_command(scene: &mut Scene, cmd: &RenderCommand, scale_factor: f64) {
 
 ### 11.5 典型场景示例
 
-与 d2 一致，渲染直接使用 Figure.bounds：
+与 g2 一致，渲染直接使用 Figure.bounds：
 
 ```
 场景: 800×600 窗口，2x DPI，矩形 (700, 550) 100×50
@@ -976,5 +978,5 @@ Vello backend           →  rect: [1400, 1100], [1600, 1200] 像素坐标
 
 1. **逻辑坐标统一**：从 Figure 到 RenderCommand 全程使用逻辑坐标
 2. **DPI 隔离**：Vello 后端负责逻辑坐标到像素坐标的转换
-3. **与 d2 一致**：位置存储在 Figure.bounds 中，拖拽通过 set_bounds 实现
+3. **与 g2 一致**：位置存储在 Figure.bounds 中，拖拽通过 set_bounds 实现
 4. **无独立 transform**：不使用独立的 transform 字段存储运行时变换

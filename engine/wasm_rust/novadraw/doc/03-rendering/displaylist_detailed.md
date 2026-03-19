@@ -522,7 +522,7 @@ pub struct GlyphRunData {
     /// 渲染模式
     pub render_mode: u8,
     /// 保留
-    _reserved2: [u8; 3],
+    _reserveg2: [u8; 3],
     /// 保留字段
     _reserved3: u32,
 }

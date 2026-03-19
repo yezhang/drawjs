@@ -251,7 +251,7 @@ impl<'a> FigureRenderer<'a> {
         }
     }
 
-    pub fn block(&self, id: BlockId) -> Option<&RuntimeBlock> {
+    pub fn block(&self, id: BlockId) -> Option<&FigureBlock> {
         self.scene.blocks.get(id)
     }
 }
