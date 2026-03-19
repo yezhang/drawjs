@@ -4,7 +4,7 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Bounded, PolylineFigure, Shape};
+use super::{Bounded, PolylineFigure, Shape, Updatable};
 
 /// 多边形图形
 ///
@@ -85,6 +85,12 @@ impl Bounded for PolygonFigure {
     fn name(&self) -> &'static str {
         "PolygonFigure"
     }
+}
+
+// 实现 Updatable trait
+impl Updatable for PolygonFigure {
+    fn validate(&mut self) {}
+    fn invalidate(&mut self) {}
 }
 
 // 实现 Shape trait

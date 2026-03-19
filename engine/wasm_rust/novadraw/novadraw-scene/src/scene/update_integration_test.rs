@@ -36,13 +36,13 @@ fn test_mark_invalid_adds_to_queue() {
     let container_id = scene.set_contents(Box::new(container));
 
     // 初始没有待处理更新
-    assert!(!scene.has_pending_updates());
+    assert!(!scene.is_update_queued());
 
     // 标记需要重新布局
     scene.mark_invalid(container_id);
 
     // 现在有待处理的更新
-    assert!(scene.has_pending_updates());
+    assert!(scene.is_update_queued());
     assert!(scene.update_manager.has_pending_layout());
 }
 
@@ -125,7 +125,7 @@ fn test_invisible_block_no_dirty_region() {
     assert!(!scene.update_manager.has_pending_repaint());
 }
 
-/// 测试：perform_update 执行两阶段更新
+/// 测试：perform_update 执行布局验证
 #[test]
 fn test_perform_update_two_phase() {
     let mut scene = SceneGraph::new();
@@ -137,16 +137,20 @@ fn test_perform_update_two_phase() {
     scene.mark_invalid(container_id);
     scene.repaint(container_id, None);
 
-    // 执行更新
-    scene.perform_update();
+    // 执行两阶段更新（布局 + 脏区域重绘）
+    let canvas = scene.perform_update();
 
-    // 更新后，待处理队列应该被清空
-    assert!(!scene.has_pending_updates());
+    // 布局队列被清空
     assert!(!scene.update_manager.has_pending_layout());
-    // 注意：perform_update 会清空 dirty_regions
+    // 脏区域也被清空（perform_update 完成两阶段后清空）
     assert!(!scene.update_manager.has_pending_repaint());
+    assert!(!scene.is_update_queued());
+
+    // 返回的 canvas 包含渲染命令
+    assert!(!canvas.commands().is_empty());
 }
 
+/// 测试：perform_update 后布局标记为有效
 /// 测试：perform_update 后布局标记为有效
 /// 注意：这个测试验证的是 mark_invalid + perform_update 的流程
 #[test]
@@ -159,14 +163,16 @@ fn test_perform_update_marks_layout_valid() {
     // 先标记布局失效（通过 mark_invalid）
     scene.mark_invalid(container_id);
 
-    // 执行更新
+    // 执行布局验证
     scene.perform_update();
 
     // mark_invalid 只是添加到队列，perform_update 会调用 revalidate
     // revalidate 只有在有布局管理器时才会设置 layout_valid = true
     // 由于没有布局管理器，layout_valid 保持原值
-    // 这个测试验证的是流程能正常执行
-    assert!(!scene.has_pending_updates());
+    // perform_update 完成两阶段后全部清空
+    assert!(!scene.update_manager.has_pending_layout());
+    assert!(!scene.update_manager.has_pending_repaint());
+    assert!(!scene.is_update_queued());
 }
 
 /// 测试：clear 清空所有更新
@@ -181,13 +187,13 @@ fn test_clear_updates() {
     scene.mark_invalid(container_id);
     scene.repaint(container_id, None);
 
-    assert!(scene.has_pending_updates());
+    assert!(scene.is_update_queued());
 
     // 清空更新
     scene.clear_updates();
 
     // 应该没有待处理更新
-    assert!(!scene.has_pending_updates());
+    assert!(!scene.is_update_queued());
 }
 
 /// 测试：revalidate 内部调用 mark_invalid
@@ -264,7 +270,10 @@ fn test_empty_rect_ignored() {
     assert!(!scene.update_manager.has_pending_repaint());
 
     // 负数区域
-    scene.repaint(container_id, Some(Rectangle::new(-10.0, -10.0, 100.0, 100.0)));
+    scene.repaint(
+        container_id,
+        Some(Rectangle::new(-10.0, -10.0, 100.0, 100.0)),
+    );
     // 负数区域应该仍然被接受（因为 x,y 可以是负数）
     assert!(scene.update_manager.has_pending_repaint());
 }
@@ -311,9 +320,115 @@ fn test_mark_invalid_with_repaint() {
     // 两者都应该被记录
     assert!(scene.update_manager.has_pending_layout());
     assert!(scene.update_manager.has_pending_repaint());
-    assert!(scene.has_pending_updates());
+    assert!(scene.is_update_queued());
 
-    // 执行更新后全部清空
+    // 执行更新后全部清空（perform_update 完成两阶段）
     scene.perform_update();
-    assert!(!scene.has_pending_updates());
+    assert!(!scene.update_manager.has_pending_layout());
+    assert!(!scene.update_manager.has_pending_repaint());
+    assert!(!scene.is_update_queued());
+}
+
+/// 测试：add_child 触发更新
+#[test]
+fn test_add_child_triggers_updates() {
+    let mut scene = SceneGraph::new();
+
+    let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
+    let container_id = scene.set_contents(Box::new(container));
+
+    // 初始无更新
+    assert!(!scene.is_update_queued());
+
+    // 交互模式添加子块
+    let child = RectangleFigure::new(10.0, 10.0, 50.0, 50.0);
+    scene.add_child(container_id, Box::new(child));
+
+    // 应该触发更新
+    assert!(scene.update_manager.has_pending_layout());
+    assert!(scene.update_manager.has_pending_repaint());
+    assert!(scene.is_update_queued());
+}
+
+/// 测试：repair_damage 渲染并清空脏区域
+#[test]
+fn test_repair_damage_clears_dirty_regions() {
+    let mut scene = SceneGraph::new();
+
+    let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
+    let container_id = scene.set_contents(Box::new(container));
+
+    // 添加脏区域
+    scene.repaint(container_id, Some(Rectangle::new(10.0, 10.0, 50.0, 50.0)));
+    assert!(scene.update_manager.has_pending_repaint());
+
+    // 渲染脏区域
+    let _render_ctx = scene.repair_damage();
+
+    // 脏区域被清空
+    assert!(!scene.update_manager.has_pending_repaint());
+}
+
+/// 测试：repair_damage 使用脏区域作为裁剪
+#[test]
+fn test_repair_damage_uses_damage_region() {
+    let mut scene = SceneGraph::new();
+
+    let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
+    let container_id = scene.set_contents(Box::new(container));
+
+    // 指定脏区域
+    let dirty_rect = Rectangle::new(10.0, 10.0, 50.0, 50.0);
+    scene.repaint(container_id, Some(dirty_rect));
+
+    // 渲染脏区域
+    let render_ctx = scene.repair_damage();
+
+    // 渲染产生了命令
+    assert!(!render_ctx.commands().is_empty());
+}
+
+/// 测试：批量构建不触发更新
+#[test]
+fn test_batch_construction_no_updates() {
+    let mut scene = SceneGraph::new();
+
+    let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
+    let container_id = scene.set_contents(Box::new(container));
+
+    // 批量添加子块（不触发更新）
+    let child1 = RectangleFigure::new(10.0, 10.0, 50.0, 50.0);
+    scene.add_child_to(container_id, Box::new(child1));
+
+    let child2 = RectangleFigure::new(100.0, 10.0, 50.0, 50.0);
+    scene.add_child_to(container_id, Box::new(child2));
+
+    // 批量构建阶段不触发更新
+    assert!(!scene.is_update_queued());
+}
+
+/// 测试：批量构建后手动触发更新
+#[test]
+fn test_batch_then_manual_update() {
+    let mut scene = SceneGraph::new();
+
+    let container = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
+    let container_id = scene.set_contents(Box::new(container));
+
+    // 批量添加子块
+    let child1 = RectangleFigure::new(10.0, 10.0, 50.0, 50.0);
+    scene.add_child_to(container_id, Box::new(child1));
+
+    // 批量构建完成后，手动触发更新
+    scene.mark_invalid(container_id);
+    scene.repaint(container_id, None);
+
+    // 现在有待处理更新
+    assert!(scene.is_update_queued());
+
+    // 执行更新（两阶段：布局 + 脏区域重绘）
+    let _canvas = scene.perform_update();
+
+    // 所有队列清空
+    assert!(!scene.is_update_queued());
 }

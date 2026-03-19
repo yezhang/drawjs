@@ -6,7 +6,7 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use crate::figure::{Bounded, Figure, RectangleFigure, Shape};
+use crate::figure::{Bounded, Figure, RectangleFigure, Shape, Updatable};
 use crate::scene::SceneGraph;
 
 // ========== 测试用 Figure 类型 ==========
@@ -41,6 +41,11 @@ impl Bounded for TestCoordRootFigure {
     fn name(&self) -> &'static str {
         "TestCoordRootFigure"
     }
+}
+
+impl Updatable for TestCoordRootFigure {
+    fn validate(&mut self) {}
+    fn invalidate(&mut self) {}
 }
 
 impl Shape for TestCoordRootFigure {

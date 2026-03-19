@@ -2,11 +2,11 @@
 
 本文档记录将本项目的 Figure bounds 系统迁移到与 Eclipse Draw2D 一致所需的改进项。
 
-## 1. 当前实现 vs d2 完整能力对比
+## 1. 当前实现 vs g2 完整能力对比
 
 ### 1.1 Bounds 相关能力对比
 
-| 能力                    | d2 实现                                  | 本项目实现               | 差距        |
+| 能力                    | g2 实现                                  | 本项目实现               | 差距        |
 | ----------------------- | ---------------------------------------- | ------------------------ | ----------- |
 | **bounds 存储**         | Rectangle (x,y,width,height)             | Rect (x,y,width,height)  | ✅ 已实现   |
 | **bounds 含义**         | 绝对坐标（相对于坐标根）                 | 绝对坐标（相对于坐标根） | ✅ 已实现   |
@@ -18,7 +18,7 @@
 
 ### 1.2 Figure Trait 能力对比
 
-| 方法                            | d2  | 本项目 | 状态         |
+| 方法                            | g2  | 本项目 | 状态         |
 | ------------------------------- | --- | ------ | ------------ |
 | `bounds()`                      | ✅  | ✅     | 已实现       |
 | `setBounds()`                   | ✅  | ✅     | 已实现       |
@@ -40,7 +40,7 @@
 
 ### 1.3 布局相关能力对比
 
-| 能力             | d2  | 本项目 | 状态   |
+| 能力             | g2  | 本项目 | 状态   |
 | ---------------- | --- | ------ | ------ |
 | LayoutManager    | ✅  | ✅     | 已实现 |
 | setConstraints   | ✅  | ✅     | 已实现 |
@@ -51,7 +51,7 @@
 
 ### 1.4 命中测试能力对比
 
-| 能力                   | d2  | 本项目 | 状态     |
+| 能力                   | g2  | 本项目 | 状态     |
 | ---------------------- | --- | ------ | -------- |
 | findFigureAt           | ✅  | ❌     | 未实现   |
 | findMouseEventTargetAt | ✅  | ✅     | 已实现   |
@@ -187,7 +187,7 @@ pub fn prim_translate(&mut self, block_id: BlockId, dx: f64, dy: f64) {
 **目标**：实现完整的 bounds 设置语义
 
 **实现位置**：
-- `RuntimeBlock::set_bounds()` - `novadraw-scene/src/scene/mod.rs:158-164`
+- `FigureBlock::set_bounds()` - `novadraw-scene/src/scene/mod.rs:158-164`
 - `SceneGraph::set_bounds()` - `novadraw-scene/src/scene/mod.rs:698-731`
 
 **最小实现方案**：
@@ -267,7 +267,7 @@ pub fn prim_translate(&mut self, block_id: BlockId, dx: f64, dy: f64) {
 1. **单元测试通过** - 所有相关测试 100% 通过
 2. **编译无警告** - `cargo clippy` 无警告
 3. **API 文档完整** - 所有 pub 方法有文档注释
-4. **行为与 d2 一致** - 关键行为与 Eclipse Draw2D 相同
+4. **行为与 g2 一致** - 关键行为与 Eclipse Draw2D 相同
 
 ---
 

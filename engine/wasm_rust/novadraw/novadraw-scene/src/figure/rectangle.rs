@@ -6,12 +6,12 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Border, Bounded, Shape};
+use super::{Border, Bounded, Shape, Updatable};
 
 /// 矩形图形
 ///
 /// 用于渲染矩形形状。
-/// 遵循 d2 设计：使用 `bounds: Rectangle` 统一管理边界，而非独立 x/y/width/height 字段。
+/// 遵循 draw2d 设计：使用 `bounds: Rectangle` 统一管理边界，而非独立 x/y/width/height 字段。
 #[derive(Clone)]
 pub struct RectangleFigure {
     /// 边界矩形（包含 x, y, width, height）
@@ -93,7 +93,7 @@ impl RectangleFigure {
 
     /// 添加边框装饰器（Border 级别）
     ///
-    /// 对应 d2: setBorder()
+    /// 对应 draw2d: setBorder()
     pub fn with_border(mut self, border: impl Border + 'static) -> Self {
         self.border = Some(Arc::new(border));
         self
@@ -105,7 +105,7 @@ impl RectangleFigure {
         self.bounds.y += dy;
     }
 
-    /// 设置边界（对应 d2: setBounds）
+    /// 设置边界（对应 draw2d: setBounds）
     pub fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
         self.bounds = Rectangle::new(x, y, width, height);
     }
@@ -127,6 +127,17 @@ impl Bounded for RectangleFigure {
 
     fn use_local_coordinates(&self) -> bool {
         self.use_local_coordinates
+    }
+}
+
+// 实现 Updatable trait：验证钩子
+impl Updatable for RectangleFigure {
+    fn validate(&mut self) {
+        // 默认空实现，Rectangle 不需要预计算几何属性
+    }
+
+    fn invalidate(&mut self) {
+        // 默认空实现
     }
 }
 
@@ -176,7 +187,7 @@ impl Shape for RectangleFigure {
 
     fn outline_shape(&self, gc: &mut NdCanvas) {
         if let Some(color) = self.stroke_color {
-            // 参考 d2 RectangleFigure.outlineShape:
+            // 参考 draw2d RectangleFigure.outlineShape:
             // 描边向内缩（inset），使描边完全在 bounds 内部
             // lineInset = max(1.0, strokeWidth) / 2.0
             let line_inset = (1.0_f64).max(self.stroke_width) / 2.0;

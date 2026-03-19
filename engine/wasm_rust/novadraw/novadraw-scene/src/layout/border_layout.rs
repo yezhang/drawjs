@@ -1,6 +1,6 @@
 //! Border 布局器
 //!
-//! 参考 d2: BorderLayout
+//! 参考 draw2d: BorderLayout
 //! 将容器划分为北、南、东、西、中五个区域。
 
 use super::LayoutContext;
@@ -10,7 +10,7 @@ use novadraw_geometry::Rectangle;
 
 /// Border 布局区域
 ///
-/// 对应 d2: BorderLayout.CENTER, NORTH, SOUTH, EAST, WEST
+/// 对应 draw2d: BorderLayout.CENTER, NORTH, SOUTH, EAST, WEST
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BorderRegion {
     /// 中心区域（默认）

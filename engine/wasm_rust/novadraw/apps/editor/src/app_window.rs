@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use crate::scene_manager::SceneManager;
+use crate::scene_manager::{SceneManager, scene_host::WinitSceneHost};
+use novadraw::SceneHost;
+use novadraw::backend::vello::{VelloRenderer, WinitWindowProxy};
 use novadraw::traits::{RenderBackend, WindowProxy};
 use winit::dpi::{self, PhysicalSize};
 use winit::event::ElementState;
@@ -13,14 +15,11 @@ use winit::{
     window::{Window, WindowId},
 };
 
-use novadraw::backend::vello::{VelloRenderer, WinitWindowProxy};
-
 pub struct GraphicsApp {
     renderer: Option<VelloRenderer>,
     scene_manager: Option<SceneManager>,
+    scene_host: Option<WinitSceneHost>,
     cached_window: Option<Arc<Window>>,
-    /// 是否使用迭代渲染模式
-    use_iterative_render: bool,
 }
 
 impl GraphicsApp {
@@ -28,26 +27,34 @@ impl GraphicsApp {
         GraphicsApp {
             renderer: None,
             scene_manager: None,
+            scene_host: None,
             cached_window: None,
-            use_iterative_render: false,
         }
     }
 
-    fn redraw(&mut self) {
+    /// 执行一轮完整的两阶段更新（布局验证 + 脏区域重绘）
+    ///
+    /// 对应 draw2d: DeferredUpdateManager.performUpdate() → repairDamage()。
+    /// SceneHost 负责调用顺序和渲染触发。
+    fn execute_update(&mut self) {
+        let Some(scene_host) = &self.scene_host else {
+            return;
+        };
         let Some(renderer) = &mut self.renderer else {
             return;
         };
-
-        let Some(scene_manager) = &self.scene_manager else {
+        let Some(scene_manager) = &mut self.scene_manager else {
             return;
         };
 
-        let render_ctx = if self.use_iterative_render {
-            scene_manager.scene().render_iterative()
-        } else {
-            scene_manager.scene().render()
-        };
-        renderer.render(render_ctx.commands());
+        scene_host.execute_update(&mut scene_manager.scene, &mut *renderer);
+    }
+
+    /// 请求在下一次渲染帧执行更新
+    fn request_update(&self) {
+        if let Some(h) = &self.scene_host {
+            h.request_update();
+        }
     }
 }
 
@@ -73,8 +80,10 @@ impl ApplicationHandler<()> for GraphicsApp {
         let logical_width = 800.0;
         let logical_height = 600.0;
 
-        let window_proxy = WinitWindowProxy::new(window);
-        let renderer = VelloRenderer::new(Arc::new(window_proxy), logical_width, logical_height);
+        let window_proxy = Arc::new(WinitWindowProxy::new(window));
+        self.scene_host = Some(WinitSceneHost::new(Arc::clone(&window_proxy)));
+
+        let renderer = VelloRenderer::new(Arc::clone(&window_proxy), logical_width, logical_height);
         self.renderer = Some(renderer);
 
         if self.scene_manager.is_none() {
@@ -94,7 +103,7 @@ impl ApplicationHandler<()> for GraphicsApp {
                 event_loop.exit();
             }
             WindowEvent::RedrawRequested => {
-                self.redraw();
+                self.execute_update();
             }
             WindowEvent::Resized(new_size) => {
                 if let Some(renderer) = &mut self.renderer {
@@ -102,9 +111,8 @@ impl ApplicationHandler<()> for GraphicsApp {
                     let PhysicalSize { width, height } = new_size;
 
                     renderer.resize(width, height, scale_factor);
-                    // 重新创建 surface 以确保配置正确更新，避免抖动
                     renderer.recreate_surface(width, height);
-                    renderer.window().request_redraw();
+                    self.request_update();
                 }
             }
             WindowEvent::KeyboardInput { event, .. } => {
@@ -114,104 +122,88 @@ impl ApplicationHandler<()> for GraphicsApp {
 
                 match event.physical_key {
                     PhysicalKey::Code(KeyCode::Digit0) => {
-                        // 切换到场景 0：基础四个定位点
                         if let Some(manager) = &mut self.scene_manager {
-                            use crate::scene_manager::SceneType;
-                            manager.switch_scene(SceneType::BasicAnchors);
-                            self.redraw();
+                            manager.switch_scene(crate::scene_manager::SceneType::BasicAnchors);
+                            self.request_update();
                         }
                     }
                     PhysicalKey::Code(KeyCode::Escape) => {
                         event_loop.exit();
                     }
                     PhysicalKey::Code(KeyCode::Digit1) => {
-                        // 切换到场景 1：嵌套父子结构
                         if let Some(manager) = &mut self.scene_manager {
-                            use crate::scene_manager::SceneType;
-                            manager.switch_scene(SceneType::Nested);
-                            self.redraw();
+                            manager.switch_scene(crate::scene_manager::SceneType::Nested);
+                            self.request_update();
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit2) => {
-                        // 切换到场景 2：嵌套场景（含透明根节点）
                         if let Some(manager) = &mut self.scene_manager {
-                            use crate::scene_manager::SceneType;
-                            manager.switch_scene(SceneType::NestedWithRoot);
-                            self.redraw();
+                            manager.switch_scene(crate::scene_manager::SceneType::NestedWithRoot);
+                            self.request_update();
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit3) => {
-                        // 切换到场景 3：Z-order
                         if let Some(manager) = &mut self.scene_manager {
-                            use crate::scene_manager::SceneType;
-                            manager.switch_scene(SceneType::ZOrder);
-                            self.redraw();
+                            manager.switch_scene(crate::scene_manager::SceneType::ZOrder);
+                            self.request_update();
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit4) => {
-                        // 切换到场景 4：不可见过滤
                         if let Some(manager) = &mut self.scene_manager {
-                            use crate::scene_manager::SceneType;
-                            manager.switch_scene(SceneType::Visibility);
-                            self.redraw();
+                            manager.switch_scene(crate::scene_manager::SceneType::Visibility);
+                            self.request_update();
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit5) => {
-                        // 切换到场景 5：BoundsTranslate 平移传播
                         if let Some(manager) = &mut self.scene_manager {
-                            use crate::scene_manager::SceneType;
-                            manager.switch_scene(SceneType::BoundsTranslate);
-                            self.redraw();
+                            manager.switch_scene(crate::scene_manager::SceneType::BoundsTranslate);
+                            self.request_update();
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit6) => {
-                        // 切换到场景 6：裁剪测试
                         if let Some(manager) = &mut self.scene_manager {
-                            use crate::scene_manager::SceneType;
-                            manager.switch_scene(SceneType::ClipTest);
-                            self.redraw();
+                            manager.switch_scene(crate::scene_manager::SceneType::ClipTest);
+                            self.request_update();
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit7) => {
-                        // 切换到场景 7：椭圆图形测试
                         if let Some(manager) = &mut self.scene_manager {
-                            use crate::scene_manager::SceneType;
-                            manager.switch_scene(SceneType::EllipseTest);
-                            self.redraw();
+                            manager.switch_scene(crate::scene_manager::SceneType::EllipseTest);
+                            self.request_update();
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit8) => {
-                        // 切换到场景 8：直线图形测试
                         if let Some(manager) = &mut self.scene_manager {
-                            use crate::scene_manager::SceneType;
-                            manager.switch_scene(SceneType::LineTest);
-                            self.redraw();
+                            manager.switch_scene(crate::scene_manager::SceneType::LineTest);
+                            self.request_update();
                         }
                     }
                     PhysicalKey::Code(KeyCode::KeyT) => {
-                        // 按 T 键：在 BoundsTranslate 场景中平移父节点
                         if let Some(manager) = &mut self.scene_manager {
-                            use crate::scene_manager::SceneType;
-                            if manager.current_scene == SceneType::BoundsTranslate {
+                            if manager.current_scene
+                                == crate::scene_manager::SceneType::BoundsTranslate
+                            {
                                 if let Some(root_id) = manager.scene().get_contents() {
                                     manager.scene_mut().prim_translate(root_id, 10.0, 10.0);
-                                    self.redraw();
+                                    self.request_update();
                                 }
                             }
                         }
                     }
                     PhysicalKey::Code(KeyCode::KeyI) => {
-                        // 按 I 键：切换递归/迭代渲染模式
-                        self.use_iterative_render = !self.use_iterative_render;
-                        println!(
-                            "渲染模式: {}",
-                            if self.use_iterative_render {
-                                "迭代渲染"
-                            } else {
-                                "递归渲染"
-                            }
-                        );
-                        self.redraw();
+                        if let Some(host) = &mut self.scene_host {
+                            let new_mode = !host.use_iterative_render();
+                            host.set_use_iterative_render(new_mode);
+                            println!(
+                                "渲染模式: {}",
+                                if new_mode {
+                                    "迭代渲染"
+                                } else {
+                                    "递归渲染"
+                                }
+                            );
+                            self.request_update();
+                        }
                     }
                     _ => {}
                 }
@@ -221,9 +213,7 @@ impl ApplicationHandler<()> for GraphicsApp {
     }
 
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
-        if let Some(renderer) = &self.renderer {
-            renderer.window().request_redraw();
-        }
+        self.request_update();
     }
 
     fn suspended(&mut self, _event_loop: &ActiveEventLoop) {

@@ -239,7 +239,7 @@ public interface Drawable {
 | 特性 | SWT GC | NdCanvas (目标) |
 |------|--------|-----------------|
 | 绘制目标 | Image/Control/Printer | 待定 |
-| 状态管理 | GCData (可变) | 分离 Figure + RuntimeBlock |
+| 状态管理 | GCData (可变) | 分离 Figure + FigureBlock |
 | 变换 | Matrix 对象 | Transform |
 | 裁剪 | Path/Rectangle | Clip |
 | 资源释放 | 显式 dispose() | 自动引用计数 |

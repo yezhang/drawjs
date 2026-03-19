@@ -14,7 +14,7 @@ pub use winit::keyboard::{KeyCode, PhysicalKey};
 pub use winit::window::WindowAttributes;
 pub use winit::{application::ApplicationHandler, window::WindowId};
 
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 /// 演示应用
 ///

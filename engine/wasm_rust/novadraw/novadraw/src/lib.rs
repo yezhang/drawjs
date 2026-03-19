@@ -21,10 +21,11 @@ pub use novadraw_render::traits;
 
 #[cfg(feature = "vello")]
 pub use novadraw_scene::{
-    BlockId, Border, BorderLayout, BorderRegion, Bounded, Direction, EllipseFigure, Figure, FigureRenderer,
-    FillLayout, FlowDirection, FlowLayout, LayoutManager, LineBorder, MarginBorder, Point,
-    PolygonFigure, PolylineFigure, Rectangle, RectangleBorder, RectangleFigure, RootFigure,
-    RoundedRectangleFigure, RuntimeBlock, SceneGraph, TriangleFigure, Viewport, XYLayout,
+    BlockId, Border, BorderLayout, BorderRegion, Bounded, Direction, EllipseFigure, Figure,
+    FigureBlock, FigureRenderer, FillLayout, FlowDirection, FlowLayout, LayoutManager, LineBorder,
+    MarginBorder, Point, PolygonFigure, PolylineFigure, Rectangle, RectangleBorder, RectangleFigure,
+    RootFigure, RoundedRectangleFigure, SceneGraph, SceneHost, SceneUpdateTarget, TriangleFigure,
+    Updatable, Viewport, XYLayout,
 };
 
 #[cfg(feature = "vello")]

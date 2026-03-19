@@ -17,19 +17,21 @@ pub mod figure;
 pub mod layout;
 pub mod log;
 pub mod scene;
+pub mod scene_host;
 pub mod update;
 pub mod viewport;
 
 pub use border::{Border, LineBorder, MarginBorder, RectangleBorder};
 pub use figure::{
-    Bounded, Direction, EllipseFigure, Figure, PolygonFigure, PolylineFigure, RectangleFigure, RootFigure,
-    RoundedRectangleFigure, TriangleFigure,
+    Bounded, Direction, EllipseFigure, Figure, PolygonFigure, PolylineFigure, RectangleFigure,
+    RootFigure, RoundedRectangleFigure, TriangleFigure, Updatable,
 };
 pub use layout::{
-    BorderLayout, BorderRegion, FillLayout, FlowDirection, FlowLayout, LayoutContext, LayoutManager,
-    XYLayout,
+    BorderLayout, BorderRegion, FillLayout, FlowDirection, FlowLayout, LayoutContext,
+    LayoutManager, XYLayout,
 };
 pub use novadraw_geometry::{Point, Rectangle};
-pub use scene::{BlockId, FigureRenderer, RuntimeBlock, SceneGraph};
+pub use scene::{BlockId, FigureBlock, FigureRenderer, SceneGraph};
+pub use scene_host::{SceneHost, SceneUpdateTarget};
 pub use update::{SceneUpdateManager, UpdateEvent, UpdateListener};
 pub use viewport::Viewport;

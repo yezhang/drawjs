@@ -1,5 +1,7 @@
 use novadraw::{Color, EllipseFigure, PolylineFigure, RectangleFigure, SceneGraph};
 
+pub mod scene_host;
+
 pub struct SceneManager {
     pub scene: SceneGraph,
     /// 当前激活的场景类型

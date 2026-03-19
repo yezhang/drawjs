@@ -163,7 +163,7 @@ fn visit(node: &Node) {
 
 ### 2. Child Propagation in SceneGraph
 
-All child propagation operations must be implemented iteratively in `SceneGraph`, not in `RuntimeBlock` or `Figure`.
+All child propagation operations must be implemented iteratively in `SceneGraph`, not in `FigureBlock` or `Figure`.
 
 **Correct**:
 
@@ -200,7 +200,7 @@ impl Figure {
 ### 3. Core Architecture Principles
 
 1. **Figure is State-Less**: Figures only define rendering interface and geometry, no runtime state
-2. **RuntimeBlock Manages State**: Visibility, selection state, hierarchy stored in RuntimeBlock
+2. **FigureBlock Manages State**: Visibility, selection state, hierarchy stored in FigureBlock
 3. **Separation of Concerns**: Rendering and logic are separated for efficient massive graphics rendering
 4. **Coordinate System**: Uses absolute coordinates by default, with local coordinate mode support
 

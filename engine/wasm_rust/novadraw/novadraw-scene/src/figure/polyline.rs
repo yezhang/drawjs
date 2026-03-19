@@ -4,7 +4,7 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Bounded, Shape};
+use super::{Bounded, Shape, Updatable};
 
 /// 折线图形
 ///
@@ -180,6 +180,12 @@ impl Bounded for PolylineFigure {
     fn name(&self) -> &'static str {
         "PolylineFigure"
     }
+}
+
+// 实现 Updatable trait
+impl Updatable for PolylineFigure {
+    fn validate(&mut self) {}
+    fn invalidate(&mut self) {}
 }
 
 // 实现 Shape trait

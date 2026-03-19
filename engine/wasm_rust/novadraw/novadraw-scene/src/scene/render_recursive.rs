@@ -9,12 +9,12 @@ use crate::debug_render;
 
 /// 场景图引用（用于渲染）
 pub struct SceneGraphRenderRef<'a> {
-    pub(crate) blocks: &'a slotmap::SlotMap<BlockId, super::RuntimeBlock>,
+    pub(crate) blocks: &'a slotmap::SlotMap<BlockId, super::FigureBlock>,
 }
 
 impl<'a> SceneGraphRenderRef<'a> {
     /// 获取块
-    pub fn get(&self, id: BlockId) -> Option<&super::RuntimeBlock> {
+    pub fn get(&self, id: BlockId) -> Option<&super::FigureBlock> {
         self.blocks.get(id)
     }
 }
@@ -51,14 +51,14 @@ impl<'a> FigureRenderer<'a> {
 
     /// 递归渲染
     ///
-    /// 对应 d2 Figure.paint() final。
+    /// 对应 draw2d Figure.paint() final。
     pub fn render(&mut self, root_id: BlockId) {
         self.paint(root_id);
     }
 
     /// 绘制 Figure
     ///
-    /// 对应 d2 Figure.paint()：
+    /// 对应 draw2d Figure.paint()：
     /// ```text
     /// paint(Graphics)
     ///   ├─> setLocalBackgroundColor()
@@ -115,7 +115,7 @@ impl<'a> FigureRenderer<'a> {
 
     /// 绘制子元素区域
     ///
-    /// 对应 d2 Figure.paintClientArea()：
+    /// 对应 draw2d Figure.paintClientArea()：
     /// ```text
     /// paintClientArea(Graphics)
     ///   if (useLocalCoordinates) {
@@ -138,8 +138,14 @@ impl<'a> FigureRenderer<'a> {
         if block.figure.use_local_coordinates() {
             let bounds = block.figure.bounds();
             let (top, left, bottom, right) = block.figure.insets();
-            debug_render!("[RECUR] #{:02} paintClientArea use_local=true, translate({}, {}) clip(0,0,{},{})",
-                id, bounds.x + left, bounds.y + top, bounds.width - left - right, bounds.height - top - bottom);
+            debug_render!(
+                "[RECUR] #{:02} paintClientArea use_local=true, translate({}, {}) clip(0,0,{},{})",
+                id,
+                bounds.x + left,
+                bounds.y + top,
+                bounds.width - left - right,
+                bounds.height - top - bottom
+            );
             self.gc.translate(bounds.x + left, bounds.y + top);
             // clip 到 client area = bounds - insets
             self.gc.clip_rect(
@@ -150,8 +156,14 @@ impl<'a> FigureRenderer<'a> {
             );
         } else {
             let bounds = block.figure.bounds();
-            debug_render!("[RECUR] #{:02} paintClientArea use_local=false, clip({},{},{},{})",
-                id, bounds.x, bounds.y, bounds.width, bounds.height);
+            debug_render!(
+                "[RECUR] #{:02} paintClientArea use_local=false, clip({},{},{},{})",
+                id,
+                bounds.x,
+                bounds.y,
+                bounds.width,
+                bounds.height
+            );
             self.gc.clip_rect(
                 block.figure.bounds().x,
                 block.figure.bounds().y,
@@ -171,10 +183,10 @@ impl<'a> FigureRenderer<'a> {
 
     /// 绘制子元素
     ///
-    /// 对应 d2 Figure.paintChildren()。
+    /// 对应 draw2d Figure.paintChildren()。
     /// 为每个子节点设置裁剪 + 绘制 + 恢复。
     ///
-    /// d2 逻辑：
+    /// draw2d 逻辑：
     /// ```text
     /// for (IFigure child : children) {
     ///   if (child.isVisible()) {
@@ -198,9 +210,12 @@ impl<'a> FigureRenderer<'a> {
             block.children.to_vec()
         };
 
-        debug_render!("[RECUR]     paint_children, children count: {}", children.len());
+        debug_render!(
+            "[RECUR]     paint_children, children count: {}",
+            children.len()
+        );
 
-        // 正序遍历（与 d2 一致）
+        // 正序遍历（与 draw2d 一致）
         for &child_id in &children {
             let child_block = match self.scene.get(child_id) {
                 Some(b) if b.is_visible => b,

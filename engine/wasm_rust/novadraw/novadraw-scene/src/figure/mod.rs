@@ -1,7 +1,7 @@
 //! Figure 渲染接口
 //!
 //! 定义图形渲染的通用接口，遵循 Eclipse Draw2D 设计模式。
-//! Figure 只负责渲染，不包含状态（状态在 RuntimeBlock 中）。
+//! Figure 只负责渲染接口，不包含运行时状态（状态在 FigureBlock 中）。
 //!
 //! # Trait 层级
 //!
@@ -54,7 +54,7 @@ pub trait Bounded: Send + Sync {
 
     /// 设置图形边界
     ///
-    /// 对应 d2: setBounds(Rectangle)
+    /// 对应 draw2d: setBounds(Rectangle)
     /// 注意：本实现只更新 bounds 本身，不触发事件通知
     fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64);
 
@@ -63,7 +63,7 @@ pub trait Bounded: Send + Sync {
 
     /// 检查点是否在图形边界内
     ///
-    /// 对应 d2: containsPoint(int, int)
+    /// 对应 draw2d: containsPoint(int, int)
     fn contains_point(&self, x: f64, y: f64) -> bool {
         let b = self.bounds();
         x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height
@@ -71,7 +71,7 @@ pub trait Bounded: Send + Sync {
 
     /// 检查矩形是否与图形边界相交
     ///
-    /// 对应 d2: intersects(Rectangle)
+    /// 对应 draw2d: intersects(Rectangle)
     fn intersects(&self, rect: Rectangle) -> bool {
         let b = self.bounds();
         b.x < rect.x + rect.width
@@ -87,7 +87,7 @@ pub trait Bounded: Send + Sync {
 
     /// 是否使用本地坐标
     ///
-    /// 对应 d2: useLocalCoordinates()
+    /// 对应 draw2d: useLocalCoordinates()
     /// true: 子元素使用 Figure 内部坐标（相对于 bounds 左上角）
     /// false: 子元素使用父节点坐标（默认）
     fn use_local_coordinates(&self) -> bool {
@@ -98,7 +98,7 @@ pub trait Bounded: Send + Sync {
 
     /// 获取客户区域
     ///
-    /// 对应 d2: getClientArea()
+    /// 对应 draw2d: getClientArea()
     /// 返回 bounds 减去 insets 后的区域
     fn client_area(&self) -> Rectangle {
         let b = self.bounds();
@@ -113,7 +113,7 @@ pub trait Bounded: Send + Sync {
 
     /// 获取首选大小
     ///
-    /// 对应 d2: getPreferredSize()
+    /// 对应 draw2d: getPreferredSize()
     /// 默认返回 bounds 的尺寸
     fn preferred_size(&self) -> (f64, f64) {
         let b = self.bounds();
@@ -122,7 +122,7 @@ pub trait Bounded: Send + Sync {
 
     /// 获取最小大小
     ///
-    /// 对应 d2: getMinimumSize()
+    /// 对应 draw2d: getMinimumSize()
     /// 默认返回首选大小
     fn minimum_size(&self) -> (f64, f64) {
         self.preferred_size()
@@ -130,11 +130,44 @@ pub trait Bounded: Send + Sync {
 
     /// 获取最大大小
     ///
-    /// 对应 d2: getMaximumSize()
+    /// 对应 draw2d: getMaximumSize()
     /// 默认返回首选大小
     fn maximum_size(&self) -> (f64, f64) {
         self.preferred_size()
     }
+}
+
+// ============================================================================
+// Updatable Trait: 更新/验证接口
+// ============================================================================
+
+/// 可更新 trait
+///
+/// 定义图形验证和更新的接口，参考 Eclipse Draw2D 的 IFigure 设计。
+/// 负责布局后的验证、失效标记等生命周期管理。
+///
+/// # 与 SceneGraph 的关系
+///
+/// - SceneGraph.revalidate() 会调用 Figure.validate()
+/// - UpdateManager 跟踪需要验证的块
+pub trait Updatable: Send + Sync {
+    /// 布局验证
+    ///
+    /// 对应 draw2d: IFigure.validate()
+    /// 在布局计算完成后被调用，用于：
+    /// - 预计算依赖布局的几何属性（如 Triangle 顶点）
+    /// - 缓存布局相关的计算结果
+    ///
+    /// 注意：本方法在 SceneGraph.revalidate() 流程中被调用。
+    fn validate(&mut self);
+
+    /// 标记为无效
+    ///
+    /// 对应 draw2d: IFigure.invalidate()
+    /// 标记图形需要重新验证。通常由 setBounds() 等操作触发。
+    ///
+    /// 默认实现为空，子类可覆盖以通知 SceneGraph。
+    fn invalidate(&mut self) {}
 }
 
 // ============================================================================
@@ -145,6 +178,7 @@ pub trait Bounded: Send + Sync {
 ///
 /// 所有图形对象都需要实现此 trait。
 /// 只包含渲染相关方法，边界方法在 Bounded trait 中。
+/// 布局验证方法在 Updatable trait 中定义。
 ///
 /// # 渲染流程（参考 Draw2D）
 ///
@@ -158,37 +192,27 @@ pub trait Bounded: Send + Sync {
 ///         │     └─> paintChildren()
 ///         └─> paintBorder()        [PaintBorder]
 /// ```
-pub trait Figure: Bounded + Send + Sync {
+pub trait Figure: Bounded + Updatable + Send + Sync {
     /// ===== 模板方法 =====
     /// 初始化本地属性
     ///
-    /// 对应 d2: setLocalBackgroundColor/ForegroundColor/Font
+    /// 对应 draw2d: setLocalBackgroundColor/ForegroundColor/Font
     /// 设置图形的本地渲染属性（颜色、字体等）
     fn init_properties(&self, _gc: &mut NdCanvas) {
         // 默认空实现，子类可覆盖
     }
 
-    /// ===== 布局验证方法 =====
-    /// 布局验证（对应 d2: IFigure.validate()）
-    ///
-    /// 在布局计算完成后被调用，用于：
-    /// - 预计算依赖布局的几何属性（如 Triangle 顶点）
-    /// - 缓存布局相关的计算结果
-    ///
-    /// 默认空实现，子类可覆盖。
-    fn validate(&mut self) {}
-
     /// ===== PaintSelf 阶段方法 =====
     /// 绘制自身（背景）
     ///
-    /// 对应 d2: paintFigure(Graphics)
+    /// 对应 draw2d: paintFigure(Graphics)
     /// 默认空实现，由 Shape trait 覆盖
     fn paint_figure(&self, _gc: &mut NdCanvas) {}
 
     /// ===== PaintChildren 相关方法 =====
     /// 绘制子元素
     ///
-    /// 对应 d2 paintChildren(Graphics)
+    /// 对应 draw2d paintChildren(Graphics)
     /// 默认行为由渲染器调度 PaintChildren 任务
     fn paint_children(&self) {
         // 默认行为由渲染器处理
@@ -197,14 +221,14 @@ pub trait Figure: Bounded + Send + Sync {
     /// ===== PaintBorder 阶段方法 =====
     /// 获取边框
     ///
-    /// 对应 d2: getBorder()
+    /// 对应 draw2d: getBorder()
     fn get_border(&self) -> Option<&dyn Border> {
         None
     }
 
     /// 绘制边框
     ///
-    /// 对应 d2: paintBorder(Graphics)
+    /// 对应 draw2d: paintBorder(Graphics)
     /// 默认实现调用 Border::paint()
     fn paint_border(&self, gc: &mut NdCanvas) {
         if let Some(border) = self.get_border() {
@@ -235,7 +259,7 @@ pub trait Shape: Figure {
     /// ===== Shape 特有方法 =====
     /// 获取边框装饰器（覆盖 Figure 的默认实现）
     ///
-    /// 对应 d2: getBorder()
+    /// 对应 draw2d: getBorder()
     fn get_border(&self) -> Option<&dyn Border> {
         None
     }
@@ -265,15 +289,6 @@ pub trait Shape: Figure {
         true
     }
 
-    /// ===== 布局验证方法 =====
-    /// 布局验证（覆盖 Figure trait 的默认实现）
-    ///
-    /// 对应 d2: IFigure.validate()
-    /// 在布局计算完成后被调用，用于预计算依赖布局的几何属性。
-    ///
-    /// 默认空实现，子类可覆盖。
-    fn validate(&mut self) {}
-
     /// 获取透明度 (0.0 - 1.0)
     fn alpha(&self) -> f64 {
         1.0
@@ -282,7 +297,7 @@ pub trait Shape: Figure {
     /// ===== 渲染方法 =====
     /// 绘制自身（覆盖 Figure trait 的实现）
     ///
-    /// 参考 d2: Shape.paintFigure()
+    /// 参考 draw2d: Shape.paintFigure()
     /// 调用 paint_fill() 和 paint_outline()
     fn paint_figure(&self, gc: &mut NdCanvas) {
         self.paint_fill(gc);
@@ -291,7 +306,7 @@ pub trait Shape: Figure {
 
     /// 绘制填充
     ///
-    /// 参考 d2: paintFill()
+    /// 参考 draw2d: paintFill()
     /// 如果 fill_enabled() 为 true，调用 fill_shape()
     fn paint_fill(&self, gc: &mut NdCanvas) {
         if self.fill_enabled() {
@@ -301,7 +316,7 @@ pub trait Shape: Figure {
 
     /// 绘制描边
     ///
-    /// 参考 d2: paintOutline()
+    /// 参考 draw2d: paintOutline()
     /// 如果 outline_enabled() 为 true，调用 outline_shape()
     fn paint_outline(&self, gc: &mut NdCanvas) {
         if self.outline_enabled() {
@@ -311,13 +326,13 @@ pub trait Shape: Figure {
 
     /// 填充形状（抽象方法）
     ///
-    /// 对应 d2: fillShape(Graphics)
+    /// 对应 draw2d: fillShape(Graphics)
     /// 具体图形必须实现此方法
     fn fill_shape(&self, gc: &mut NdCanvas);
 
     /// 描边形状（抽象方法）
     ///
-    /// 对应 d2: outlineShape(Graphics)
+    /// 对应 draw2d: outlineShape(Graphics)
     /// 具体图形必须实现此方法
     fn outline_shape(&self, gc: &mut NdCanvas);
 }

@@ -17,18 +17,18 @@ use novadraw_render::NdCanvas;
 
 /// Border 边框 trait
 ///
-/// 参考 d2: Border 接口
+/// 参考 draw2d: Border 接口
 /// 所有边框类型都需要实现此 trait。
 pub trait Border: Send + Sync {
     /// 获取边框内边距
     ///
-    /// 对应 d2: getInsets()
+    /// 对应 draw2d: getInsets()
     /// 返回 (top, left, bottom, right)
     fn get_insets(&self) -> (f64, f64, f64, f64);
 
     /// 绘制边框
     ///
-    /// 对应 d2: paint(Figure, Graphics)
+    /// 对应 draw2d: paint(Figure, Graphics)
     /// 在给定的图形边界内绘制边框
     fn paint(&self, figure_bounds: Rectangle, gc: &mut NdCanvas);
 

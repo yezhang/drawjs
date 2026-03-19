@@ -14,3 +14,6 @@ MD024: false
 
 # 允许内联 HTML（Rust trait 语法如 <dyn> 在代码块中）
 MD033: false
+
+# 允许相对链接锚点（heading IDs 在不同工具间可能不一致）
+MD051: false

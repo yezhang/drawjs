@@ -60,8 +60,8 @@ public class PolylineJoinDemo {
 
         canvas.setContents(root);
 
-        // 添加 ESC 键监听
-        shell.addListener(SWT.KeyDown, event -> {
+        // 添加全局 ESC 键监听（使用 filter 实现全局拦截）
+        d.addFilter(SWT.KeyDown, event -> {
             if (event.keyCode == SWT.ESC) {
                 shell.dispose();
             }

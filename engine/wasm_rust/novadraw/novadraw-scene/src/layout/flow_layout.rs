@@ -1,6 +1,6 @@
 //! Flow 布局器
 //!
-//! 参考 d2: FlowLayout
+//! 参考 draw2d: FlowLayout
 //! 按顺序排列子元素，自动换行。
 
 use tracing::debug;
@@ -84,7 +84,11 @@ impl FlowLayout {
             return;
         }
 
-        debug!("FlowLayout: container={:?}, children count: {}", container, children.len());
+        debug!(
+            "FlowLayout: container={:?}, children count: {}",
+            container,
+            children.len()
+        );
 
         let container_bounds = ctx.get_container_bounds(container);
         let cx = container_bounds.x;
@@ -92,7 +96,10 @@ impl FlowLayout {
         let cw = container_bounds.width;
         let ch = container_bounds.height;
 
-        debug!("FlowLayout: container bounds=({}, {}, {}, {})", cx, cy, cw, ch);
+        debug!(
+            "FlowLayout: container bounds=({}, {}, {}, {})",
+            cx, cy, cw, ch
+        );
 
         match self.direction {
             FlowDirection::Horizontal => {

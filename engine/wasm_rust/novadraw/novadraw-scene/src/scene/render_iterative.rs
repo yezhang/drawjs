@@ -13,7 +13,7 @@ use crate::{debug_render, trace_render};
 ///
 /// 使用栈迭代实现 Figure 树的渲染遍历，将递归转换为显式栈操作。
 /// 状态执行顺序：EnterFigure → EnterClientArea → ExitClientArea → ExitFigure
-/// 与 d2 保持一致：paintChildren 中对每个子节点单独 clip 到其 bounds。
+/// 与 draw2d 保持一致：paintChildren 中对每个子节点单独 clip 到其 bounds。
 #[derive(Debug, Clone, Copy)]
 enum RenderTask {
     /// 进入 Figure
@@ -73,7 +73,7 @@ impl<'a> FigureRendererIter<'a> {
     /// 迭代渲染
     ///
     /// 使用显式栈替代递归，实现四状态遍历机制。
-    /// 与 d2 paintChildren 保持一致：对每个子节点单独 clip 到其 bounds。
+    /// 与 draw2d paintChildren 保持一致：对每个子节点单独 clip 到其 bounds。
     pub fn render(&mut self, root_id: BlockId) {
         let mut stack: Vec<RenderTask> = vec![RenderTask::EnterFigure(root_id)];
 
@@ -111,7 +111,7 @@ impl<'a> FigureRendererIter<'a> {
     /// 执行：
     /// 1. 初始化本地属性
     /// 2. `push_state()`
-    /// 3. 裁剪到子元素 bounds（对应 d2 paintChildren 中的 clipRect）
+    /// 3. 裁剪到子元素 bounds（对应 draw2d paintChildren 中的 clipRect）
     /// 4. `paint_figure()`
     ///
     /// 压栈顺序（后进先出，确保正确执行顺序）：
@@ -136,9 +136,9 @@ impl<'a> FigureRendererIter<'a> {
         // 2. 保存状态
         self.gc.push_state();
 
-        // 3. 绘制自身（对应 d2 paintFigure）
+        // 3. 绘制自身（对应 draw2d paintFigure）
         // 注意：不应用 clip，让描边可以超出 bounds
-        // clip 只在绘制子元素时应用（对应 d2 paintClientArea）
+        // clip 只在绘制子元素时应用（对应 draw2d paintClientArea）
         #[allow(clippy::needless_borrow)]
         block.figure.paint_figure(&mut self.gc);
 
@@ -169,8 +169,14 @@ impl<'a> FigureRendererIter<'a> {
         if Bounded::use_local_coordinates(block.figure.as_ref()) {
             let bounds = Bounded::bounds(block.figure.as_ref());
             let (top, left, bottom, right) = Bounded::insets(block.figure.as_ref());
-            debug_render!("[ITER] #{:02} EnterClientArea use_local=true, translate({}, {}) clip(0,0,{},{})",
-                id, bounds.x + left, bounds.y + top, bounds.width - left - right, bounds.height - top - bottom);
+            debug_render!(
+                "[ITER] #{:02} EnterClientArea use_local=true, translate({}, {}) clip(0,0,{},{})",
+                id,
+                bounds.x + left,
+                bounds.y + top,
+                bounds.width - left - right,
+                bounds.height - top - bottom
+            );
             self.gc.translate(bounds.x + left, bounds.y + top);
             // clip 到 client area = bounds - insets
             self.gc.clip_rect(
@@ -181,8 +187,14 @@ impl<'a> FigureRendererIter<'a> {
             );
         } else {
             let bounds = Bounded::bounds(block.figure.as_ref());
-            debug_render!("[ITER] #{:02} EnterClientArea use_local=false, clip({},{},{},{})",
-                id, bounds.x, bounds.y, bounds.width, bounds.height);
+            debug_render!(
+                "[ITER] #{:02} EnterClientArea use_local=false, clip({},{},{},{})",
+                id,
+                bounds.x,
+                bounds.y,
+                bounds.width,
+                bounds.height
+            );
             self.gc
                 .clip_rect(bounds.x, bounds.y, bounds.width, bounds.height);
         }
@@ -202,12 +214,16 @@ impl<'a> FigureRendererIter<'a> {
             })
             .collect();
 
-        debug_render!("[ITER] #{:02}   children count: {}", id, children_info.len());
+        debug_render!(
+            "[ITER] #{:02}   children count: {}",
+            id,
+            children_info.len()
+        );
 
         stack.push(RenderTask::ExitClientArea(block_id));
 
         // 逆序压栈，确保先添加的子节点先渲染
-        // 与 d2 paintChildren 一致：每个子节点 clip 到其 bounds
+        // 与 draw2d paintChildren 一致：每个子节点 clip 到其 bounds
         for (child_id, _) in children_info.into_iter().rev() {
             stack.push(RenderTask::EnterChild(child_id));
         }
@@ -215,7 +231,7 @@ impl<'a> FigureRendererIter<'a> {
 
     /// 处理进入子节点状态
     ///
-    /// 执行：clip 到子节点 bounds（对应 d2 paintChildren 中的 clipRect）
+    /// 执行：clip 到子节点 bounds（对应 draw2d paintChildren 中的 clipRect）
     /// 压栈：`ExitChild` → `EnterFigure`
     fn handle_enter_child(&mut self, block_id: BlockId, stack: &mut Vec<RenderTask>) {
         let block = match self.scene.get(block_id) {
@@ -228,8 +244,9 @@ impl<'a> FigureRendererIter<'a> {
         let bounds = block.figure.bounds();
         debug_render!("[ITER] #{:02} EnterChild clip to bounds={:?}", id, bounds);
 
-        // clip 到子节点 bounds（对应 d2 paintChildren 中的 clipRect）
-        self.gc.clip_rect(bounds.x, bounds.y, bounds.width, bounds.height);
+        // clip 到子节点 bounds（对应 draw2d paintChildren 中的 clipRect）
+        self.gc
+            .clip_rect(bounds.x, bounds.y, bounds.width, bounds.height);
 
         // 压入后续状态
         stack.push(RenderTask::ExitChild(block_id));

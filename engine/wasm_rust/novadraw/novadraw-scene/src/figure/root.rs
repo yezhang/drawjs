@@ -4,11 +4,11 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Bounded, Shape};
+use super::{Bounded, Shape, Updatable};
 
 /// 根图形（内部使用）
 ///
-/// 参考 d2 的 LightweightSystem.RootFigure 设计。
+/// 参考 draw2d 的 LightweightSystem.RootFigure 设计。
 /// 用于表示 SceneGraph 内部的根容器，与用户设置的图形根区分。
 ///
 /// 特点：
@@ -48,6 +48,12 @@ impl Bounded for RootFigure {
     fn name(&self) -> &'static str {
         "RootFigure"
     }
+}
+
+// 实现 Updatable trait
+impl Updatable for RootFigure {
+    fn validate(&mut self) {}
+    fn invalidate(&mut self) {}
 }
 
 // 实现 Shape trait：根图形透明，不渲染自身

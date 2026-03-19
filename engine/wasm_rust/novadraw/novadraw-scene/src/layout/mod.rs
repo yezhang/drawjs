@@ -12,8 +12,8 @@ pub use fill_layout::FillLayout;
 pub use flow_layout::{FlowDirection, FlowLayout};
 pub use xy_layout::XYLayout;
 
-use novadraw_geometry::Rectangle;
 use crate::scene::BlockId;
+use novadraw_geometry::Rectangle;
 
 /// 布局上下文 trait
 ///
@@ -39,27 +39,27 @@ pub trait LayoutContext: Send + Sync {
 
 /// 布局管理器 trait
 ///
-/// 参考 d2: LayoutManager
+/// 参考 draw2d: LayoutManager
 /// 用于计算和设置子元素的位置。
 pub trait LayoutManager: Send + Sync {
     /// 获取布局约束
     ///
-    /// 对应 d2: getConstraint(IFigure)
+    /// 对应 draw2d: getConstraint(IFigure)
     fn get_constraint(&self, child_id: BlockId) -> Option<Rectangle>;
 
     /// 设置布局约束
     ///
-    /// 对应 d2: setConstraint(IFigure, Object)
+    /// 对应 draw2d: setConstraint(IFigure, Object)
     fn set_constraint(&mut self, child_id: BlockId, constraint: Rectangle);
 
     /// 移除布局约束
     ///
-    /// 对应 d2: remove(IFigure)
+    /// 对应 draw2d: remove(IFigure)
     fn remove_constraint(&mut self, child_id: BlockId);
 
     /// 获取首选大小
     ///
-    /// 对应 d2: getPreferredSize(IFigure, int, int)
+    /// 对应 draw2d: getPreferredSize(IFigure, int, int)
     /// wHint, hHint 为建议的宽高，-1 表示无限制
     fn get_preferred_size(
         &self,
@@ -71,7 +71,7 @@ pub trait LayoutManager: Send + Sync {
 
     /// 获取最小大小
     ///
-    /// 对应 d2: getMinimumSize(IFigure, int, int)
+    /// 对应 draw2d: getMinimumSize(IFigure, int, int)
     fn get_minimum_size(
         &self,
         container: BlockId,
@@ -82,11 +82,11 @@ pub trait LayoutManager: Send + Sync {
 
     /// 执行布局
     ///
-    /// 对应 d2: layout(IFigure)
+    /// 对应 draw2d: layout(IFigure)
     fn layout(&self, container: BlockId, ctx: &mut dyn LayoutContext);
 
     /// 使缓存失效
     ///
-    /// 对应 d2: invalidate()
+    /// 对应 draw2d: invalidate()
     fn invalidate(&mut self);
 }

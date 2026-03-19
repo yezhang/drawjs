@@ -4,7 +4,7 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Bounded, Shape};
+use super::{Bounded, Shape, Updatable};
 
 /// 圆角矩形图形
 ///
@@ -116,6 +116,12 @@ impl Bounded for RoundedRectangleFigure {
     }
 }
 
+// 实现 Updatable trait
+impl Updatable for RoundedRectangleFigure {
+    fn validate(&mut self) {}
+    fn invalidate(&mut self) {}
+}
+
 // 实现 Shape trait
 impl Shape for RoundedRectangleFigure {
     fn stroke_color(&self) -> Option<Color> {
@@ -152,7 +158,7 @@ impl Shape for RoundedRectangleFigure {
 
     fn outline_shape(&self, gc: &mut NdCanvas) {
         if let Some(color) = self.stroke_color {
-            // 参考 d2 RectangleFigure.outlineShape:
+            // 参考 draw2d RectangleFigure.outlineShape:
             // 描边向内缩，使描边完全在 bounds 内部
             let line_inset = (1.0_f64).max(self.stroke_width) / 2.0;
 

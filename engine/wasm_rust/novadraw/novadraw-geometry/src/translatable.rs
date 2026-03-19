@@ -1,14 +1,14 @@
 //! 可变形类型 Trait
 //!
 //! 提供几何对象的平移和缩放能力。
-//! 对应 d2: org.eclipse.draw2d.geometry.Translatable
+//! 对应 draw2d: org.eclipse.draw2d.geometry.Translatable
 
 use super::{Point, Rectangle, Size};
 
 /// 内边距类型
 ///
 /// 表示矩形的四个方向的内边距值。
-/// 对应 d2: org.eclipse.draw2d.geometry.Insets
+/// 对应 draw2d: org.eclipse.draw2d.geometry.Insets
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Insets {
     /// 上边距
@@ -91,7 +91,7 @@ impl std::fmt::Display for Insets {
 /// 可变形 Trait
 ///
 /// 支持平移和缩放操作的几何类型。
-/// 对应 d2: org.eclipse.draw2d.geometry.Translatable
+/// 对应 draw2d: org.eclipse.draw2d.geometry.Translatable
 pub trait Translatable {
     /// 水平移动 `dx`，垂直移动 `dy`
     fn translate(&mut self, dx: f64, dy: f64);

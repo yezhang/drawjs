@@ -19,7 +19,7 @@ novadraw-render/   - 渲染后端抽象
 
 ### 1. 创建新 Figure 类型
 
-参考 `doc/figure_box_model.md` 中的 d2 盒模型实现。
+参考 `doc/figure_box_model.md` 中的 g2 盒模型实现。
 
 ```rust
 // 1. 在 figure/mod.rs 添加模块

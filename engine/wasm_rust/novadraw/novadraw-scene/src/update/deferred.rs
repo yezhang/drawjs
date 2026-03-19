@@ -23,13 +23,20 @@ use crate::scene::BlockId;
 /// Scene Update Manager
 ///
 /// 场景图更新管理器，批量处理布局和重绘请求。
-/// 此结构体作为 SceneGraph 的内部状态使用。
+/// 参考 Eclipse Draw2D 的 DeferredUpdateManager 设计。
 ///
 /// # 设计要点
 ///
 /// - 脏区域使用 HashMap 合并，每个块最多一个脏区域
 /// - 失效块使用 Vec 存储，支持重复添加（去重）
 /// - 两阶段更新：先布局，再重绘
+/// - 纯数据管理：具体的验证和渲染由 SceneGraph 通过 trait 方法执行
+///
+/// # 与 draw2d 的差异
+///
+/// draw2d 的 DeferredUpdateManager 直接持有 root Figure 引用并直接调用其方法。
+/// 本实现将数据管理（UM）和业务逻辑（SceneGraph）分离，
+/// 通过 `UpdateManagerSource` trait 定义回调接口，保持解耦。
 #[derive(Default)]
 pub struct SceneUpdateManager {
     /// 脏区域映射：block_id -> 脏区域
@@ -38,9 +45,6 @@ pub struct SceneUpdateManager {
     pub(crate) invalid_blocks: Vec<BlockId>,
     /// 是否有更新待处理
     pub(crate) update_queued: bool,
-    /// 合并脏区域时的扩展边距
-    #[allow(dead_code)]
-    expand_margin: f64,
 }
 
 impl SceneUpdateManager {
@@ -50,13 +54,12 @@ impl SceneUpdateManager {
             dirty_regions: std::collections::HashMap::new(),
             invalid_blocks: Vec::new(),
             update_queued: false,
-            expand_margin: 1.0,
         }
     }
 
     /// 添加脏区域
     ///
-    /// 对应 d2: UpdateManager.addDirtyRegion()
+    /// 对应 draw2d: UpdateManager.addDirtyRegion()
     ///
     /// # Arguments
     ///
@@ -88,7 +91,7 @@ impl SceneUpdateManager {
 
     /// 添加失效块
     ///
-    /// 对应 d2: UpdateManager.addInvalidFigure()
+    /// 对应 draw2d: UpdateManager.addInvalidFigure()
     ///
     /// 失效的块将在下一帧进行布局计算。
     ///
@@ -116,7 +119,9 @@ impl SceneUpdateManager {
     }
 
     /// 检查是否有待处理的更新
-    pub fn has_pending_updates(&self) -> bool {
+    ///
+    /// 对应 draw2d: updateQueued flag
+    pub fn is_update_queued(&self) -> bool {
         self.update_queued
     }
 
@@ -161,6 +166,23 @@ impl SceneUpdateManager {
     pub fn dirty_count(&self) -> usize {
         self.dirty_regions.len()
     }
+
+    /// 排空并返回所有待验证的块 ID
+    ///
+    /// 对应 draw2d: performValidation 中对 invalidFigures 的 drain。
+    /// SceneGraph 使用此方法获取需要验证的块列表。
+    pub fn drain_invalid_blocks(&mut self) -> Vec<BlockId> {
+        self.invalid_blocks.drain(..).collect()
+    }
+
+    /// 清空脏区域和更新标记
+    ///
+    /// 对应 draw2d: performUpdate 完成后清空队列。
+    /// 由 SceneGraph 在 repairDamage 完成后调用。
+    pub fn clear_dirty_and_flag(&mut self) {
+        self.dirty_regions.clear();
+        self.update_queued = false;
+    }
 }
 
 #[cfg(test)]
@@ -180,7 +202,7 @@ mod tests {
         let rect = Rectangle::new(0.0, 0.0, 100.0, 100.0);
         manager.add_dirty_region(create_test_key(1), rect);
 
-        assert!(manager.has_pending_updates());
+        assert!(manager.is_update_queued());
         assert!(manager.has_pending_repaint());
         assert_eq!(manager.dirty_count(), 1);
     }
@@ -239,7 +261,7 @@ mod tests {
 
         manager.clear();
 
-        assert!(!manager.has_pending_updates());
+        assert!(!manager.is_update_queued());
         assert!(!manager.has_pending_layout());
         assert!(!manager.has_pending_repaint());
     }
@@ -253,5 +275,17 @@ mod tests {
         manager.add_dirty_region(create_test_key(1), rect);
 
         assert!(!manager.has_pending_repaint());
+    }
+
+    #[test]
+    fn test_drain_invalid_blocks() {
+        let mut manager = SceneUpdateManager::new();
+
+        manager.add_invalid_figure(create_test_key(1));
+        manager.add_invalid_figure(create_test_key(2));
+
+        let drained = manager.drain_invalid_blocks();
+        assert_eq!(drained.len(), 2);
+        assert!(!manager.has_pending_layout());
     }
 }

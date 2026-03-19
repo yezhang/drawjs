@@ -3,7 +3,7 @@
 ## 项目概述
 
 使用 Rust + WebGPU 技术栈实现的高性能绘图引擎工具包，参考 eclipse draw2d/GEF 架构设计，目标是扩展为通用图形框架。
-为了简便，我会使用 d2 指代 draw2d。
+为了简便，我会使用 g2 指代 eclipse draw2d，但仅限文档中使用。代码文件（`.rs`）中引用 draw2d 时必须使用全称 `draw2d`，不得使用 `g2` 等简称。
 
 ## 技术栈
 
@@ -27,7 +27,7 @@
 ### 核心原则
 
 - Figure 只负责渲染接口和几何定义，不包含状态
-- 运行时状态（可见性、选中状态、层次关系）由 RuntimeBlock 管理
+- 运行时状态（可见性、选中状态、层次关系）由 FigureBlock 管理
 - 渲染与逻辑分离，支持海量图形高效渲染
 
 ## 代码约定
@@ -38,6 +38,7 @@
 - 函数/变量: `snake_case`
 - 常量: `SCREAMING_SNAKE_CASE`
 - 泛型参数: `T`, `U` 等单大写字母
+- **代码文件中引用 draw2d 时必须使用全称**，不得使用 `g2` 等简称
 
 ### 文档规范
 
@@ -97,7 +98,7 @@ fn visit(node: &Node) {
 ### 子节点传播
 
 - **所有涉及子节点传播的操作必须在 SceneGraph 中使用迭代实现**
-- RuntimeBlock 和 Figure 只管理单个节点状态，不包含传播逻辑
+- FigureBlock 和 Figure 只管理单个节点状态，不包含传播逻辑
 - 传播操作（translate、bounds 更新等）统一在 SceneGraph 层处理
 
 ```rust
@@ -116,7 +117,7 @@ impl SceneGraph {
     }
 }
 
-// 禁止：在 Figure 或 RuntimeBlock 中递归传播
+// 禁止：在 Figure 或 FigureBlock 中递归传播
 impl Figure {
     pub fn translate(&mut self, dx: f64, dy: f64) {
         self.bounds.x += dx;
@@ -165,7 +166,7 @@ npx markdownlint-cli2 doc/**/*.md 2>/dev/null || true
 
 1. **需求分析**：明确功能边界和验收标准
 2. **源码参考**：
-   - 使用 `/analyzing-gef-code` 分析 d2 对应实现
+   - 使用 `/analyzing-gef-code` 分析 g2 对应实现
    - 使用 `/analyzing-xilem-code` 参考现代 GUI 框架设计
    - 使用 `/analyzing-swt-code` 分析底层 GC API
 3. **接口设计**：先定义 trait 接口，再逐步实现
@@ -212,6 +213,7 @@ npx markdownlint-cli2 doc/**/*.md 2>/dev/null || true
 - 不在渲染/热路径中打印日志
 - 不使用全局状态或 Singleton
 - 不在业务代码中硬编码magic numbers
+- **不得移除递归/迭代渲染模式切换功能**（editor 的 I 键切换和 `use_iterative_render` 字段必须保留）
 
 ## 交互方式
 

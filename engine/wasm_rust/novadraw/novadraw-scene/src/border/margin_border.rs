@@ -13,11 +13,11 @@ use super::{Border, BorderStyle, DEFAULT_BORDER_WIDTH};
 
 /// 边距边框
 ///
-/// 参考 d2: MarginBorder 提供内边距，不绘制可见内容。
+/// 参考 draw2d: MarginBorder 提供内边距，不绘制可见内容。
 ///
-/// # 与 d2 的差异
+/// # 与 draw2d 的差异
 ///
-/// d2 中 MarginBorder 的 paint() 为空，仅用于布局（提供 insets）。
+/// draw2d 中 MarginBorder 的 paint() 为空，仅用于布局（提供 insets）。
 /// novadraw 当前未实现布局系统，所以 insets 效果不会体现。
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MarginBorder {
@@ -103,7 +103,7 @@ impl Border for MarginBorder {
 
     /// 绘制边框
     ///
-    /// 参考 d2: MarginBorder.paint() 为空实现，不绘制任何可见内容。
+    /// 参考 draw2d: MarginBorder.paint() 为空实现，不绘制任何可见内容。
     /// 主要用于提供内边距（insets），影响子元素布局。
     fn paint(&self, _figure_bounds: Rectangle, _gc: &mut NdCanvas) {
         // 空实现：MarginBorder 不绘制可见内容

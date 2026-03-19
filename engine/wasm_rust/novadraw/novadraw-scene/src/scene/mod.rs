@@ -9,6 +9,7 @@ use novadraw_render::NdCanvas;
 use slotmap::{Key, SlotMap};
 use uuid::Uuid;
 
+use super::figure::Updatable;
 use super::layout::LayoutManager;
 
 // 渲染模块
@@ -26,10 +27,17 @@ pub mod update_integration_test;
 
 slotmap::new_key_type! { pub struct BlockId; }
 
-/// 运行时块
+/// FigureBlock - 图形节点
 ///
-/// 场景图中的基本单元，包含图形。
-pub struct RuntimeBlock {
+/// 场景图中的基本单元，同时包含图形数据（通过 Box<dyn Figure>）
+/// 和树形结构（parent/children），参考 Eclipse Draw2D 的 Figure 设计。
+///
+/// # 与 Figure trait 的区别
+///
+/// - `FigureBlock` 是具体的数据结构，实现了树形节点的所有功能
+/// - `dyn Figure` 是渲染接口 trait，定义了图形的几何和渲染行为
+/// - 一个 `FigureBlock` 持有 `Box<dyn Figure>` 来实现具体的图形类型
+pub struct FigureBlock {
     /// 块 ID
     pub id: BlockId,
     /// UUID
@@ -56,7 +64,7 @@ pub struct RuntimeBlock {
     pub maximum_size: Option<(f64, f64)>,
 }
 
-impl RuntimeBlock {
+impl FigureBlock {
     /// 创建新运行时块
     pub fn new(id: BlockId, uuid: Uuid, figure: Box<dyn super::Figure>) -> Self {
         Self {
@@ -178,7 +186,7 @@ fn rect_intersects(a: &Rectangle, b: &Rectangle) -> bool {
 /// scene.add_child_to(contents_id, Box::new(child));
 /// ```
 pub struct SceneGraph {
-    pub blocks: SlotMap<BlockId, RuntimeBlock>,
+    pub blocks: SlotMap<BlockId, FigureBlock>,
     pub uuid_map: std::collections::HashMap<Uuid, BlockId>,
     /// 根块（内部使用）
     root: BlockId,
@@ -199,7 +207,7 @@ impl SceneGraph {
         let mut blocks = SlotMap::with_key();
         let uuid = Uuid::new_v4();
 
-        let root_id = blocks.insert_with_key(|key| RuntimeBlock {
+        let root_id = blocks.insert_with_key(|key| FigureBlock {
             id: key,
             uuid,
             children: Vec::new(),
@@ -226,9 +234,13 @@ impl SceneGraph {
         }
     }
 
-    /// 设置内容块（类似 Draw2d 的 LightweightSystem.setContents）
+    /// 设置内容块
+    ///
+    /// 对应 draw2d: LightweightSystem.setContents(IFigure)
     ///
     /// 设置场景的根容器，后续添加的子块将作为此容器的子元素。
+    /// 注意：此方法不触发 revalidate()，用于批量构建场景。
+    /// 交互式修改使用 SceneManager.set_contents() 方法。
     pub fn set_contents(&mut self, figure: Box<dyn super::Figure>) -> BlockId {
         let contents_id = self.new_block_with_parent(figure, self.root);
         self.contents = Some(contents_id);
@@ -240,7 +252,11 @@ impl SceneGraph {
         self.contents
     }
 
-    /// 添加子块到指定父块（类似 Draw2d 的 parent.addChild(child)）
+    /// 添加子块到指定父块
+    ///
+    /// 对应 draw2d: parent.addChild(child) (不触发 revalidate)
+    ///
+    /// 与 `add_child()` 的区别：此方法不触发 revalidate()，用于批量构建场景。
     pub fn add_child_to(&mut self, parent_id: BlockId, figure: Box<dyn super::Figure>) -> BlockId {
         self.new_block_with_parent(figure, parent_id)
     }
@@ -278,6 +294,30 @@ impl SceneGraph {
         self.new_block_with_parent(Box::new(figure), parent_id)
     }
 
+    /// 添加子块
+    ///
+    /// 参考 draw2d: parent.addChild(child) -> revalidate()
+    /// 与 `add_child_to()` 的区别：此方法会标记父容器需要重新布局，
+    /// 并将父容器区域加入脏区域，下次 `perform_update()` 时会验证布局。
+    ///
+    /// # 使用场景
+    ///
+    /// 用于交互式修改（如拖拽添加、动态插入节点），不适合批量构建场景。
+    /// 批量构建使用 `add_child_to()` 以避免不必要的更新触发。
+    pub fn add_child(&mut self, parent_id: BlockId, figure: Box<dyn super::Figure>) -> BlockId {
+        let bounds = figure.bounds();
+        let child_id = self.new_block_with_parent(figure, parent_id);
+
+        // 标记父容器需要重新布局
+        self.mark_invalid(parent_id);
+        // 标记脏区域
+        self.repaint(parent_id, Some(bounds));
+        // 标记新子块需要验证
+        self.mark_invalid(child_id);
+
+        child_id
+    }
+
     /// 创建带父块的块
     fn new_block_with_parent(
         &mut self,
@@ -285,7 +325,7 @@ impl SceneGraph {
         parent_id: BlockId,
     ) -> BlockId {
         let uuid = Uuid::new_v4();
-        let id = self.blocks.insert_with_key(|key| RuntimeBlock {
+        let id = self.blocks.insert_with_key(|key| FigureBlock {
             id: key,
             uuid,
             children: Vec::new(),
@@ -307,14 +347,14 @@ impl SceneGraph {
 
     /// 使布局失效，下次渲染时将重新计算布局
     ///
-    /// 对应 d2: Figure.invalidate()
+    /// 对应 draw2d: Figure.invalidate()
     pub fn invalidate(&mut self) {
         self.layout_valid = false;
     }
 
     /// 标记块需要重新布局
     ///
-    /// 对应 d2: Figure.revalidate() -> UpdateManager.addInvalidFigure()
+    /// 对应 draw2d: Figure.revalidate() -> UpdateManager.addInvalidFigure()
     /// 将块添加到更新管理器的失效队列中。
     ///
     /// # Arguments
@@ -326,7 +366,7 @@ impl SceneGraph {
 
     /// 请求重绘指定块
     ///
-    /// 对应 d2: Figure.repaint() -> UpdateManager.addDirtyRegion()
+    /// 对应 draw2d: Figure.repaint() -> UpdateManager.addDirtyRegion()
     /// 将块添加到更新管理器的脏区域队列中。
     ///
     /// # Arguments
@@ -348,7 +388,7 @@ impl SceneGraph {
 
     /// 请求重绘整个场景
     ///
-    /// 对应 d2: Figure.repaint() 使用整个 bounds
+    /// 对应 draw2d: Figure.repaint() 使用整个 bounds
     pub fn repaint_all(&mut self) {
         if let Some(contents_id) = self.contents {
             self.repaint(contents_id, None);
@@ -357,39 +397,85 @@ impl SceneGraph {
 
     /// 检查是否有待处理的更新
     ///
-    /// 对应 d2: UpdateManager.hasPendingUpdates()
-    pub fn has_pending_updates(&self) -> bool {
-        self.update_manager.has_pending_updates()
+    /// 对应 draw2d: UpdateManager.updateQueued flag
+    pub fn is_update_queued(&self) -> bool {
+        self.update_manager.is_update_queued()
     }
 
     /// 执行更新（两阶段：布局 + 重绘）
     ///
-    /// 对应 d2: UpdateManager.performUpdate()
+    /// 对应 draw2d: DeferredUpdateManager.performUpdate()
     ///
-    /// 1. Phase 1: 布局失效的块
-    /// 2. Phase 2: 合并脏区域并重绘
-    pub fn perform_update(&mut self) {
-        // Phase 1: 处理失效块布局
-        if self.update_manager.has_pending_layout() {
-            // 收集所有失效块并执行布局
-            let invalid_blocks: Vec<BlockId> = self.update_manager.invalid_blocks.clone();
-
-            for block_id in invalid_blocks {
-                if let Some(block) = self.blocks.get(block_id) {
-                    if block.is_visible && block.is_enabled {
-                        self.revalidate(block_id);
-                    }
+    /// Phase 1: 布局验证
+    /// - 遍历所有失效块，调用 revalidate() 执行布局
+    /// - 调用 Figure.validate() 预计算几何属性（如 Triangle 顶点）
+    ///
+    /// Phase 2: 脏区域重绘
+    /// - 如果有待重绘的脏区域，使用脏区域裁剪渲染
+    /// - 清空脏区域
+    pub fn perform_update(&mut self) -> NdCanvas {
+        // 对应 draw2d: DeferredUpdateManager.performUpdate()
+        //
+        // Phase 1: 布局验证
+        // 使用 drain_invalid_blocks() 获取所有待验证块并清空队列
+        let block_ids = self.update_manager.drain_invalid_blocks();
+        for block_id in block_ids {
+            if let Some(block) = self.blocks.get(block_id) {
+                if block.is_visible && block.is_enabled {
+                    self.revalidate(block_id);
                 }
             }
-
-            // 清空失效块队列
-            self.update_manager.invalid_blocks.clear();
         }
 
-        // Phase 2: 清空脏区域（渲染完成后应由外部调用方清空）
-        // 这里我们清空脏区域，因为 perform_update 表示"更新已完成"
+        // Phase 2: 脏区域重绘
+        let damage = self.update_manager.compute_damage();
+        let mut canvas = NdCanvas::new();
+
+        if self.update_manager.has_pending_repaint() && damage.width > 0.0 && damage.height > 0.0 {
+            canvas.clip_rect(damage.x, damage.y, damage.width, damage.height);
+        }
+        self.render_to_iterative(&mut canvas);
+
+        // 清空脏区域和更新标记
+        self.update_manager.clear_dirty_and_flag();
+
+        canvas
+    }
+
+    /// 渲染脏区域
+    ///
+    /// 对应 draw2d: DeferredUpdateManager.repairDamage() (private)
+    ///
+    /// # 性能优化
+    ///
+    /// 脏区域优化可以显著减少渲染工作量。
+    /// 对于全量重绘场景（无脏区域），使用 render() 方法。
+    pub fn repair_damage(&mut self) -> NdCanvas {
+        let damage = self.update_manager.compute_damage();
+
+        let mut gc = NdCanvas::new();
+
+        // 设置脏区域裁剪
+        if self.update_manager.has_pending_repaint() && damage.width > 0.0 && damage.height > 0.0 {
+            gc.clip_rect(damage.x, damage.y, damage.width, damage.height);
+        }
+
+        // 渲染场景
+        self.render_to_iterative(&mut gc);
+
+        // 清空脏区域
         self.update_manager.dirty_regions.clear();
         self.update_manager.update_queued = false;
+
+        gc
+    }
+
+    /// 执行两阶段更新（布局 + 脏区域重绘）
+    ///
+    /// 对应 draw2d: DeferredUpdateManager.performUpdate() 的完整行为。
+    /// 委托给 SceneUpdateManager.perform_update() 执行。
+    pub fn perform_update_and_repair(&mut self) -> NdCanvas {
+        self.perform_update()
     }
 
     /// 获取合并后的脏区域
@@ -401,7 +487,7 @@ impl SceneGraph {
 
     /// 清空更新队列
     ///
-    /// 对应 d2: UpdateManager.clear()
+    /// 对应 draw2d: UpdateManager.clear()
     pub fn clear_updates(&mut self) {
         self.update_manager.clear();
     }
@@ -410,11 +496,11 @@ impl SceneGraph {
     ///
     /// 从指定容器开始，递归执行布局。
     /// 只有设置了布局管理器的容器才会执行布局。
-    /// 参考 d2: Figure.layout() { if (layoutManager != null) layoutManager.layout() }
+    /// 参考 draw2d: Figure.layout() { if (layoutManager != null) layoutManager.layout() }
     pub fn revalidate(&mut self, container_id: BlockId) {
-        // 1. 调用容器的 Figure.validate()（布局后验证钩子）
+        // 1. 调用容器的 Updatable.validate()（布局后验证钩子）
         if let Some(block) = self.blocks.get_mut(container_id) {
-            block.figure.validate();
+            Updatable::validate(&mut *block.figure);
         }
 
         // 2. 获取该容器的布局器
@@ -424,7 +510,7 @@ impl SceneGraph {
             .and_then(|b| b.layout_manager.clone());
 
         if layout_manager.is_none() {
-            // 没有布局器，不执行任何布局，参考 d2：layoutManager == null 时什么都不做
+            // 没有布局器，不执行任何布局，参考 draw2d：layoutManager == null 时什么都不做
             // 但仍然递归处理子容器
             self.revalidate_children(container_id);
             return;
@@ -619,7 +705,7 @@ impl SceneGraph {
     /// 渲染场景图
     ///
     /// 使用递归实现 Figure 树的渲染遍历。
-    /// 渲染顺序（参考 d2）：
+    /// 渲染顺序（参考 draw2d）：
     /// 1. paintFigure() - 绘制自身
     /// 2. paintClientArea() - 绘制子元素
     /// 3. paintBorder() - 绘制边框
@@ -743,7 +829,7 @@ impl SceneGraph {
     }
 
     /// 获取块
-    pub fn get_block(&self, id: BlockId) -> Option<&RuntimeBlock> {
+    pub fn get_block(&self, id: BlockId) -> Option<&FigureBlock> {
         self.blocks.get(id)
     }
 
@@ -779,7 +865,7 @@ impl SceneGraph {
 
     /// 设置子元素的布局约束
     ///
-    /// 对应 d2: setConstraint(IFigure, Object)
+    /// 对应 draw2d: setConstraint(IFigure, Object)
     /// 约束使用 Rectangle 类型
     pub fn set_constraint(&mut self, child_id: BlockId, constraint: Rectangle) {
         // 使用 child_id 的索引作为约束的 key
@@ -791,7 +877,7 @@ impl SceneGraph {
 
     /// 获取子元素的布局约束
     ///
-    /// 对应 d2: getConstraint(IFigure)
+    /// 对应 draw2d: getConstraint(IFigure)
     pub fn get_constraint(&self, child_id: BlockId) -> Option<Rectangle> {
         self.constraints
             .get(&(child_id.data().as_ffi() as usize))
@@ -800,7 +886,7 @@ impl SceneGraph {
 
     /// 移除子元素的布局约束
     ///
-    /// 对应 d2: LayoutManager.remove(IFigure)
+    /// 对应 draw2d: LayoutManager.remove(IFigure)
     pub fn remove_constraint(&mut self, child_id: BlockId) {
         self.constraints
             .remove(&(child_id.data().as_ffi() as usize));
@@ -809,7 +895,7 @@ impl SceneGraph {
 
     /// 使布局生效
     ///
-    /// 对应 d2: validate()
+    /// 对应 draw2d: validate()
     /// 标记布局为有效
     pub fn validate(&mut self) {
         self.layout_valid = true;
@@ -836,7 +922,7 @@ impl SceneGraph {
 
     // ========== 坐标变换方法 ==========
 
-    /// 原始平移（对应 d2: primTranslate）
+    /// 原始平移（对应 draw2d: primTranslate）
     ///
     /// 移动 Figure 的位置并传播到子节点。
     /// 如果 `use_local_coordinates()` 为 false（默认），子节点的 bounds 也会被平移。
@@ -854,7 +940,7 @@ impl SceneGraph {
     /// - 这种设计确保所有 bounds 始终相对于坐标根
     /// - 当 `use_local_coordinates()` 为 true 时，坐标根的 bounds 变化会触发事件通知
     ///
-    /// # 与 d2 的一致性
+    /// # 与 draw2d 的一致性
     ///
     /// ```java
     /// // Figure.java:1390-1397 - primTranslate
@@ -901,7 +987,7 @@ impl SceneGraph {
 
     /// 设置节点的 bounds
     ///
-    /// 对应 d2: setBounds(Rectangle)
+    /// 对应 draw2d: setBounds(Rectangle)
     /// 核心逻辑：
     /// 1. 计算位置偏移
     /// 2. 使用栈迭代调用 prim_translate 传播偏移到所有子节点
@@ -938,7 +1024,7 @@ impl SceneGraph {
 
     /// 将局部坐标转换为绝对坐标
     ///
-    /// 对应 d2: translateToAbsolute(Translatable)
+    /// 对应 draw2d: translateToAbsolute(Translatable)
     ///
     /// # 算法
     ///
@@ -983,7 +1069,7 @@ impl SceneGraph {
 
     /// 检查节点是否是坐标根
     ///
-    /// 对应 d2: isCoordinateSystem()
+    /// 对应 draw2d: isCoordinateSystem()
     /// 返回 true 如果节点使用本地坐标（即它是子节点的坐标根）。
     pub fn is_coordinate_system(&self, block_id: BlockId) -> bool {
         if let Some(block) = self.blocks.get(block_id) {
@@ -995,7 +1081,7 @@ impl SceneGraph {
 
     /// 将本地坐标转换为父节点坐标
     ///
-    /// 对应 d2: translateToParent(Translatable)
+    /// 对应 draw2d: translateToParent(Translatable)
     ///
     /// # 算法
     ///
@@ -1027,7 +1113,7 @@ impl SceneGraph {
 
     /// 将父节点坐标转换为本地坐标
     ///
-    /// 对应 d2: translateFromParent(Translatable)
+    /// 对应 draw2d: translateFromParent(Translatable)
     ///
     /// # 算法
     ///
@@ -1052,7 +1138,7 @@ impl SceneGraph {
 
     /// 将绝对坐标转换为本地坐标
     ///
-    /// 对应 d2: translateToRelative(Translatable)
+    /// 对应 draw2d: translateToRelative(Translatable)
     ///
     /// # 算法
     ///
@@ -1145,7 +1231,7 @@ impl Default for SceneGraph {
 
 #[cfg(test)]
 mod tests {
-    use super::super::figure::{Bounded, Figure, RectangleFigure, Shape};
+    use super::super::figure::{Bounded, RectangleFigure, Shape, Updatable};
     use crate::scene::SceneGraphRenderRef;
     use crate::{Rectangle, SceneGraph};
     use novadraw_core::Color as NovadrawCoreColor;
@@ -1183,6 +1269,11 @@ mod tests {
         fn name(&self) -> &'static str {
             "TestCoordinateRootFigure"
         }
+    }
+
+    impl Updatable for TestCoordinateRootFigure {
+        fn validate(&mut self) {}
+        fn invalidate(&mut self) {}
     }
 
     impl Shape for TestCoordinateRootFigure {
@@ -1255,6 +1346,11 @@ mod tests {
         fn name(&self) -> &'static str {
             "TestFigureWithInsets"
         }
+    }
+
+    impl Updatable for TestFigureWithInsets {
+        fn validate(&mut self) {}
+        fn invalidate(&mut self) {}
     }
 
     impl Shape for TestFigureWithInsets {
@@ -2072,5 +2168,15 @@ mod tests {
             "应有足够的渲染命令，实际为 {}",
             cmd_iterative
         );
+    }
+}
+
+impl crate::scene_host::SceneUpdateTarget for SceneGraph {
+    fn perform_update(&mut self) -> novadraw_render::NdCanvas {
+        SceneGraph::perform_update(self)
+    }
+
+    fn repair_damage(&mut self) -> novadraw_render::NdCanvas {
+        SceneGraph::repair_damage(self)
     }
 }

@@ -1,6 +1,6 @@
 //! XY 布局器
 //!
-//! 参考 d2: XYLayout
+//! 参考 draw2d: XYLayout
 //! 使用约束（Rectangle）定位每个子元素。
 
 use super::LayoutContext;
@@ -10,7 +10,7 @@ use novadraw_geometry::Rectangle;
 
 /// XY 布局约束
 ///
-/// 对应 d2 中的 Rectangle 约束
+/// 对应 draw2d 中的 Rectangle 约束
 #[derive(Clone, Debug)]
 #[allow(dead_code)]
 pub struct XYConstraint {
@@ -70,7 +70,7 @@ impl Default for XYConstraint {
 
 /// XY 布局器
 ///
-/// 参考 d2: XYLayout
+/// 参考 draw2d: XYLayout
 /// 根据每个子元素的约束 Rectangle 来定位和设置大小。
 #[derive(Debug, Clone)]
 pub struct XYLayout {
@@ -144,15 +144,15 @@ impl LayoutManager for XYLayout {
         // 获取容器的 bounds（用于计算 client area）
         let container_bounds = ctx.get_container_bounds(container);
 
-        // d2: getOrigin(parent) 返回 parent.getClientArea().getLocation()
-        // 在 d2 中，useLocalCoordinates() 默认返回 false
+        // draw2d: getOrigin(parent) 返回 parent.getClientArea().getLocation()
+        // 在 draw2d 中，useLocalCoordinates() 默认返回 false
         // client area = bounds - insets，默认 insets 为 0
         // 所以 origin = bounds.location()
         let offset_x = container_bounds.x;
         let offset_y = container_bounds.y;
 
         // XYLayout：将约束从"相对于 client area"转换为"相对于 bounds"
-        // d2: bounds = bounds.getTranslated(offset)
+        // draw2d: bounds = bounds.getTranslated(offset)
         for (child_id, _) in children {
             // 获取约束（相对于 client area）
             if let Some(constraint) = ctx.get_constraint(child_id) {

@@ -83,7 +83,7 @@ impl From<Size> for SizeSerde {
 /// 矩形类型
 ///
 /// 使用左上角坐标 (x, y) 和宽高 (width, height) 定义。
-/// 对应 d2: org.eclipse.draw2d.geometry.Rectangle
+/// 对应 draw2d: org.eclipse.draw2d.geometry.Rectangle
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(from = "RectangleSerde", into = "RectangleSerde")]
 pub struct Rectangle {

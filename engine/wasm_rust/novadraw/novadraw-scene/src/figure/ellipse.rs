@@ -4,7 +4,7 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Bounded, Shape};
+use super::{Bounded, Shape, Updatable};
 
 /// 椭圆图形
 ///
@@ -119,6 +119,12 @@ impl Bounded for EllipseFigure {
     }
 }
 
+// 实现 Updatable trait
+impl Updatable for EllipseFigure {
+    fn validate(&mut self) {}
+    fn invalidate(&mut self) {}
+}
+
 // 实现 Shape trait
 impl Shape for EllipseFigure {
     fn stroke_color(&self) -> Option<Color> {
@@ -171,7 +177,7 @@ impl Shape for EllipseFigure {
 
     fn outline_shape(&self, gc: &mut NdCanvas) {
         if let Some(color) = self.stroke_color {
-            // 参考 d2 Ellipse.outlineShape:
+            // 参考 draw2d Ellipse.outlineShape:
             // 描边向内缩（inset），使描边完全在 bounds 内部
             let line_inset = (1.0_f64).max(self.stroke_width) / 2.0;
 

@@ -1,6 +1,6 @@
 //! Fill 布局器
 //!
-//! 参考 d2: FlowLayout 或 FillLayout
+//! 参考 draw2d: FlowLayout 或 FillLayout
 //! 第一个子元素填充容器，其他子元素保持原位。
 
 use tracing::debug;
@@ -76,7 +76,11 @@ impl LayoutManager for FillLayout {
             return;
         }
 
-        debug!("FillLayout: container={:?}, children count: {}", container, children.len());
+        debug!(
+            "FillLayout: container={:?}, children count: {}",
+            container,
+            children.len()
+        );
 
         // 获取第一个子元素
         if let Some((first_child_id, _)) = children.first() {

@@ -16,15 +16,15 @@
 2. **Miter 特性**: 尖锐角度处 miter 尖角可以延伸很远，超过 `stroke_width / 2` 的范围
 3. **渲染坐标**: 直接在原始坐标绘制，未考虑向内收缩
 
-## d2 对比
+## g2 对比
 
-| Figure 类型 | d2 处理方式 |
+| Figure 类型 | g2 处理方式 |
 |------------|------------|
 | RectangleFigure | 向内收缩绘制: `lineInset = max(1.0, lineWidth) / 2.0` |
 | PolylineShape | 不做特殊处理 |
 | PolygonShape | 不做特殊处理 |
 
-**结论**: d2 也存在同样问题。
+**结论**: g2 也存在同样问题。
 
 ## 解决方案
 

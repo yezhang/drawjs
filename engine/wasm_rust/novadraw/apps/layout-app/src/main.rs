@@ -135,7 +135,11 @@ fn create_scene_flow_layout() -> novadraw::SceneGraph {
     let container_id = scene.set_contents(Box::new(container));
 
     // 设置 FlowLayout
-    let flow_layout = Arc::new(novadraw::FlowLayout::new().with_spacing(15.0).with_row_spacing(15.0));
+    let flow_layout = Arc::new(
+        novadraw::FlowLayout::new()
+            .with_spacing(15.0)
+            .with_row_spacing(15.0),
+    );
     scene.set_block_layout_manager(container_id, flow_layout);
 
     // 添加多个小方块，会自动换行（需要足够数量填满一行）
@@ -148,13 +152,8 @@ fn create_scene_flow_layout() -> novadraw::SceneGraph {
         let w = 100.0 + (i % 3) as f64 * 20.0; // 固定宽度范围
         let h = 60.0 + (i % 2) as f64 * 15.0;
 
-        let rect = novadraw::RectangleFigure::new_with_color(
-            0.0,
-            0.0,
-            w,
-            h,
-            novadraw::Color::hex(color),
-        );
+        let rect =
+            novadraw::RectangleFigure::new_with_color(0.0, 0.0, w, h, novadraw::Color::hex(color));
         let _child_id = scene.add_child_to(container_id, Box::new(rect));
     }
 
@@ -401,7 +400,11 @@ fn create_scene_border_layout() -> novadraw::SceneGraph {
 
     // North (顶部，红色)
     let north = novadraw::RectangleFigure::new_with_color(
-        0.0, 0.0, 100.0, 50.0, novadraw::Color::hex("#e74c3c"),
+        0.0,
+        0.0,
+        100.0,
+        50.0,
+        novadraw::Color::hex("#e74c3c"),
     );
     let north_id = scene.add_child_to(container_id, Box::new(north));
     // height < 0 表示 North
@@ -409,7 +412,11 @@ fn create_scene_border_layout() -> novadraw::SceneGraph {
 
     // South (底部，绿色)
     let south = novadraw::RectangleFigure::new_with_color(
-        0.0, 0.0, 100.0, 50.0, novadraw::Color::hex("#2ecc71"),
+        0.0,
+        0.0,
+        100.0,
+        50.0,
+        novadraw::Color::hex("#2ecc71"),
     );
     let south_id = scene.add_child_to(container_id, Box::new(south));
     // height > 0 表示 South
@@ -417,7 +424,11 @@ fn create_scene_border_layout() -> novadraw::SceneGraph {
 
     // West (左侧，蓝色)
     let west = novadraw::RectangleFigure::new_with_color(
-        0.0, 0.0, 50.0, 100.0, novadraw::Color::hex("#3498db"),
+        0.0,
+        0.0,
+        50.0,
+        100.0,
+        novadraw::Color::hex("#3498db"),
     );
     let west_id = scene.add_child_to(container_id, Box::new(west));
     // width < 0 表示 West
@@ -425,7 +436,11 @@ fn create_scene_border_layout() -> novadraw::SceneGraph {
 
     // East (右侧，黄色)
     let east = novadraw::RectangleFigure::new_with_color(
-        0.0, 0.0, 50.0, 100.0, novadraw::Color::hex("#f1c40f"),
+        0.0,
+        0.0,
+        50.0,
+        100.0,
+        novadraw::Color::hex("#f1c40f"),
     );
     let east_id = scene.add_child_to(container_id, Box::new(east));
     // width > 0 表示 East
@@ -433,7 +448,11 @@ fn create_scene_border_layout() -> novadraw::SceneGraph {
 
     // Center (中间，紫色)
     let center = novadraw::RectangleFigure::new_with_color(
-        0.0, 0.0, 100.0, 100.0, novadraw::Color::hex("#9b59b6"),
+        0.0,
+        0.0,
+        100.0,
+        100.0,
+        novadraw::Color::hex("#9b59b6"),
     );
     let center_id = scene.add_child_to(container_id, Box::new(center));
     // 默认 Center
