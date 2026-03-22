@@ -460,8 +460,8 @@ impl FigureGraph {
             gc.clip_rect(damage.x, damage.y, damage.width, damage.height);
         }
 
-        // 渲染场景
-        self.render_to_iterative(&mut gc);
+        // 渲染场景（使用递归实现）
+        self.render_to(&mut gc);
 
         // 清空脏区域
         self.update_manager.dirty_regions.clear();
