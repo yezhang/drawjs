@@ -5,16 +5,16 @@
 //! ## 使用方式
 //!
 //! ```rust
-//! use novadraw_scene::log::{debug_render, trace_render, info_render};
+//! use novadraw_scene::{debug_render, trace_render, info_render};
 //!
 //! // 调试渲染
-//! debug_render!("EnterFigure bounds={:?}", bounds);
+//! debug_render!("EnterFigure: rendering figure");
 //!
 //! // 详细执行路径
-//! trace_render!("clip_rect x={} y={}", x, y);
+//! trace_render!("clip_rect at x={} y={}", 100.0, 200.0);
 //!
 //! // 重要事件
-//! info_render!("Scene loaded: {} figures", count);
+//! info_render!("Scene loaded: {} figures", 42);
 //! ```
 //!
 //! ## 运行时控制
