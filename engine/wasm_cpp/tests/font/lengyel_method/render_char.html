@@ -40,9 +40,31 @@
         width: 40px;
         height: 500px;
       }
+      #toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      #toolbar button {
+        padding: 6px 10px;
+      }
+      #status {
+        font-family: monospace;
+        font-size: 12px;
+      }
     </style>
   </head>
   <body>
+    <div id="toolbar">
+      <button data-step="0">基线</button>
+      <button data-step="1">判别式钳制</button>
+      <button data-step="2">网格索引钳制</button>
+      <button data-step="3">双向平均</button>
+      <button data-step="4">近零处理</button>
+      <span id="status"></span>
+    </div>
     <div id="container">
       <canvas id="fontCanvas" width="600" height="600"></canvas>
       <canvas id="rulerX" width="500" height="40"></canvas>
@@ -100,6 +122,20 @@
 
       const kQuadraticEpsilon: f32 = 0.0001;
 
+      const USE_GRID_CLAMP: u32 = 1u;
+      const USE_NEARZERO_H: u32 = 1u;
+      const USE_NEARZERO_V: u32 = 1u;
+      const COVERAGE_MODE: u32 = 0u;
+
+      fn gridCoordOf(uv: vec2f, gridSize: vec2u) -> vec2u {
+        let coord_i = vec2i(floor(uv * vec2f(gridSize)));
+        if (USE_GRID_CLAMP == 1u) {
+          let max_i = vec2i(gridSize) - vec2i(1, 1);
+          return vec2u(clamp(coord_i, vec2i(0, 0), max_i));
+        }
+        return vec2u(coord_i);
+      }
+
       fn rotate90(p: vec2f) -> vec2f {
         return vec2f(p.y, -p.x);
       }
@@ -120,9 +156,7 @@
       ) -> f32{
 
         var coverage: f32 = 0.0;
-        // 根据 uv 和 gridSize，计算当前像素所属网格索引
-        // 给不同网格绘制棋盘色，黑红相间
-        let gridCoord = vec2u(floor(uv * vec2f(gridSize)));
+        let gridCoord = gridCoordOf(uv, gridSize);
 
         // The effective pixel dimensions of the em square are computed
         // independently for x and y directions with texcoord derivatives.
@@ -162,10 +196,11 @@
           var c_to_texel = c - texelNormCoord;
           var e1_to_texel = e1 - texelNormCoord;
 
-          // 如果坐标接近为 0，则直接设置为 0.0
-          e0_to_texel = makeSureZeroWhenProper(e0_to_texel);
-          c_to_texel = makeSureZeroWhenProper(c_to_texel);
-          e1_to_texel = makeSureZeroWhenProper(e1_to_texel);
+          if (USE_NEARZERO_H == 1u) {
+            e0_to_texel = makeSureZeroWhenProper(e0_to_texel);
+            c_to_texel = makeSureZeroWhenProper(c_to_texel);
+            e1_to_texel = makeSureZeroWhenProper(e1_to_texel);
+          }
 
           // 根据 lengyel 方法，判断当前像素是否在 glyph 的内部
           // 计算偏移量
@@ -251,9 +286,7 @@
       ) -> f32{
 
         var coverage: f32 = 0.0;
-        // 根据 uv 和 gridSize，计算当前像素所属网格索引
-        // 给不同网格绘制棋盘色，黑红相间
-        let gridCoord = vec2u(floor(uv * vec2f(gridSize)));
+        let gridCoord = gridCoordOf(uv, gridSize);
 
         // The effective pixel dimensions of the em square are computed
         // independently for x and y directions with texcoord derivatives.
@@ -292,10 +325,11 @@
           var e0_to_texel = e0 - texelNormCoord;
           var c_to_texel = c - texelNormCoord;
           var e1_to_texel = e1 - texelNormCoord;
-
-
-
-
+          if (USE_NEARZERO_V == 1u) {
+            e0_to_texel = makeSureZeroWhenProper(e0_to_texel);
+            c_to_texel = makeSureZeroWhenProper(c_to_texel);
+            e1_to_texel = makeSureZeroWhenProper(e1_to_texel);
+          }
           // 根据 lengyel 方法，判断当前像素是否在 glyph 的内部
           // 计算偏移量
           // ?: 三目运算符会引起语法错误，使用 select 函数代替
@@ -323,9 +357,9 @@
             // where t = b / a.
 
             var ax: f32 = e0_to_texel.y - c_to_texel.y * 2.0 + e1_to_texel.y;
-            let ay: f32 = e0_to_texel.x - c_to_texel.x * 2.0 + e1_to_texel.x;
+            let ay: f32 = (e0_to_texel.x - c_to_texel.x * 2.0 + e1_to_texel.x);
             let bx: f32 = e0_to_texel.y - c_to_texel.y;
-            let by: f32 = e0_to_texel.x - c_to_texel.x;
+            let by: f32 = (e0_to_texel.x - c_to_texel.x);
             let ra: f32 = 1.0 / ay;
 
             let d: f32 = sqrt(max(by * by - ay * e0_to_texel.x, 0.0));
@@ -372,9 +406,7 @@
       @fragment fn fs(@location(0) uv: vec2f) -> @location(0) vec4f {
         var coverage: f32 = 0.0;
 
-        // 根据 uv 和 gridSize，计算当前像素所属网格索引
-        // 给不同网格绘制棋盘色，黑红相间
-        let gridCoord = vec2u(floor(uv * vec2f(global.gridSizeH)));
+        let gridCoord = gridCoordOf(uv, global.gridSizeH);
 
 
         let isEven = (gridCoord.x + gridCoord.y) % 2 == 0;
@@ -395,9 +427,15 @@
 
 
         var alpha: f32 = 1.0;
-        coverage = (abs(coverage1) + abs(coverage2)) / 2.0; // 水平+垂直采样，求平均
-        coverage = coverage2;
-        coverage = sqrt(clamp(abs(coverage) , 0.0, 1.0));
+        var cov: f32 = 0.0;
+        if (COVERAGE_MODE == 0u) {
+          cov = (abs(coverage1) + abs(coverage2)) / 2.0;
+        } else if (COVERAGE_MODE == 1u) {
+          cov = coverage1;
+        } else {
+          cov = coverage2;
+        }
+        coverage = sqrt(clamp(abs(cov) , 0.0, 1.0));
         alpha = coverage * color.w;
 
 
@@ -421,6 +459,8 @@
         createTextureFromImage,
         createBuffersAndAttributesFromArrays,
       } from "https://greggman.github.io/webgpu-utils/dist/0.x/webgpu-utils.module.js";
+
+      let gDiscClamp = false;
 
       async function loadFont(url) {
         const response = await fetch(url);
@@ -729,7 +769,11 @@
           return { rootNum: i, roots: outX };
         }
 
-        const sqrtExpr = Math.sqrt(Y * a + B.y * B.y - A.y * C.y);
+        let disc = Y * a + B.y * B.y - A.y * C.y;
+        if (gDiscClamp) {
+          disc = Math.max(disc, 0);
+        }
+        const sqrtExpr = Math.sqrt(disc);
 
         const t1 = (A.y - B.y + sqrtExpr) / a;
         const t2 = (A.y - B.y - sqrtExpr) / a;
@@ -890,7 +934,28 @@
         return elem.textContent;
       }
 
-      async function drawGlyph(fontUrl, char) {
+      function prepareShaderCode(code, options) {
+        let out = code;
+        out = out.replace(
+          /const USE_GRID_CLAMP: u32 = \d+u;/,
+          `const USE_GRID_CLAMP: u32 = ${options.gridClamp ? 1 : 0}u;`,
+        );
+        out = out.replace(
+          /const USE_NEARZERO_H: u32 = \d+u;/,
+          `const USE_NEARZERO_H: u32 = ${options.nearZeroH ? 1 : 0}u;`,
+        );
+        out = out.replace(
+          /const USE_NEARZERO_V: u32 = \d+u;/,
+          `const USE_NEARZERO_V: u32 = ${options.nearZeroV ? 1 : 0}u;`,
+        );
+        out = out.replace(
+          /const COVERAGE_MODE: u32 = \d+u;/,
+          `const COVERAGE_MODE: u32 = ${options.coverageMode}u;`,
+        );
+        return out;
+      }
+
+      async function drawGlyph(fontUrl, char, options = {}) {
         const font = await loadFont(fontUrl);
         const glyph = font.charToGlyph(char);
 
@@ -908,7 +973,13 @@
         const canvasWidth = canvas.width;
         const canvasHeight = canvas.height;
 
-        const glyphShaderCode = getShader("glyphshader");
+        gDiscClamp = !!options.discClamp;
+        const glyphShaderCode = prepareShaderCode(getShader("glyphshader"), {
+          gridClamp: !!options.gridClamp,
+          nearZeroH: !!options.nearZeroH,
+          nearZeroV: !!options.nearZeroV,
+          coverageMode: options.coverageMode ?? 1,
+        });
         const module = device.createShaderModule({
           label: "glypy shader",
           code: glyphShaderCode,
@@ -1215,10 +1286,72 @@
 
       drawRulers();
 
-      // drawGlyph("./STSong.ttf", "永");
-      drawGlyph("./STSong.ttf", "层");
-      // drawGlyph("./STSong.ttf", "1");
-      // drawGlyph("./STSong.ttf", "。");
+      const steps = [
+        {
+          label: "step0 baseline",
+          options: {
+            discClamp: false,
+            gridClamp: false,
+            nearZeroH: false,
+            nearZeroV: false,
+            coverageMode: 1,
+          },
+        },
+        {
+          label: "step1 discriminant clamp",
+          options: {
+            discClamp: true,
+            gridClamp: false,
+            nearZeroH: false,
+            nearZeroV: false,
+            coverageMode: 1,
+          },
+        },
+        {
+          label: "step2 grid clamp",
+          options: {
+            discClamp: true,
+            gridClamp: true,
+            nearZeroH: false,
+            nearZeroV: false,
+            coverageMode: 1,
+          },
+        },
+        {
+          label: "step3 average H/V",
+          options: {
+            discClamp: true,
+            gridClamp: true,
+            nearZeroH: false,
+            nearZeroV: false,
+            coverageMode: 0,
+          },
+        },
+        {
+          label: "step4 near-zero on both axes",
+          options: {
+            discClamp: true,
+            gridClamp: true,
+            nearZeroH: true,
+            nearZeroV: true,
+            coverageMode: 0,
+          },
+        },
+      ];
+
+      async function renderStep(index) {
+        const step = steps[index];
+        document.getElementById("status").textContent = step.label;
+        await drawGlyph("./STSong.ttf", "层", step.options);
+      }
+
+      document.querySelectorAll("[data-step]").forEach((button) => {
+        button.addEventListener("click", () => {
+          renderStep(Number(button.dataset.step));
+        });
+      });
+
+      renderStep(0);
 
       function drawContents() {
         let contents = `白日依山尽，黄河入海流。欲穷千里目，更上一层楼。`;
