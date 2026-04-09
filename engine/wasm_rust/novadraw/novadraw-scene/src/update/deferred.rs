@@ -17,8 +17,10 @@
 //!    - Phase 2: 合并并重绘脏区域
 
 use novadraw_geometry::Rectangle;
+use novadraw_render::NdCanvas;
 
 use crate::scene::BlockId;
+use crate::update::repair::{compute_damage_union, execute_repair_phase, merge_dirty_region};
 
 /// Scene Update Manager
 ///
@@ -45,6 +47,7 @@ pub struct SceneUpdateManager {
     pub(crate) invalid_blocks: Vec<BlockId>,
     /// 是否有更新待处理
     pub(crate) update_queued: bool,
+    pub(crate) updating: bool,
 }
 
 impl SceneUpdateManager {
@@ -54,6 +57,7 @@ impl SceneUpdateManager {
             dirty_regions: std::collections::HashMap::new(),
             invalid_blocks: Vec::new(),
             update_queued: false,
+            updating: false,
         }
     }
 
@@ -66,27 +70,9 @@ impl SceneUpdateManager {
     /// * `block_id` - 需要重绘的块 ID
     /// * `rect` - 脏区域（局部坐标）
     pub fn add_dirty_region(&mut self, block_id: BlockId, rect: Rectangle) {
-        // 检查区域有效性
-        if rect.width <= 0.0 || rect.height <= 0.0 {
-            return;
+        if merge_dirty_region(&mut self.dirty_regions, block_id, rect) {
+            self.update_queued = true;
         }
-
-        // 合并脏区域
-        if let Some(existing) = self.dirty_regions.get_mut(&block_id) {
-            // 扩展区域以包含新区域
-            let min_x = existing.x.min(rect.x);
-            let min_y = existing.y.min(rect.y);
-            let max_x = (existing.x + existing.width).max(rect.x + rect.width);
-            let max_y = (existing.y + existing.height).max(rect.y + rect.height);
-            existing.x = min_x;
-            existing.y = min_y;
-            existing.width = max_x - min_x;
-            existing.height = max_y - min_y;
-        } else {
-            self.dirty_regions.insert(block_id, rect);
-        }
-
-        self.update_queued = true;
     }
 
     /// 添加失效块
@@ -129,23 +115,11 @@ impl SceneUpdateManager {
     ///
     /// 将所有脏区域合并为一个大的区域。
     pub fn compute_damage(&self) -> Rectangle {
-        if self.dirty_regions.is_empty() {
-            return Rectangle::new(0.0, 0.0, 0.0, 0.0);
-        }
+        compute_damage_union(self.dirty_regions.values())
+    }
 
-        let mut min_x = f64::MAX;
-        let mut min_y = f64::MAX;
-        let mut max_x = f64::MIN;
-        let mut max_y = f64::MIN;
-
-        for rect in self.dirty_regions.values() {
-            min_x = min_x.min(rect.x);
-            min_y = min_y.min(rect.y);
-            max_x = max_x.max(rect.x + rect.width);
-            max_y = max_y.max(rect.y + rect.height);
-        }
-
-        Rectangle::new(min_x, min_y, max_x - min_x, max_y - min_y)
+    pub(crate) fn take_dirty_snapshot(&mut self) -> std::collections::HashMap<BlockId, Rectangle> {
+        std::mem::take(&mut self.dirty_regions)
     }
 
     /// 清空所有待处理的更新
@@ -153,6 +127,7 @@ impl SceneUpdateManager {
         self.dirty_regions.clear();
         self.invalid_blocks.clear();
         self.update_queued = false;
+        self.updating = false;
     }
 
     /// 获取失效块数量
@@ -180,15 +155,66 @@ impl SceneUpdateManager {
     /// 对应 draw2d: performUpdate 完成后清空队列。
     /// 由 FigureGraph 在 repairDamage 完成后调用。
     pub fn clear_dirty_and_flag(&mut self) {
-        self.dirty_regions.clear();
+        self.update_queued = !self.invalid_blocks.is_empty() || !self.dirty_regions.is_empty();
+    }
+}
+
+impl crate::update::UpdateManager for SceneUpdateManager {
+    fn add_dirty_region(&mut self, block_id: BlockId, rect: Rectangle) {
+        SceneUpdateManager::add_dirty_region(self, block_id, rect);
+    }
+
+    fn add_invalid_figure(&mut self, block_id: BlockId) {
+        SceneUpdateManager::add_invalid_figure(self, block_id);
+    }
+
+    fn perform_update(
+        &mut self,
+        graph: &mut crate::scene::FigureGraph,
+        canvas: &mut NdCanvas,
+    ) {
+        if self.updating {
+            return;
+        }
+
+        self.updating = true;
+        self.perform_validation(graph);
         self.update_queued = false;
+        let dirty_snapshot = self.take_dirty_snapshot();
+
+        execute_repair_phase(graph, canvas, dirty_snapshot.iter());
+
+        self.clear_dirty_and_flag();
+        self.updating = false;
+    }
+
+    fn perform_validation(&mut self, graph: &mut crate::scene::FigureGraph) {
+        while !self.invalid_blocks.is_empty() {
+            let block_ids = self.drain_invalid_blocks();
+            for block_id in block_ids {
+                if let Some(block) = graph.blocks.get(block_id) {
+                    if block.is_visible && block.is_enabled {
+                        graph.revalidate(block_id);
+                    }
+                }
+            }
+        }
+    }
+
+    fn is_updating(&self) -> bool {
+        self.updating
+    }
+
+    fn is_update_queued(&self) -> bool {
+        self.update_queued
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scene::BlockId;
+    use crate::{FigureGraph, RectangleFigure, scene::BlockId, update::UpdateManager};
+    use novadraw_core::Color;
     use slotmap::KeyData;
 
     fn create_test_key(data: u64) -> BlockId {
@@ -287,5 +313,64 @@ mod tests {
         let drained = manager.drain_invalid_blocks();
         assert_eq!(drained.len(), 2);
         assert!(!manager.has_pending_layout());
+    }
+
+    #[test]
+    fn test_take_dirty_snapshot_freezes_current_cycle() {
+        let mut manager = SceneUpdateManager::new();
+        let key1 = create_test_key(1);
+        let key2 = create_test_key(2);
+        manager.add_dirty_region(key1, Rectangle::new(0.0, 0.0, 10.0, 10.0));
+
+        let snapshot = manager.take_dirty_snapshot();
+        manager.add_dirty_region(key2, Rectangle::new(20.0, 20.0, 5.0, 5.0));
+
+        assert_eq!(snapshot.len(), 1);
+        assert_eq!(
+            snapshot.get(&key1),
+            Some(&Rectangle::new(0.0, 0.0, 10.0, 10.0))
+        );
+        assert!(!snapshot.contains_key(&key2));
+        assert_eq!(manager.dirty_count(), 1);
+        assert_eq!(
+            manager.dirty_regions.get(&key2),
+            Some(&Rectangle::new(20.0, 20.0, 5.0, 5.0))
+        );
+    }
+
+    #[test]
+    fn test_clear_dirty_and_flag_preserves_next_cycle_work() {
+        let mut manager = SceneUpdateManager::new();
+        manager.add_dirty_region(create_test_key(1), Rectangle::new(0.0, 0.0, 10.0, 10.0));
+        let _snapshot = manager.take_dirty_snapshot();
+        manager.add_dirty_region(create_test_key(2), Rectangle::new(5.0, 5.0, 5.0, 5.0));
+
+        manager.clear_dirty_and_flag();
+
+        assert!(manager.is_update_queued());
+        assert!(manager.has_pending_repaint());
+    }
+
+    #[test]
+    fn test_perform_update_writes_damage_set_to_canvas() {
+        let mut manager = SceneUpdateManager::new();
+        let mut graph = FigureGraph::new();
+        let root_id = graph.set_contents(Box::new(RectangleFigure::new_with_color(
+            0.0,
+            0.0,
+            400.0,
+            300.0,
+            Color::rgba(0.1, 0.1, 0.1, 1.0),
+        )));
+        manager.add_dirty_region(root_id, Rectangle::new(10.0, 20.0, 30.0, 40.0));
+
+        let mut canvas = NdCanvas::new();
+        manager.perform_update(&mut graph, &mut canvas);
+
+        assert_eq!(
+            canvas.damage().union,
+            Some(Rectangle::new(10.0, 20.0, 30.0, 40.0))
+        );
+        assert_eq!(canvas.damage().regions, vec![Rectangle::new(10.0, 20.0, 30.0, 40.0)]);
     }
 }

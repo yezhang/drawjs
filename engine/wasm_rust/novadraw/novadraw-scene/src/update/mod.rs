@@ -27,6 +27,7 @@
 //! [`SceneUpdateManager`] 是纯数据管理器，负责跟踪脏区域和失效块队列。
 //! [`FigureGraph`] 是 orchestrator，通过调用 SceneUpdateManager 的数据方法
 //! 编排两阶段更新流程。
+//! [`repair`] 模块负责 DamageSet 写入与 repair phase 的脏区处理逻辑。
 //!
 //! 对应 draw2d 的 DeferredUpdateManager（持有 root + GraphicsSource + orchestrator），
 //! 本实现将数据管理（SceneUpdateManager）和场景编排（FigureGraph）分离，
@@ -35,9 +36,23 @@
 
 mod deferred;
 mod listener;
+mod repair;
 
 pub use deferred::SceneUpdateManager;
 pub use listener::{UpdateEvent, UpdateListener};
+
+pub trait UpdateManager: Send + Sync {
+    fn add_dirty_region(&mut self, block_id: crate::scene::BlockId, rect: novadraw_geometry::Rectangle);
+    fn add_invalid_figure(&mut self, block_id: crate::scene::BlockId);
+    fn perform_update(
+        &mut self,
+        graph: &mut crate::scene::FigureGraph,
+        canvas: &mut novadraw_render::NdCanvas,
+    );
+    fn perform_validation(&mut self, graph: &mut crate::scene::FigureGraph);
+    fn is_update_queued(&self) -> bool;
+    fn is_updating(&self) -> bool;
+}
 
 /// Update Manager Source - 更新管理器数据源
 ///
