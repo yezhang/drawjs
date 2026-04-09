@@ -13,8 +13,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use novadraw::{
-    NdCanvas, RenderBackend, SceneHost, SceneUpdateTarget, backend::vello::WinitWindowProxy,
-    traits::WindowProxy,
+    FigureGraph, NdCanvas, RenderBackend, SceneHost, UpdateManager,
+    backend::vello::WinitWindowProxy, traits::WindowProxy,
 };
 
 /// Winit 平台的 SceneHost 实现
@@ -53,8 +53,9 @@ impl WinitSceneHost {
 
 impl SceneHost for WinitSceneHost {
     fn request_update(&self) {
-        self.update_queued.store(true, Ordering::Relaxed);
-        self.window.request_redraw();
+        if !self.update_queued.swap(true, Ordering::Relaxed) {
+            self.window.request_redraw();
+        }
     }
 
     fn is_update_queued(&self) -> bool {
@@ -63,22 +64,24 @@ impl SceneHost for WinitSceneHost {
 
     fn execute_update(
         &self,
-        scene: &mut impl SceneUpdateTarget,
+        scene: &mut FigureGraph,
+        update_manager: &mut dyn UpdateManager,
         renderer: &mut impl RenderBackend,
     ) -> NdCanvas {
         if !self.update_queued.load(Ordering::Relaxed) {
             return NdCanvas::new();
         }
 
-        // Phase 1: 布局验证
-        let _ = scene.perform_update();
+        let canvas = scene.perform_update(update_manager);
+        let submission = canvas.to_submission();
+        renderer.render(&submission);
 
-        // Phase 2: 渲染
-        let canvas = scene.repair_damage();
-        renderer.render(canvas.commands());
-
-        self.update_queued.store(false, Ordering::Relaxed);
-        NdCanvas::new()
+        let still_queued = update_manager.is_update_queued();
+        self.update_queued.store(still_queued, Ordering::Relaxed);
+        if still_queued {
+            self.window.request_redraw();
+        }
+        canvas
     }
 
     fn viewport_size(&self) -> (f64, f64) {
