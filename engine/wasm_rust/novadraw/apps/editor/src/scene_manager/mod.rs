@@ -1,6 +1,10 @@
-use novadraw::{Color, EllipseFigure, PolylineFigure, RectangleFigure, FigureGraph};
+use novadraw::{Color, EllipseFigure, FigureGraph, PolylineFigure, Rectangle, RectangleFigure};
 
+mod interactive_figure;
 pub mod scene_host;
+pub mod mouse_simulator;
+
+use interactive_figure::InteractiveRectFigure;
 
 pub struct SceneManager {
     pub scene: FigureGraph,
@@ -19,12 +23,20 @@ pub enum SceneType {
     ClipTest,        // 场景6：裁剪测试（子元素超出父边界）
     EllipseTest,     // 场景7：椭圆图形测试
     LineTest,        // 场景8：直线图形测试
+    DpiTest,         // 场景9：DPI 坐标验证
 }
 
+pub const DPI_TEST_PROBE_BOUNDS: Rectangle = Rectangle {
+    x: 100.0,
+    y: 100.0,
+    width: 100.0,
+    height: 100.0,
+};
+
 impl SceneManager {
-    /// 创建默认场景（场景2：嵌套场景，含透明根节点和相对坐标）
+    /// 创建默认场景（场景9：DPI 坐标验证）
     pub fn new() -> Self {
-        Self::with_scene(SceneType::NestedWithRoot)
+        Self::with_scene(SceneType::DpiTest)
     }
 
     /// 根据场景类型创建场景
@@ -41,6 +53,7 @@ impl SceneManager {
             SceneType::ClipTest => Self::create_clip_test_scene(&mut scene),
             SceneType::EllipseTest => Self::create_ellipse_test_scene(&mut scene),
             SceneType::LineTest => Self::create_line_test_scene(&mut scene),
+            SceneType::DpiTest => Self::create_dpi_test_scene(&mut scene),
         }
 
         Self {
@@ -494,6 +507,30 @@ impl SceneManager {
         scene.add_child_to(root_id, Box::new(white_line));
     }
 
+    fn create_dpi_test_scene(scene: &mut FigureGraph) {
+        let root = RectangleFigure::new_with_color(
+            0.0,
+            0.0,
+            800.0,
+            600.0,
+            Color::rgba(0.10, 0.12, 0.16, 1.0),
+        );
+        let root_id = scene.set_contents(Box::new(root));
+
+        let outer = InteractiveRectFigure::with_palette(
+            DPI_TEST_PROBE_BOUNDS.x,
+            DPI_TEST_PROBE_BOUNDS.y,
+            DPI_TEST_PROBE_BOUNDS.width,
+            DPI_TEST_PROBE_BOUNDS.height,
+            Color::rgba(0.20, 0.47, 0.86, 1.0),
+            Color::rgba(0.18, 0.72, 0.64, 1.0),
+            Color::rgba(0.95, 0.56, 0.18, 1.0),
+            Color::rgba(0.10, 0.16, 0.24, 1.0),
+            Color::rgba(0.98, 0.86, 0.22, 1.0),
+        );
+        scene.add_child_to(root_id, Box::new(outer));
+    }
+
     /// 切换场景
     pub fn switch_scene(&mut self, scene_type: SceneType) {
         self.scene = FigureGraph::new();
@@ -507,6 +544,7 @@ impl SceneManager {
             SceneType::ClipTest => Self::create_clip_test_scene(&mut self.scene),
             SceneType::EllipseTest => Self::create_ellipse_test_scene(&mut self.scene),
             SceneType::LineTest => Self::create_line_test_scene(&mut self.scene),
+            SceneType::DpiTest => Self::create_dpi_test_scene(&mut self.scene),
         }
         self.current_scene = scene_type;
         println!("[SceneManager] 切换到场景 {:?}", scene_type);
