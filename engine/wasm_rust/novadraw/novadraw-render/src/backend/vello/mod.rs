@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use glam::DVec2;
 use image::ImageBuffer;
-use novadraw_geometry::Transform;
-use tracing::{debug, info};
+use novadraw_geometry::{Rectangle, Transform};
+use tracing::debug;
 use vello::kurbo::{Cap, Join, Stroke};
 use vello::peniko::Color as VelloColor;
 use vello::util::{RenderContext, RenderSurface};
@@ -38,11 +38,17 @@ pub struct VelloRenderer {
     scale_factor: f64,
     /// 状态栈
     state_stack: Vec<RenderState>,
-    /// 截图纹理（带 COPY_SRC 权限）
-    screenshot_texture: Option<(vello::wgpu::Texture, vello::wgpu::TextureView, u32, u32)>,
+    /// 保留上一帧完整结果的纹理（也作为截图源）
+    retained_texture: Option<(vello::wgpu::Texture, vello::wgpu::TextureView, u32, u32)>,
+    /// 本帧临时渲染纹理
+    scratch_texture: Option<(vello::wgpu::Texture, vello::wgpu::TextureView, u32, u32)>,
 }
 
 impl VelloRenderer {
+    fn current_surface_size(&self) -> (u32, u32) {
+        (self.surface.config.width, self.surface.config.height)
+    }
+
     pub fn new(window: Arc<WinitWindowProxy>, logical_width: f64, logical_height: f64) -> Self {
         let scale_factor = window.scale_factor();
         let width = (logical_width * scale_factor) as u32;
@@ -69,32 +75,22 @@ impl VelloRenderer {
             window,
             scale_factor,
             state_stack: vec![RenderState::default()],
-            screenshot_texture: None,
+            retained_texture: None,
+            scratch_texture: None,
         }
     }
 
-    /// 确保截图纹理存在
-    fn ensure_screenshot_texture(&mut self) {
+    fn create_offscreen_texture(
+        &self,
+        label: &'static str,
+    ) -> (vello::wgpu::Texture, vello::wgpu::TextureView, u32, u32) {
         let width = self.surface.config.width;
         let height = self.surface.config.height;
-
-        // 检查是否需要重新创建
-        #[allow(clippy::collapsible_if)]
-        if let Some((_, _, old_width, old_height)) = &self.screenshot_texture {
-            if *old_width == width && *old_height == height {
-                return;
-            }
-        }
-
-        // 创建设备句柄引用
         let device_handle = &self.render_context.devices[self.surface.dev_id];
         let device = &device_handle.device;
 
-        // 创建带 COPY_SRC 权限的纹理
-        // 注意：必须使用 Rgba8Unorm 格式，因为 Vello 内部期望此格式
-        // macOS surface 默认是 Bgra8Unorm，需要显式转换
         let texture = device.create_texture(&vello::wgpu::TextureDescriptor {
-            label: Some("Screenshot Texture"),
+            label: Some(label),
             size: vello::wgpu::Extent3d {
                 width,
                 height,
@@ -105,6 +101,7 @@ impl VelloRenderer {
             dimension: vello::wgpu::TextureDimension::D2,
             format: vello::wgpu::TextureFormat::Rgba8Unorm,
             usage: vello::wgpu::TextureUsages::COPY_SRC
+                | vello::wgpu::TextureUsages::COPY_DST
                 | vello::wgpu::TextureUsages::RENDER_ATTACHMENT
                 | vello::wgpu::TextureUsages::TEXTURE_BINDING
                 | vello::wgpu::TextureUsages::STORAGE_BINDING,
@@ -112,9 +109,79 @@ impl VelloRenderer {
         });
 
         let view = texture.create_view(&vello::wgpu::TextureViewDescriptor::default());
-
-        self.screenshot_texture = Some((texture, view, width, height));
+        (texture, view, width, height)
     }
+
+    /// 确保保留纹理存在
+    fn ensure_retained_texture(&mut self) {
+        let (width, height) = self.current_surface_size();
+
+        #[allow(clippy::collapsible_if)]
+        if let Some((_, _, old_width, old_height)) = &self.retained_texture {
+            if *old_width == width && *old_height == height {
+                return;
+            }
+        }
+
+        self.retained_texture = Some(self.create_offscreen_texture("Retained Texture"));
+    }
+
+    /// 确保临时渲染纹理存在
+    fn ensure_scratch_texture(&mut self) {
+        let (width, height) = self.current_surface_size();
+
+        #[allow(clippy::collapsible_if)]
+        if let Some((_, _, old_width, old_height)) = &self.scratch_texture {
+            if *old_width == width && *old_height == height {
+                return;
+            }
+        }
+
+        self.scratch_texture = Some(self.create_offscreen_texture("Scratch Texture"));
+    }
+
+    fn damage_rect_to_copy_region(
+        &self,
+        rect: Rectangle,
+        width: u32,
+        height: u32,
+    ) -> Option<(u32, u32, u32, u32)> {
+        let origin_x = (rect.x * self.scale_factor).floor().max(0.0) as u32;
+        let origin_y = (rect.y * self.scale_factor).floor().max(0.0) as u32;
+        let max_width = width.saturating_sub(origin_x);
+        let max_height = height.saturating_sub(origin_y);
+        let copy_width = ((rect.width * self.scale_factor).ceil().max(0.0) as u32).min(max_width);
+        let copy_height =
+            ((rect.height * self.scale_factor).ceil().max(0.0) as u32).min(max_height);
+
+        if copy_width == 0 || copy_height == 0 {
+            return None;
+        }
+
+        Some((origin_x, origin_y, copy_width, copy_height))
+    }
+
+    fn effective_damage_regions(
+        &self,
+        submission: &crate::RenderSubmission,
+    ) -> (Rectangle, Vec<Rectangle>) {
+        let (width, height) = self.current_surface_size();
+        let fallback_union = submission.damage.union.unwrap_or_else(|| {
+            Rectangle::new(
+                0.0,
+                0.0,
+                width as f64 / self.scale_factor,
+                height as f64 / self.scale_factor,
+            )
+        });
+        let regions = if submission.damage.regions.is_empty() {
+            vec![fallback_union]
+        } else {
+            submission.damage.regions.clone()
+        };
+        (fallback_union, regions)
+    }
+
 
     /// 获取当前状态
     fn current_state(&self) -> &RenderState {
@@ -620,8 +687,20 @@ impl RenderBackend for VelloRenderer {
         &self.window
     }
 
-    fn render(&mut self, commands: &[RenderCommand]) {
-        info!("开始渲染, 命令数: {}", commands.len());
+    fn render(&mut self, submission: &crate::RenderSubmission) {
+        let commands = &submission.commands;
+        let damage = &submission.damage;
+        debug!("damage set: union={:?}, regions={}", damage.union, damage.regions.len());
+
+        let (width, height) = self.current_surface_size();
+        let (effective_damage, effective_regions) = self.effective_damage_regions(submission);
+        let clip_rect = [
+            DVec2::new(effective_damage.x, effective_damage.y),
+            DVec2::new(
+                effective_damage.x + effective_damage.width,
+                effective_damage.y + effective_damage.height,
+            ),
+        ];
 
         // self.scene.reset();
         self.scene = vello::Scene::new();
@@ -630,30 +709,35 @@ impl RenderBackend for VelloRenderer {
         self.state_stack.clear();
         self.state_stack.push(RenderState::default());
 
-        // 按顺序解释执行命令
+        self.push_clip_layer(&clip_rect);
         for cmd in commands {
             self.render_command(cmd);
         }
+        self.scene.pop_layer();
 
         debug!("渲染命令执行完成");
 
-        // 确保截图纹理存在（带 COPY_SRC 权限）
-        self.ensure_screenshot_texture();
+        self.ensure_retained_texture();
+        self.ensure_scratch_texture();
 
-        // 获取截图纹理和 device_handle（先完成 ensure_screenshot_texture）
-        let screenshot_texture = {
+        let scratch_view = {
             let (_, view, _, _) = self
-                .screenshot_texture
+                .scratch_texture
                 .as_ref()
-                .expect("Screenshot texture not created");
+                .expect("Scratch texture not created");
+            view.clone()
+        };
+        let retained_view = {
+            let (_, view, _, _) = self
+                .retained_texture
+                .as_ref()
+                .expect("Retained texture not created");
             view.clone()
         };
 
         let device_handle = &self.render_context.devices[self.surface.dev_id];
-        let width = self.surface.config.width;
-        let height = self.surface.config.height;
 
-        // 渲染到截图纹理（带 COPY_SRC）
+        // 先把当前帧的脏区内容渲染到临时纹理，脏区外保持透明
         self.renderers[self.surface.dev_id]
             .as_mut()
             .unwrap()
@@ -661,33 +745,26 @@ impl RenderBackend for VelloRenderer {
                 &device_handle.device,
                 &device_handle.queue,
                 &self.scene,
-                &screenshot_texture,
+                &scratch_view,
                 &vello::RenderParams {
-                    base_color: VelloColor::new([1.0, 1.0, 1.0, 1.0]),
+                    base_color: VelloColor::new([0.0, 0.0, 0.0, 0.0]),
                     width,
                     height,
                     antialiasing_method: AaConfig::Msaa16,
                 },
             )
-            .expect("Failed to render to screenshot texture");
+            .expect("Failed to render to scratch texture");
 
-        // 渲染到 surface 目标视图
-        self.renderers[self.surface.dev_id]
-            .as_mut()
-            .unwrap()
-            .render_to_texture(
-                &device_handle.device,
-                &device_handle.queue,
-                &self.scene,
-                &self.surface.target_view,
-                &vello::RenderParams {
-                    base_color: VelloColor::new([1.0, 1.0, 1.0, 1.0]),
-                    width,
-                    height,
-                    antialiasing_method: AaConfig::Msaa16,
-                },
-            )
-            .expect("Failed to render to surface texture");
+        let scratch_texture = &self
+            .scratch_texture
+            .as_ref()
+            .expect("Scratch texture not created")
+            .0;
+        let retained_texture = &self
+            .retained_texture
+            .as_ref()
+            .expect("Retained texture not created")
+            .0;
 
         let surface_texture = self
             .surface
@@ -701,11 +778,45 @@ impl RenderBackend for VelloRenderer {
                 .create_command_encoder(&vello::wgpu::CommandEncoderDescriptor {
                     label: Some("Surface Blit"),
                 });
+        for rect in effective_regions {
+            let Some((origin_x, origin_y, copy_width, copy_height)) =
+                self.damage_rect_to_copy_region(rect, width, height)
+            else {
+                continue;
+            };
+            encoder.copy_texture_to_texture(
+                vello::wgpu::TexelCopyTextureInfo {
+                    texture: scratch_texture,
+                    mip_level: 0,
+                    origin: vello::wgpu::Origin3d {
+                        x: origin_x,
+                        y: origin_y,
+                        z: 0,
+                    },
+                    aspect: vello::wgpu::TextureAspect::All,
+                },
+                vello::wgpu::TexelCopyTextureInfo {
+                    texture: retained_texture,
+                    mip_level: 0,
+                    origin: vello::wgpu::Origin3d {
+                        x: origin_x,
+                        y: origin_y,
+                        z: 0,
+                    },
+                    aspect: vello::wgpu::TextureAspect::All,
+                },
+                vello::wgpu::Extent3d {
+                    width: copy_width,
+                    height: copy_height,
+                    depth_or_array_layers: 1,
+                },
+            );
+        }
 
         self.surface.blitter.copy(
             &device_handle.device,
             &mut encoder,
-            &self.surface.target_view,
+            &retained_view,
             &surface_texture
                 .texture
                 .create_view(&vello::wgpu::TextureViewDescriptor::default()),
@@ -719,6 +830,10 @@ impl RenderBackend for VelloRenderer {
         self.scale_factor = scale_factor;
         self.render_context
             .resize_surface(&mut self.surface, pixel_width, pixel_height);
+        // Offscreen retained buffers become invalid after resize and must be recreated
+        // on the next render to avoid mixing old frame contents with the new surface.
+        self.retained_texture = None;
+        self.scratch_texture = None;
     }
 }
 
@@ -740,13 +855,13 @@ impl VelloRenderer {
         let width = self.surface.config.width;
         let height = self.surface.config.height;
 
-        // 从 screenshot_texture 获取底层纹理
-        let texture = match &self.screenshot_texture {
+        // 从 retained_texture 获取底层纹理
+        let texture = match &self.retained_texture {
             Some((tex, _, _, _)) => tex,
             None => {
                 return Err(std::io::Error::new(
                     std::io::ErrorKind::NotFound,
-                    "Screenshot texture not created. Call render() first.",
+                    "Retained texture not created. Call render() first.",
                 ));
             }
         };
@@ -770,7 +885,7 @@ impl VelloRenderer {
                     label: Some("Screenshot Encoder"),
                 });
 
-        // 从 screenshot_texture 复制到 buffer
+        // 从 retained_texture 复制到 buffer
         encoder.copy_texture_to_buffer(
             vello::wgpu::TexelCopyTextureInfo {
                 texture,
