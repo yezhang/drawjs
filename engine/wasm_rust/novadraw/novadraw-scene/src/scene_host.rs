@@ -1,9 +1,26 @@
-//! SceneHost - 场景图主机环境
+//! SceneHost - 场景图渲染入口协调
 //!
-//! 定义场景图与平台环境交互的接口。平台特定的实现（如 WinitSceneHost）
-//! 负责管理更新调度（帧合并）和渲染触发。
+//! 定义渲染入口与平台环境交互的接口。只负责渲染触发和视口管理，
+//! 不持有 FigureGraph、UpdateManager 等核心对象。
 //!
-//! 对应 draw2d: LightweightSystem 中持有 root + UpdateManager + paint() 的职责。
+//! 对应 draw2d: LightweightSystem 的**渲染入口职责**（paint() 方法）
+//!
+//! # LightweightSystem 职责分散说明
+//!
+//! LightweightSystem 持有 Canvas + UpdateManager + EventDispatcher + RootFigure，
+//! 这些职责在 Novadraw 中分散到多个组件：
+//!
+//! | LightweightSystem 持有 | Novadraw 对应 |
+//! |----------------------|---------------|
+//! | root Figure | FigureGraph.root |
+//! | UpdateManager | NovadrawSystem.update_manager |
+//! | EventDispatcher | EventDispatcher trait |
+//! | Canvas | WinitEventDispatcher |
+//!
+//! SceneHost 只对应 LightweightSystem 的：
+//! - 渲染入口：execute_update()
+//! - 视口大小：viewport_size()
+//! - 更新请求：request_update()
 //!
 //! # 设计理念
 //!
@@ -28,8 +45,7 @@
 //!         ▼ (RedrawRequested 事件)
 //! SceneHost.execute_update()
 //!         │
-//!         ├─► scene.perform_update()   (Phase 1: 布局验证)
-//!         └─► scene.repair_damage()   (Phase 2: 脏区域重绘)
+//!         └─► update_manager.perform_update(scene, canvas)
 //!                 │
 //!                 ▼
 //!         renderer.render(commands)
@@ -37,11 +53,14 @@
 //!
 //! # 职责边界
 //!
-//! - **SceneHost**: 平台调度 + update 编排 + 渲染触发。不直接持有 FigureGraph。
-//! - **FigureGraph**: 块树管理 + 布局计算 + 渲染命令生成。平台无关。
-//! - **SceneUpdateManager**: 脏区域和失效块的纯数据管理。
+//! - **SceneHost**: 渲染入口协调。不持有任何核心对象（FigureGraph、UpdateManager 等）。
+//! - **FigureGraph**: 块树管理 + 布局计算。平台无关。
+//! - **EventDispatcher**: 事件分发 trait。交互状态在 FigureGraph 中。
+//! - **WinitEventDispatcher**: winit 平台实现，持有 Window。
 
 use novadraw_render::{NdCanvas, RenderBackend};
+
+use crate::{FigureGraph, UpdateManager};
 
 /// 场景图主机环境 trait
 ///
@@ -70,16 +89,10 @@ pub trait SceneHost: Send + Sync {
     ///
     /// 对应 draw2d: DeferredUpdateManager.performUpdate()。
     ///
-    /// 调用顺序：先 `perform_update()`，再 `repair_damage()`。
-    /// 调用方负责在 `execute_update()` 返回后将渲染命令交给渲染器。
-    ///
-    /// # Arguments
-    ///
-    /// * `scene` - 场景图
-    /// * `renderer` - 渲染器后端
     fn execute_update(
         &self,
-        scene: &mut impl SceneUpdateTarget,
+        scene: &mut FigureGraph,
+        update_manager: &mut dyn UpdateManager,
         renderer: &mut impl RenderBackend,
     ) -> NdCanvas;
 
@@ -89,20 +102,4 @@ pub trait SceneHost: Send + Sync {
     ///
     /// `(width, height)` 单位为逻辑像素
     fn viewport_size(&self) -> (f64, f64);
-}
-
-/// SceneUpdateTarget - FigureGraph 的更新相关操作子集
-///
-/// 用于 `execute_update` 的参数化，避免传递完整 FigureGraph。
-/// 对应 draw2d 中 UpdateManager 直接持有 root Figure 并调用其方法。
-pub trait SceneUpdateTarget {
-    /// 执行布局验证
-    ///
-    /// 对应 draw2d: performValidation() → fig.validate()
-    fn perform_update(&mut self) -> NdCanvas;
-
-    /// 渲染脏区域
-    ///
-    /// 对应 draw2d: repairDamage() → root.paint(graphics)
-    fn repair_damage(&mut self) -> NdCanvas;
 }

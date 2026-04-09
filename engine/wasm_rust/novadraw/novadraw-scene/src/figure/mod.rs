@@ -37,6 +37,7 @@ use novadraw_render::NdCanvas;
 use novadraw_render::command::{LineCap, LineJoin};
 
 use crate::border::Border;
+use crate::{MouseEvent, NovadrawContext};
 
 // ============================================================================
 // Bounded Trait: 边界相关方法
@@ -235,6 +236,34 @@ pub trait Figure: Bounded + Updatable + Send + Sync {
             border.paint(self.bounds(), gc);
         }
     }
+
+    fn wants_mouse_events(&self) -> bool {
+        false
+    }
+
+    fn wants_key_events(&self) -> bool {
+        false
+    }
+
+    fn on_mouse_pressed(&self, _event: &MouseEvent, _ctx: &mut dyn NovadrawContext) -> bool {
+        false
+    }
+
+    fn on_mouse_released(&self, _event: &MouseEvent, _ctx: &mut dyn NovadrawContext) -> bool {
+        false
+    }
+
+    fn on_mouse_moved(&self, _event: &MouseEvent, _ctx: &mut dyn NovadrawContext) -> bool {
+        false
+    }
+
+    fn on_mouse_entered(&self, _event: &MouseEvent, _ctx: &mut dyn NovadrawContext) -> bool {
+        false
+    }
+
+    fn on_mouse_exited(&self, _event: &MouseEvent, _ctx: &mut dyn NovadrawContext) -> bool {
+        false
+    }
 }
 
 // ============================================================================
@@ -292,6 +321,34 @@ pub trait Shape: Figure {
     /// 获取透明度 (0.0 - 1.0)
     fn alpha(&self) -> f64 {
         1.0
+    }
+
+    fn wants_mouse_events(&self) -> bool {
+        false
+    }
+
+    fn wants_key_events(&self) -> bool {
+        false
+    }
+
+    fn on_mouse_pressed(&self, _event: &MouseEvent, _ctx: &mut dyn NovadrawContext) -> bool {
+        false
+    }
+
+    fn on_mouse_released(&self, _event: &MouseEvent, _ctx: &mut dyn NovadrawContext) -> bool {
+        false
+    }
+
+    fn on_mouse_moved(&self, _event: &MouseEvent, _ctx: &mut dyn NovadrawContext) -> bool {
+        false
+    }
+
+    fn on_mouse_entered(&self, _event: &MouseEvent, _ctx: &mut dyn NovadrawContext) -> bool {
+        false
+    }
+
+    fn on_mouse_exited(&self, _event: &MouseEvent, _ctx: &mut dyn NovadrawContext) -> bool {
+        false
     }
 
     /// ===== 渲染方法 =====
@@ -373,5 +430,33 @@ where
     /// 当通过 Box<dyn Figure> 调用时，会正确分派到 Shape 的实现
     fn get_border(&self) -> Option<&dyn super::Border> {
         Shape::get_border(self)
+    }
+
+    fn wants_mouse_events(&self) -> bool {
+        Shape::wants_mouse_events(self)
+    }
+
+    fn wants_key_events(&self) -> bool {
+        Shape::wants_key_events(self)
+    }
+
+    fn on_mouse_pressed(&self, event: &MouseEvent, ctx: &mut dyn NovadrawContext) -> bool {
+        Shape::on_mouse_pressed(self, event, ctx)
+    }
+
+    fn on_mouse_released(&self, event: &MouseEvent, ctx: &mut dyn NovadrawContext) -> bool {
+        Shape::on_mouse_released(self, event, ctx)
+    }
+
+    fn on_mouse_moved(&self, event: &MouseEvent, ctx: &mut dyn NovadrawContext) -> bool {
+        Shape::on_mouse_moved(self, event, ctx)
+    }
+
+    fn on_mouse_entered(&self, event: &MouseEvent, ctx: &mut dyn NovadrawContext) -> bool {
+        Shape::on_mouse_entered(self, event, ctx)
+    }
+
+    fn on_mouse_exited(&self, event: &MouseEvent, ctx: &mut dyn NovadrawContext) -> bool {
+        Shape::on_mouse_exited(self, event, ctx)
     }
 }

@@ -8,8 +8,10 @@ use novadraw_core::Color;
 use novadraw_geometry::Transform;
 
 use crate::command::{Path, RenderCommand, RenderCommandKind};
+use crate::submission::{DamageSet, RenderSubmission};
 
 pub struct NdCanvas {
+    pub damage: DamageSet,
     commands: Vec<RenderCommand>,
     /// 当前正在构建的路径（用于 begin_path/fill/stroke 流程）
     current_path: Option<Path>,
@@ -34,6 +36,7 @@ impl Default for NdCanvas {
 impl NdCanvas {
     pub fn new() -> Self {
         Self {
+            damage: DamageSet::default(),
             commands: Vec::new(),
             current_path: None,
             fill_color: None,
@@ -364,8 +367,23 @@ impl NdCanvas {
         self.commands.clear();
     }
 
+    pub fn damage(&self) -> &DamageSet {
+        &self.damage
+    }
+
+    pub fn damage_mut(&mut self) -> &mut DamageSet {
+        &mut self.damage
+    }
+
     pub fn commands(&self) -> &Vec<RenderCommand> {
         &self.commands
+    }
+
+    pub fn to_submission(&self) -> RenderSubmission {
+        RenderSubmission {
+            commands: self.commands.clone(),
+            damage: self.damage.clone(),
+        }
     }
 
     pub fn commands_mut(&mut self) -> &mut Vec<RenderCommand> {

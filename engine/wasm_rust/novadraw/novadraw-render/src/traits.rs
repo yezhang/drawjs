@@ -2,7 +2,7 @@
 //!
 //! 定义渲染器的抽象接口，支持不同的渲染后端实现。
 
-use crate::command::RenderCommand;
+use crate::submission::RenderSubmission;
 
 /// 窗口代理 trait
 ///
@@ -29,7 +29,7 @@ pub trait RenderBackend {
     fn window(&self) -> &Self::Window;
 
     /// 执行渲染
-    fn render(&mut self, commands: &[RenderCommand]);
+    fn render(&mut self, submission: &RenderSubmission);
 
     /// 处理窗口大小变化
     ///

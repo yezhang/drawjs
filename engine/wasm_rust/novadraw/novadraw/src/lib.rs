@@ -7,7 +7,8 @@ pub use novadraw_geometry::Transform;
 
 #[cfg(feature = "vello")]
 pub use novadraw_render::{
-    NdCanvas, RenderBackend, RenderCommand, RenderCommandKind, WindowProxy, command,
+    DamageSet, NdCanvas, RenderBackend, RenderCommand, RenderCommandKind, RenderSubmission,
+    WindowProxy, command,
 };
 
 #[cfg(feature = "vello")]
@@ -21,11 +22,13 @@ pub use novadraw_render::traits;
 
 #[cfg(feature = "vello")]
 pub use novadraw_scene::{
-    BlockId, Border, BorderLayout, BorderRegion, Bounded, Direction, EllipseFigure, Figure,
-    FigureBlock, FigureRenderer, FillLayout, FlowDirection, FlowLayout, LayoutManager, LineBorder,
-    MarginBorder, Point, PolygonFigure, PolylineFigure, Rectangle, RectangleBorder, RectangleFigure,
-    RootFigure, RoundedRectangleFigure, FigureGraph, SceneHost, SceneUpdateTarget, TriangleFigure,
-    Updatable, Viewport, XYLayout,
+    BasicEventDispatcher, BlockId, Border, BorderLayout, BorderRegion, Bounded, Direction,
+    DispatchContext, EllipseFigure, Event, EventDispatcher, Figure, FigureBlock, FigureGraph,
+    FigureRenderer, FillLayout, FlowDirection, FlowLayout, LayoutManager, LineBorder,
+    MarginBorder, MouseButton, MouseEvent, MouseEventKind, MutationContext, NovadrawContext,
+    NovadrawSystem, PendingMutation, PendingMutations, Point, PolygonFigure, PolylineFigure,
+    Rectangle, RectangleBorder, RectangleFigure, RootFigure, RoundedRectangleFigure, SceneHost,
+    SceneUpdateManager, Shape, TriangleFigure, UpdateManager, Updatable, Viewport, XYLayout,
 };
 
 #[cfg(feature = "vello")]

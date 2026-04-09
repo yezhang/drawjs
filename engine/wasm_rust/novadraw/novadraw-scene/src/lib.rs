@@ -13,25 +13,35 @@
 #![allow(missing_docs)]
 
 pub mod border;
+pub mod context;
+pub mod event;
 pub mod figure;
 pub mod layout;
 pub mod log;
+pub mod mutation;
 pub mod scene;
 pub mod scene_host;
+pub mod system;
 pub mod update;
 pub mod viewport;
 
 pub use border::{Border, LineBorder, MarginBorder, RectangleBorder};
+pub use context::NovadrawContext;
+pub use event::{
+    BasicEventDispatcher, DispatchContext, Event, EventDispatcher, MouseButton, MouseEvent,
+    MouseEventKind,
+};
 pub use figure::{
     Bounded, Direction, EllipseFigure, Figure, PolygonFigure, PolylineFigure, RectangleFigure,
-    RootFigure, RoundedRectangleFigure, TriangleFigure, Updatable,
+    RootFigure, RoundedRectangleFigure, Shape, TriangleFigure, Updatable,
 };
+pub use mutation::{MutationContext, PendingMutation, PendingMutations};
 pub use layout::{
-    BorderLayout, BorderRegion, FillLayout, FlowDirection, FlowLayout, LayoutContext,
-    LayoutManager, XYLayout,
+    BorderLayout, BorderRegion, FillLayout, FlowDirection, FlowLayout, LayoutManager, XYLayout,
 };
 pub use novadraw_geometry::{Point, Rectangle};
 pub use scene::{BlockId, FigureBlock, FigureRenderer, FigureGraph};
-pub use scene_host::{SceneHost, SceneUpdateTarget};
-pub use update::{SceneUpdateManager, UpdateEvent, UpdateListener};
+pub use scene_host::SceneHost;
+pub use system::NovadrawSystem;
+pub use update::{SceneUpdateManager, UpdateEvent, UpdateListener, UpdateManager};
 pub use viewport::Viewport;

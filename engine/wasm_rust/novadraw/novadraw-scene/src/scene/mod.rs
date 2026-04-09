@@ -11,6 +11,8 @@ use uuid::Uuid;
 
 use super::figure::Updatable;
 use super::layout::LayoutManager;
+use super::update::UpdateManager;
+use crate::PendingMutation;
 
 // 渲染模块
 pub mod render_iterative;
@@ -56,6 +58,8 @@ pub struct FigureBlock {
     pub is_visible: bool,
     /// 是否启用
     pub is_enabled: bool,
+    /// 是否已验证
+    pub is_valid: bool,
     /// 首选尺寸 (宽, 高)，None 表示使用 Figure 的 bounds
     pub preferred_size: Option<(f64, f64)>,
     /// 最小尺寸 (宽, 高)
@@ -77,6 +81,7 @@ impl FigureBlock {
             is_selected: false,
             is_visible: true,
             is_enabled: true,
+            is_valid: true,
             preferred_size: None,
             minimum_size: None,
             maximum_size: None,
@@ -192,13 +197,11 @@ pub struct FigureGraph {
     root: BlockId,
     /// 内容块（用户可访问的根容器）
     contents: Option<BlockId>,
-    pub layout_manager: Option<Arc<dyn LayoutManager>>,
-    /// 布局是否有效，false 表示需要重新计算布局
-    pub layout_valid: bool,
     /// 子元素的布局约束 (child_id -> Rectangle constraint)
     constraints: std::collections::HashMap<usize, Rectangle>,
-    /// 更新管理器
-    pub update_manager: super::update::SceneUpdateManager,
+    mouse_target: Option<BlockId>,
+    focus_owner: Option<BlockId>,
+    captured: Option<BlockId>,
 }
 
 impl FigureGraph {
@@ -217,6 +220,7 @@ impl FigureGraph {
             is_selected: false,
             is_visible: true,
             is_enabled: true,
+            is_valid: true,
             preferred_size: None,
             minimum_size: None,
             maximum_size: None,
@@ -227,10 +231,10 @@ impl FigureGraph {
             uuid_map: std::collections::HashMap::new(),
             root: root_id,
             contents: None,
-            layout_manager: None,
-            layout_valid: true,
             constraints: std::collections::HashMap::new(),
-            update_manager: super::update::SceneUpdateManager::new(),
+            mouse_target: None,
+            focus_owner: None,
+            captured: None,
         }
     }
 
@@ -244,6 +248,7 @@ impl FigureGraph {
     pub fn set_contents(&mut self, figure: Box<dyn super::Figure>) -> BlockId {
         let contents_id = self.new_block_with_parent(figure, self.root);
         self.contents = Some(contents_id);
+        self.invalidate();
         contents_id
     }
 
@@ -304,18 +309,79 @@ impl FigureGraph {
     ///
     /// 用于交互式修改（如拖拽添加、动态插入节点），不适合批量构建场景。
     /// 批量构建使用 `add_child_to()` 以避免不必要的更新触发。
-    pub fn add_child(&mut self, parent_id: BlockId, figure: Box<dyn super::Figure>) -> BlockId {
+    pub fn add_child(
+        &mut self,
+        update_manager: &mut dyn UpdateManager,
+        parent_id: BlockId,
+        figure: Box<dyn super::Figure>,
+    ) -> BlockId {
         let bounds = figure.bounds();
         let child_id = self.new_block_with_parent(figure, parent_id);
 
-        // 标记父容器需要重新布局
-        self.mark_invalid(parent_id);
-        // 标记脏区域
-        self.repaint(parent_id, Some(bounds));
-        // 标记新子块需要验证
-        self.mark_invalid(child_id);
+        self.mark_invalid(update_manager, parent_id);
+        self.repaint(update_manager, parent_id, Some(bounds));
+        self.mark_invalid(update_manager, child_id);
 
         child_id
+    }
+
+    pub fn allocate_block(&mut self, figure: Box<dyn super::Figure>) -> BlockId {
+        let uuid = Uuid::new_v4();
+        let id = self.blocks.insert_with_key(|key| FigureBlock {
+            id: key,
+            uuid,
+            children: Vec::new(),
+            parent: None,
+            figure,
+            layout_manager: None,
+            is_selected: false,
+            is_visible: true,
+            is_enabled: true,
+            is_valid: false,
+            preferred_size: None,
+            minimum_size: None,
+            maximum_size: None,
+        });
+        self.uuid_map.insert(uuid, id);
+        id
+    }
+
+    pub fn apply_pending_mutations(
+        &mut self,
+        update_manager: &mut dyn UpdateManager,
+        mutations: Vec<PendingMutation>,
+    ) -> bool {
+        if mutations.is_empty() {
+            return false;
+        }
+
+        let mut changed = false;
+
+        for mutation in mutations
+            .iter()
+            .copied()
+            .filter(|mutation| matches!(mutation, PendingMutation::RemoveChild { .. }))
+        {
+            changed |= self.apply_remove_mutation(update_manager, mutation);
+        }
+
+        for mutation in mutations
+            .iter()
+            .copied()
+            .filter(|mutation| matches!(mutation, PendingMutation::Reparent { .. }))
+        {
+            changed |= self.apply_reparent_mutation(update_manager, mutation);
+        }
+
+        for mutation in mutations
+            .iter()
+            .copied()
+            .filter(|mutation| matches!(mutation, PendingMutation::AddChild { .. }))
+        {
+            changed |= self.apply_add_mutation(update_manager, mutation);
+        }
+
+        changed
     }
 
     /// 创建带父块的块
@@ -335,21 +401,143 @@ impl FigureGraph {
             is_selected: false,
             is_visible: true,
             is_enabled: true,
+            is_valid: false,
             preferred_size: None,
             minimum_size: None,
             maximum_size: None,
         });
         self.uuid_map.insert(uuid, id);
         self.blocks[parent_id].children.push(id);
-        self.layout_valid = false;
+        self.mark_validation_path_invalid(parent_id);
         id
+    }
+
+    fn attach_child(&mut self, parent_id: BlockId, child_id: BlockId) -> bool {
+        let Some(parent) = self.blocks.get_mut(parent_id) else {
+            return false;
+        };
+
+        if parent.children.contains(&child_id) {
+            return false;
+        }
+
+        parent.children.push(child_id);
+        if let Some(child) = self.blocks.get_mut(child_id) {
+            child.parent = Some(parent_id);
+            child.is_valid = false;
+        }
+        self.mark_validation_path_invalid(parent_id);
+        true
+    }
+
+    fn detach_child(&mut self, parent_id: BlockId, child_id: BlockId) -> bool {
+        let Some(parent) = self.blocks.get_mut(parent_id) else {
+            return false;
+        };
+
+        let old_len = parent.children.len();
+        parent.children.retain(|&id| id != child_id);
+        if parent.children.len() == old_len {
+            return false;
+        }
+
+        if let Some(child) = self.blocks.get_mut(child_id) {
+            child.parent = None;
+            child.is_valid = false;
+        }
+        self.mark_validation_path_invalid(parent_id);
+        true
+    }
+
+    fn apply_remove_mutation(
+        &mut self,
+        update_manager: &mut dyn UpdateManager,
+        mutation: PendingMutation,
+    ) -> bool {
+        let PendingMutation::RemoveChild { parent, child } = mutation else {
+            return false;
+        };
+        let Some(bounds) = self.blocks.get(child).map(|block| block.figure_bounds()) else {
+            return false;
+        };
+
+        if !self.detach_child(parent, child) {
+            return false;
+        }
+
+        if self.contents == Some(child) {
+            self.contents = None;
+        }
+
+        self.clear_interaction_state_for_subtree(child);
+        self.mark_invalid(update_manager, parent);
+        update_manager.add_dirty_region(child, bounds);
+        self.repaint(update_manager, parent, None);
+        true
+    }
+
+    fn apply_reparent_mutation(
+        &mut self,
+        update_manager: &mut dyn UpdateManager,
+        mutation: PendingMutation,
+    ) -> bool {
+        let PendingMutation::Reparent { child, new_parent } = mutation else {
+            return false;
+        };
+        let old_parent = self.blocks.get(child).and_then(|block| block.parent);
+        if old_parent == Some(new_parent) {
+            return false;
+        }
+
+        let Some(bounds) = self.blocks.get(child).map(|block| block.figure_bounds()) else {
+            return false;
+        };
+
+        if let Some(old_parent) = old_parent {
+            self.detach_child(old_parent, child);
+            self.mark_invalid(update_manager, old_parent);
+            self.repaint(update_manager, old_parent, None);
+        }
+
+        if !self.attach_child(new_parent, child) {
+            return false;
+        }
+
+        self.mark_invalid(update_manager, new_parent);
+        update_manager.add_dirty_region(child, bounds);
+        self.repaint(update_manager, new_parent, None);
+        true
+    }
+
+    fn apply_add_mutation(
+        &mut self,
+        update_manager: &mut dyn UpdateManager,
+        mutation: PendingMutation,
+    ) -> bool {
+        let PendingMutation::AddChild { parent, child } = mutation else {
+            return false;
+        };
+        let Some(bounds) = self.blocks.get(child).map(|block| block.figure_bounds()) else {
+            return false;
+        };
+
+        if !self.attach_child(parent, child) {
+            return false;
+        }
+
+        self.mark_invalid(update_manager, parent);
+        self.mark_invalid(update_manager, child);
+        update_manager.add_dirty_region(child, bounds);
+        self.repaint(update_manager, parent, None);
+        true
     }
 
     /// 使布局失效，下次渲染时将重新计算布局
     ///
     /// 对应 draw2d: Figure.invalidate()
     pub fn invalidate(&mut self) {
-        self.layout_valid = false;
+        let target = self.contents.unwrap_or(self.root);
+        self.mark_validation_path_invalid(target);
     }
 
     /// 标记块需要重新布局
@@ -360,8 +548,9 @@ impl FigureGraph {
     /// # Arguments
     ///
     /// * `block_id` - 需要重新布局的块 ID
-    pub fn mark_invalid(&mut self, block_id: BlockId) {
-        self.update_manager.add_invalid_figure(block_id);
+    pub fn mark_invalid(&mut self, update_manager: &mut dyn UpdateManager, block_id: BlockId) {
+        self.mark_validation_path_invalid(block_id);
+        update_manager.add_invalid_figure(block_id);
     }
 
     /// 请求重绘指定块
@@ -373,33 +562,29 @@ impl FigureGraph {
     ///
     /// * `block_id` - 需要重绘的块 ID
     /// * `rect` - 脏区域（局部坐标），如果为 None 则使用块的 bounds
-    pub fn repaint(&mut self, block_id: BlockId, rect: Option<Rectangle>) {
-        // 获取块并检查可见性
+    pub fn repaint(
+        &mut self,
+        update_manager: &mut dyn UpdateManager,
+        block_id: BlockId,
+        rect: Option<Rectangle>,
+    ) {
         if let Some(block) = self.blocks.get(block_id) {
             if !block.is_visible {
                 return;
             }
 
-            // 使用传入的区域或块的 bounds
             let dirty_rect = rect.unwrap_or_else(|| block.figure_bounds());
-            self.update_manager.add_dirty_region(block_id, dirty_rect);
+            update_manager.add_dirty_region(block_id, dirty_rect);
         }
     }
 
     /// 请求重绘整个场景
     ///
     /// 对应 draw2d: Figure.repaint() 使用整个 bounds
-    pub fn repaint_all(&mut self) {
+    pub fn repaint_all(&mut self, update_manager: &mut dyn UpdateManager) {
         if let Some(contents_id) = self.contents {
-            self.repaint(contents_id, None);
+            self.repaint(update_manager, contents_id, None);
         }
-    }
-
-    /// 检查是否有待处理的更新
-    ///
-    /// 对应 draw2d: UpdateManager.updateQueued flag
-    pub fn is_update_queued(&self) -> bool {
-        self.update_manager.is_update_queued()
     }
 
     /// 执行更新（两阶段：布局 + 重绘）
@@ -413,83 +598,10 @@ impl FigureGraph {
     /// Phase 2: 脏区域重绘
     /// - 如果有待重绘的脏区域，使用脏区域裁剪渲染
     /// - 清空脏区域
-    pub fn perform_update(&mut self) -> NdCanvas {
-        // 对应 draw2d: DeferredUpdateManager.performUpdate()
-        //
-        // Phase 1: 布局验证
-        // 使用 drain_invalid_blocks() 获取所有待验证块并清空队列
-        let block_ids = self.update_manager.drain_invalid_blocks();
-        for block_id in block_ids {
-            if let Some(block) = self.blocks.get(block_id) {
-                if block.is_visible && block.is_enabled {
-                    self.revalidate(block_id);
-                }
-            }
-        }
-
-        // Phase 2: 脏区域重绘
-        let damage = self.update_manager.compute_damage();
+    pub fn perform_update(&mut self, update_manager: &mut dyn UpdateManager) -> NdCanvas {
         let mut canvas = NdCanvas::new();
-
-        if self.update_manager.has_pending_repaint() && damage.width > 0.0 && damage.height > 0.0 {
-            canvas.clip_rect(damage.x, damage.y, damage.width, damage.height);
-        }
-        self.render_to_iterative(&mut canvas);
-
-        // 清空脏区域和更新标记
-        self.update_manager.clear_dirty_and_flag();
-
+        update_manager.perform_update(self, &mut canvas);
         canvas
-    }
-
-    /// 渲染脏区域
-    ///
-    /// 对应 draw2d: DeferredUpdateManager.repairDamage() (private)
-    ///
-    /// # 性能优化
-    ///
-    /// 脏区域优化可以显著减少渲染工作量。
-    /// 对于全量重绘场景（无脏区域），使用 render() 方法。
-    pub fn repair_damage(&mut self) -> NdCanvas {
-        let damage = self.update_manager.compute_damage();
-
-        let mut gc = NdCanvas::new();
-
-        // 设置脏区域裁剪
-        if self.update_manager.has_pending_repaint() && damage.width > 0.0 && damage.height > 0.0 {
-            gc.clip_rect(damage.x, damage.y, damage.width, damage.height);
-        }
-
-        // 渲染场景（使用递归实现）
-        self.render_to(&mut gc);
-
-        // 清空脏区域
-        self.update_manager.dirty_regions.clear();
-        self.update_manager.update_queued = false;
-
-        gc
-    }
-
-    /// 执行两阶段更新（布局 + 脏区域重绘）
-    ///
-    /// 对应 draw2d: DeferredUpdateManager.performUpdate() 的完整行为。
-    /// 委托给 SceneUpdateManager.perform_update() 执行。
-    pub fn perform_update_and_repair(&mut self) -> NdCanvas {
-        self.perform_update()
-    }
-
-    /// 获取合并后的脏区域
-    ///
-    /// 返回所有脏区域合并后的大区域，用于视口裁剪。
-    pub fn get_damage_region(&self) -> Rectangle {
-        self.update_manager.compute_damage()
-    }
-
-    /// 清空更新队列
-    ///
-    /// 对应 draw2d: UpdateManager.clear()
-    pub fn clear_updates(&mut self) {
-        self.update_manager.clear();
     }
 
     /// 重新验证布局（递归），如果布局无效则重新计算
@@ -498,32 +610,28 @@ impl FigureGraph {
     /// 只有设置了布局管理器的容器才会执行布局。
     /// 参考 draw2d: Figure.layout() { if (layoutManager != null) layoutManager.layout() }
     pub fn revalidate(&mut self, container_id: BlockId) {
-        // 1. 调用容器的 Updatable.validate()（布局后验证钩子）
         if let Some(block) = self.blocks.get_mut(container_id) {
             Updatable::validate(&mut *block.figure);
         }
 
-        // 2. 获取该容器的布局器
         let layout_manager = self
             .blocks
             .get(container_id)
             .and_then(|b| b.layout_manager.clone());
 
         if layout_manager.is_none() {
-            // 没有布局器，不执行任何布局，参考 draw2d：layoutManager == null 时什么都不做
-            // 但仍然递归处理子容器
             self.revalidate_children(container_id);
+            if let Some(block) = self.blocks.get_mut(container_id) {
+                block.is_valid = true;
+            }
             return;
         }
 
-        // 3. 执行布局：调用 LayoutManager.layout()
         layout_manager.unwrap().layout(container_id, self);
-
-        // 4. 递归处理子容器
         self.revalidate_children(container_id);
-
-        // 标记布局有效
-        self.layout_valid = true;
+        if let Some(block) = self.blocks.get_mut(container_id) {
+            block.is_valid = true;
+        }
     }
 
     /// 递归验证子容器的布局
@@ -554,15 +662,18 @@ impl FigureGraph {
     /// 如果布局无效则重新计算。
     /// 使用内容块作为根容器。
     pub fn revalidate_with_bounds(&mut self, container_bounds: Rectangle) {
-        if !self.layout_valid {
+        if !self.is_layout_valid() {
             self.apply_layout(container_bounds);
-            self.layout_valid = true;
+            self.validate();
         }
     }
 
     /// 检查布局是否有效
     pub fn is_layout_valid(&self) -> bool {
-        self.layout_valid
+        self.blocks
+            .get(self.contents.unwrap_or(self.root))
+            .map(|block| block.is_valid)
+            .unwrap_or(true)
     }
 
     /// 按矩形选择
@@ -644,55 +755,8 @@ impl FigureGraph {
     /// None 表示未命中任何图形
     pub fn hit_test(&self, point: (f64, f64)) -> Option<(BlockId, Vec<BlockId>)> {
         let start_id = self.contents.unwrap_or(self.root);
-        let mut stack = vec![start_id];
         let mut path = Vec::new();
-
-        while let Some(id) = stack.pop() {
-            if let Some(block) = self.blocks.get(id) {
-                // 将当前节点加入路径
-                path.push(id);
-
-                // 收集可见子节点（逆序，保证先处理后添加的）
-                let mut children: Vec<BlockId> = block
-                    .children
-                    .iter()
-                    .filter(|&&child_id| {
-                        if let Some(child) = self.blocks.get(child_id) {
-                            child.is_visible && child.is_enabled
-                        } else {
-                            false
-                        }
-                    })
-                    .cloned()
-                    .collect();
-                children.reverse();
-
-                // 检查当前节点是否包含点
-                if block.is_visible && block.is_enabled {
-                    let bounds = block.figure_bounds();
-                    if point.0 >= bounds.x
-                        && point.0 <= bounds.x + bounds.width
-                        && point.1 >= bounds.y
-                        && point.1 <= bounds.y + bounds.height
-                    {
-                        // 命中，返回完整路径
-                        let target = id;
-                        let full_path = path.clone();
-                        return Some((target, full_path));
-                    }
-                }
-
-                // 将子节点加入栈
-                for child_id in children {
-                    stack.push(child_id);
-                }
-            } else {
-                // 退出当前分支，从路径中移除
-                path.pop();
-            }
-        }
-
-        None
+        self.hit_test_from(start_id, point, &mut path)
     }
 
     /// 简单的命中测试
@@ -700,6 +764,16 @@ impl FigureGraph {
     /// 只返回第一个命中的块 ID，不包含路径。
     pub fn hit_test_simple(&self, point: (f64, f64)) -> Option<BlockId> {
         self.hit_test(point).map(|(target, _)| target)
+    }
+
+    pub fn find_mouse_event_target_at(&self, x: f64, y: f64) -> Option<BlockId> {
+        tracing::info!(
+            "[FigureGraph] find_mouse_event_target_at: coords=({:.1}, {:.1}), contents={:?}",
+            x, y, self.contents
+        );
+        let result = self.find_mouse_event_target_from(self.contents.unwrap_or(self.root), (x, y));
+        tracing::info!("[FigureGraph] find_mouse_event_target_at: result={:?}", result);
+        result
     }
 
     /// 渲染场景图
@@ -739,7 +813,7 @@ impl FigureGraph {
     }
 
     /// 渲染到上下文（迭代实现）
-    fn render_to_iterative(&self, gc: &mut NdCanvas) {
+    pub(crate) fn render_to_iterative(&self, gc: &mut NdCanvas) {
         let start_id = self.contents.unwrap_or(self.root);
         let scene_ref = FigureGraphRenderRef {
             blocks: &self.blocks,
@@ -835,13 +909,15 @@ impl FigureGraph {
 
     /// 设置布局管理器
     pub fn set_layout_manager(&mut self, layout_manager: Arc<dyn LayoutManager>) {
-        self.layout_manager = Some(layout_manager);
-        self.invalidate();
+        let container_id = self.contents.unwrap_or(self.root);
+        self.set_block_layout_manager(container_id, layout_manager);
     }
 
     /// 获取布局管理器
     pub fn get_layout_manager(&self) -> Option<&dyn LayoutManager> {
-        self.layout_manager.as_deref()
+        self.blocks
+            .get(self.contents.unwrap_or(self.root))
+            .and_then(|block| block.layout_manager.as_deref())
     }
 
     /// 设置指定块的布局管理器
@@ -852,8 +928,8 @@ impl FigureGraph {
     ) {
         if let Some(block) = self.blocks.get_mut(block_id) {
             block.layout_manager = Some(layout_manager);
-            self.invalidate();
         }
+        self.mark_validation_path_invalid(block_id);
     }
 
     /// 获取指定块的布局管理器
@@ -898,7 +974,34 @@ impl FigureGraph {
     /// 对应 draw2d: validate()
     /// 标记布局为有效
     pub fn validate(&mut self) {
-        self.layout_valid = true;
+        let target = self.contents.unwrap_or(self.root);
+        if let Some(block) = self.blocks.get_mut(target) {
+            block.is_valid = true;
+        }
+    }
+
+    pub fn mouse_target(&self) -> Option<BlockId> {
+        self.mouse_target
+    }
+
+    pub fn set_mouse_target(&mut self, id: Option<BlockId>) {
+        self.mouse_target = id;
+    }
+
+    pub fn focus_owner(&self) -> Option<BlockId> {
+        self.focus_owner
+    }
+
+    pub fn set_focus_owner(&mut self, id: Option<BlockId>) {
+        self.focus_owner = id;
+    }
+
+    pub fn captured(&self) -> Option<BlockId> {
+        self.captured
+    }
+
+    pub fn set_captured(&mut self, id: Option<BlockId>) {
+        self.captured = id;
     }
 
     /// 应用布局
@@ -1173,6 +1276,126 @@ impl FigureGraph {
     }
 }
 
+impl FigureGraph {
+    fn mark_validation_path_invalid(&mut self, mut block_id: BlockId) {
+        loop {
+            let parent = if let Some(block) = self.blocks.get_mut(block_id) {
+                block.is_valid = false;
+                block.parent
+            } else {
+                None
+            };
+
+            match parent {
+                Some(parent_id) => block_id = parent_id,
+                None => break,
+            }
+        }
+    }
+
+    fn hit_test_from(
+        &self,
+        block_id: BlockId,
+        point: (f64, f64),
+        path: &mut Vec<BlockId>,
+    ) -> Option<(BlockId, Vec<BlockId>)> {
+        let block = self.blocks.get(block_id)?;
+        if !block.is_visible || !block.is_enabled {
+            return None;
+        }
+
+        if !block.figure.contains_point(point.0, point.1) {
+            return None;
+        }
+
+        path.push(block_id);
+
+        for &child_id in block.children.iter().rev() {
+            if let Some(hit) = self.hit_test_from(child_id, point, path) {
+                return Some(hit);
+            }
+        }
+
+        let hit = Some((block_id, path.clone()));
+        path.pop();
+        hit
+    }
+
+    fn find_mouse_event_target_from(
+        &self,
+        block_id: BlockId,
+        point: (f64, f64),
+    ) -> Option<BlockId> {
+        let block = self.blocks.get(block_id)?;
+        if !block.is_visible || !block.is_enabled {
+            tracing::info!(
+            "[FigureGraph] find_mouse_event_target_from: block_id={:?} skipped (invisible/disabled)",
+            block_id
+        );
+            return None;
+        }
+
+        let contains = block.figure.contains_point(point.0, point.1);
+        tracing::trace!(
+            "[FigureGraph] find_mouse_event_target_from: block_id={:?}, bounds={:?}, contains_point=({}, {})={}",
+            block_id, block.figure.bounds(), point.0, point.1, contains
+        );
+
+        if !contains {
+            return None;
+        }
+
+        for &child_id in block.children.iter().rev() {
+            if let Some(target) = self.find_mouse_event_target_from(child_id, point) {
+                return Some(target);
+            }
+        }
+
+        if block.figure.wants_mouse_events() {
+            tracing::trace!(
+                "[FigureGraph] find_mouse_event_target_from: block_id={:?} wants_mouse_events=true, returning",
+                block_id
+            );
+            Some(block_id)
+        } else {
+            tracing::trace!(
+                "[FigureGraph] find_mouse_event_target_from: block_id={:?} wants_mouse_events=false, skipping",
+                block_id
+            );
+            None
+        }
+    }
+
+    fn clear_interaction_state_for_subtree(&mut self, subtree_root: BlockId) {
+        if self
+            .mouse_target
+            .is_some_and(|id| self.is_in_subtree(id, subtree_root))
+        {
+            self.mouse_target = None;
+        }
+        if self.captured.is_some_and(|id| self.is_in_subtree(id, subtree_root)) {
+            self.captured = None;
+        }
+        if self
+            .focus_owner
+            .is_some_and(|id| self.is_in_subtree(id, subtree_root))
+        {
+            self.focus_owner = None;
+        }
+    }
+
+    fn is_in_subtree(&self, block_id: BlockId, subtree_root: BlockId) -> bool {
+        let mut current = Some(block_id);
+        while let Some(id) = current {
+            if id == subtree_root {
+                return true;
+            }
+            current = self.blocks.get(id).and_then(|block| block.parent);
+        }
+        false
+    }
+}
+
 impl super::layout::LayoutContext for FigureGraph {
     fn get_children(&self, parent_id: BlockId) -> Vec<(BlockId, Rectangle)> {
         if let Some(block) = self.blocks.get(parent_id) {
@@ -1387,6 +1610,76 @@ mod tests {
         fn outline_shape(&self, _gc: &mut NdCanvas) {}
     }
 
+    #[derive(Clone, Copy)]
+    struct TestInteractiveFigure {
+        bounds: Rectangle,
+    }
+
+    impl TestInteractiveFigure {
+        fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
+            Self {
+                bounds: Rectangle::new(x, y, width, height),
+            }
+        }
+    }
+
+    impl Bounded for TestInteractiveFigure {
+        fn bounds(&self) -> Rectangle {
+            self.bounds
+        }
+
+        fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
+            self.bounds = Rectangle::new(x, y, width, height);
+        }
+
+        fn name(&self) -> &'static str {
+            "TestInteractiveFigure"
+        }
+    }
+
+    impl Updatable for TestInteractiveFigure {
+        fn validate(&mut self) {}
+        fn invalidate(&mut self) {}
+    }
+
+    impl Shape for TestInteractiveFigure {
+        fn stroke_color(&self) -> Option<NovadrawCoreColor> {
+            None
+        }
+
+        fn stroke_width(&self) -> f64 {
+            0.0
+        }
+
+        fn fill_color(&self) -> Option<NovadrawCoreColor> {
+            None
+        }
+
+        fn line_cap(&self) -> novadraw_render::command::LineCap {
+            novadraw_render::command::LineCap::default()
+        }
+
+        fn line_join(&self) -> novadraw_render::command::LineJoin {
+            novadraw_render::command::LineJoin::default()
+        }
+
+        fn fill_enabled(&self) -> bool {
+            false
+        }
+
+        fn outline_enabled(&self) -> bool {
+            false
+        }
+
+        fn wants_mouse_events(&self) -> bool {
+            true
+        }
+
+        fn fill_shape(&self, _gc: &mut NdCanvas) {}
+
+        fn outline_shape(&self, _gc: &mut NdCanvas) {}
+    }
+
     /// 测试渲染顺序：Z-order 验证
     ///
     /// 场景：父容器包含三个子矩形（从下到上添加）
@@ -1581,6 +1874,37 @@ mod tests {
             )
         });
         assert!(has_fill_rect, "应有 FillRect 命令");
+    }
+
+    #[test]
+    fn test_find_mouse_event_target_at_skips_non_interactive_figures() {
+        let mut scene = FigureGraph::new();
+        scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 100.0, 100.0)));
+
+        assert_eq!(scene.find_mouse_event_target_at(10.0, 10.0), None);
+    }
+
+    #[test]
+    fn test_find_mouse_event_target_at_prefers_deepest_interactive_figure() {
+        let mut scene = FigureGraph::new();
+        let root_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
+        let interactive_parent = scene.add_child_to(
+            root_id,
+            Box::new(TestInteractiveFigure::new(10.0, 10.0, 120.0, 120.0)),
+        );
+        let interactive_child = scene.add_child_to(
+            interactive_parent,
+            Box::new(TestInteractiveFigure::new(20.0, 20.0, 40.0, 40.0)),
+        );
+
+        assert_eq!(
+            scene.find_mouse_event_target_at(15.0, 15.0),
+            Some(interactive_parent)
+        );
+        assert_eq!(
+            scene.find_mouse_event_target_at(35.0, 35.0),
+            Some(interactive_child)
+        );
     }
 
     // ========== 坐标变换测试 ==========
@@ -2168,15 +2492,5 @@ mod tests {
             "应有足够的渲染命令，实际为 {}",
             cmd_iterative
         );
-    }
-}
-
-impl crate::scene_host::SceneUpdateTarget for FigureGraph {
-    fn perform_update(&mut self) -> novadraw_render::NdCanvas {
-        FigureGraph::perform_update(self)
-    }
-
-    fn repair_damage(&mut self) -> novadraw_render::NdCanvas {
-        FigureGraph::repair_damage(self)
     }
 }

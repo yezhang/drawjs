@@ -126,7 +126,8 @@ impl DemoApp {
         } else {
             scene.render()
         };
-        renderer.render(render_ctx.commands());
+        let submission = render_ctx.to_submission();
+        renderer.render(&submission);
     }
 
     /// 截图并保存到文件

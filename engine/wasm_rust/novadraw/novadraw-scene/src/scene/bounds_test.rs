@@ -209,6 +209,30 @@ fn test_nested_structure_render_order() {
     // 这验证了：RenderCommand 只存储 bounds 值，translate 状态由独立栈管理
 }
 
+#[test]
+fn test_hit_test_prefers_topmost_deepest_child() {
+    let mut scene = FigureGraph::new();
+
+    let root = RectangleFigure::new(0.0, 0.0, 200.0, 200.0);
+    let root_id = scene.set_contents(Box::new(root));
+
+    let bottom = RectangleFigure::new(20.0, 20.0, 120.0, 120.0);
+    let bottom_id = scene.add_child_to(root_id, Box::new(bottom));
+
+    let top = RectangleFigure::new(40.0, 40.0, 120.0, 120.0);
+    let top_id = scene.add_child_to(root_id, Box::new(top));
+
+    let nested = RectangleFigure::new(60.0, 60.0, 40.0, 40.0);
+    let nested_id = scene.add_child_to(top_id, Box::new(nested));
+
+    assert_eq!(scene.find_mouse_event_target_at(70.0, 70.0), None);
+    assert_eq!(scene.hit_test_simple((70.0, 70.0)), Some(nested_id));
+    assert_eq!(scene.hit_test_simple((50.0, 50.0)), Some(top_id));
+    assert_eq!(scene.hit_test_simple((30.0, 30.0)), Some(bottom_id));
+    assert_eq!(scene.hit_test_simple((190.0, 190.0)), Some(root_id));
+    assert_eq!(scene.hit_test_simple((260.0, 260.0)), None);
+}
+
 /// 测试：prim_translate 传播到子节点
 ///
 /// 场景：parent(0,0,100,100) + child(10,10,50,50)
