@@ -59,6 +59,45 @@ cargo fmt --check && cargo check && cargo clippy -- -D warnings && cargo test
 | 架构设计 | [doc/01-architecture/](doc/01-architecture/) |
 | 坐标系 | [doc/04-coordinates/](doc/04-coordinates/) |
 
+## 架构设计原则
+
+### 基本准则
+
+架构设计时遵循以下优先级：
+
+1. **扩展性 > 稳定性 > 性能**：优先保证架构可扩展，其次是稳定可靠，最后才考虑性能
+2. **参考 g2 设计理念**：draw2d/GEF 经过 20+ 年生产验证，核心设计决策优先对标 g2
+3. **不考虑当前代码状态**：架构讨论独立于实现，代码应追随架构而非反之
+4. **接口 vs 实现分离**：核心抽象必须是接口（trait），具体实现可替换
+
+### 架构设计执行规则
+
+**在做理想架构设计时，禁止扫描本项目的 rust 代码。**
+
+- 架构设计应从需求、第一性原理、g2/GEF 参考文档出发
+- 可以参考 g2 源码（`/Users/bytedance/Documents/code/GitHub/gef-classic`）和已有分析文档
+- 不扫描本项目代码是为了避免"现状偏差"，确保架构设计独立于当前实现
+
+### g2 设计哲学
+
+draw2d/GEF 的核心设计哲学：
+
+| 原则 | 说明 | Novadraw 对应 |
+|------|------|---------------|
+| **接口内聚** | IFigure 接口保持内聚，避免上帝接口 | dyn Figure trait |
+| **状态分离** | Figure 只有渲染状态，FigureBlock 持有运行时状态 | Figure/FigureBlock 分离 |
+| **委托优于继承** | 布局、更新等通过组合实现 | LayoutManager trait |
+| **两阶段更新** | Validation → Damage Repair 分离 | UpdateManager 两阶段 |
+| **ID 引用树** | 树节点通过 ID 而非引用访问 | SlotMap<BlockId, T> |
+
+### 架构审查清单
+
+讨论架构时，必须明确：
+- [ ] 扩展点在哪里？（新 Figure 类型、新 LayoutManager、新平台后端）
+- [ ] 稳定性：接口是否稳定？会不会频繁 breaking change？
+- [ ] 与 g2 的对应关系？为何与 g2 不同或相同？
+- [ ] 错误处理：失败模式是什么？
+
 ## 交互方式
 
 ### 思维原则

@@ -14,7 +14,9 @@ doc/
 │   ├── gef_principle.md              # GEF 框架核心原理
 │   ├── displaylist_design.md          # DisplayList 中间层设计
 │   ├── draw2d-history.md             # draw2d 历史与架构演变
-│   └── swt-gc-analysis.md           # SWT GC 底层绘制 API 分析
+│   ├── swt-gc-analysis.md           # SWT GC 底层绘制 API 分析
+│   ├── ideal-architecture-static.md   # 理想架构 - 静态结构（组件关系、Trait 层级）
+│   └── ideal-architecture-dynamic.md  # 理想架构 - 动态结构（事件流、更新流程）
 │
 ├── 02-figure/                        # Figure 核心
 │   ├── figure_core_concepts.md       # Figure 核心概念
@@ -38,9 +40,12 @@ doc/
 ├── 04-coordinates/                   # 坐标系与变换
 │   └── coordinates.md                 # 坐标系统原理
 │
-└── 05-java-rust/                     # Java to Rust 迁移
-    ├── java_to_rust_oo.md            # Java OOP 特性等价实现
-    └── java_to_rust_migration.md     # 迁移步骤指南 + 多态支持
+├── 05-java-rust/                     # Java to Rust 迁移
+│   ├── java_to_rust_oo.md            # Java OOP 特性等价实现
+│   └── java_to_rust_migration.md     # 迁移步骤指南 + 多态支持
+│
+└── deprecated/                        # 历史文档（已被取代）
+    └── 架构设计-历史.md              # 早期架构设计，已被《理想架构设计.md》取代
 ```
 
 ---
@@ -55,6 +60,8 @@ doc/
 | `displaylist_design.md` | DisplayList 设计 | crate 设计决策、协议定义、与渲染层解耦方案 |
 | `draw2d-history.md` | draw2d 历史 | draw2d 架构演变、设计决策背景 |
 | `swt-gc-analysis.md` | SWT GC 分析 | SWT GC 底层绘制 API、IServerOcr2d 接口 |
+| `ideal-architecture-static.md` | 理想架构 - 静态结构 | 组件关系图、Trait 层级、数据结构、平台解耦设计（d2 绘图） |
+| `ideal-architecture-dynamic.md` | 理想架构 - 动态结构 | 事件分发流程、setCapture 机制、两阶段更新、数据流（d2 绘图） |
 
 ### 2. Figure 核心
 
@@ -93,6 +100,12 @@ doc/
 |------|------|----------|
 | `java_to_rust_oo.md` | OOP 等价实现 | 20 种 Java OOP 特性与 Rust 对应关系 |
 | `java_to_rust_migration.md` | 迁移指南 | 迁移步骤、多态调用支持、决策流程 |
+
+### 6. 历史文档
+
+| 文档 | 主题 | 说明 |
+|------|------|------|
+| `deprecated/架构设计-历史.md` | 早期架构设计 | 已被《理想架构设计.md》取代，仅作历史参考 |
 
 ---
 
