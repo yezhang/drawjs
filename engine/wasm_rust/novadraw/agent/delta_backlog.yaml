@@ -1,0 +1,77 @@
+version: 1
+last_updated: "2026-04-10"
+
+selection_rules:
+  - 先处理职责边界错误，再处理实现细节
+  - 先处理高优先级 delta，再处理中低优先级 delta
+  - 单轮只允许选择一个 delta
+  - 如果 delta 需要跨多个子系统，先拆分
+
+items:
+  - id: AD-001
+    title: UpdateManager boundary audit
+    contract: "UpdateManager 只负责两阶段更新编排，不拥有图级语义"
+    priority: high
+    status: pending
+    evidence:
+      - novadraw-scene/src/update/mod.rs
+      - novadraw-scene/src/update/deferred.rs
+      - apps/editor/src/system.rs
+    done_when:
+      - 明确哪些职责应保留在 UpdateManager，哪些应回归 FigureGraph 或组合根
+      - 如需调整接口，调用点可以编译通过
+      - 相关测试通过
+
+  - id: AD-002
+    title: SceneHost thin boundary audit
+    contract: "SceneHost 是极薄平台调度层"
+    priority: high
+    status: pending
+    evidence:
+      - apps/editor/src/scene_manager/scene_host.rs
+      - apps/editor/src/system.rs
+    done_when:
+      - 明确 SceneHost 的最小职责集
+      - 平台细节与业务规则边界清晰
+      - 调用链保持可编译
+
+  - id: AD-003
+    title: PendingMutation timing audit
+    contract: "结构性变更必须通过 PendingMutation 在正确时机应用"
+    priority: high
+    status: pending
+    evidence:
+      - novadraw-scene/src/mutation/mod.rs
+      - apps/editor/src/system.rs
+      - doc/理想架构设计.md
+    done_when:
+      - 应用时机与理想架构一致
+      - 分发期间不直接破坏图结构
+      - 相关验证通过
+
+  - id: AD-004
+    title: NovadrawSystem composition root audit
+    contract: "NovadrawSystem 是组合根"
+    priority: medium
+    status: pending
+    evidence:
+      - novadraw/src/lib.rs
+      - apps/editor/src/system.rs
+    done_when:
+      - 组合根职责清晰
+      - 子系统依赖方向稳定
+      - 无额外全局状态引入
+
+  - id: AD-005
+    title: Interaction state ownership audit
+    contract: "交互状态应归属 FigureGraph"
+    priority: medium
+    status: pending
+    evidence:
+      - novadraw-scene/src/event/mod.rs
+      - apps/editor/src/system.rs
+      - doc/理想架构设计.md
+    done_when:
+      - hover/focus/capture 等状态归属明确
+      - 事件分发与状态持有边界清晰
+      - 行为验证通过
