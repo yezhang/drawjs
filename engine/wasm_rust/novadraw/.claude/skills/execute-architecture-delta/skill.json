@@ -1,0 +1,4 @@
+{
+  "name": "execute-architecture-delta",
+  "description": "执行一个最小架构差距并先做根因分析。适合已选定当前 delta、准备小步推进时调用。"
+}

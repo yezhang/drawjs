@@ -1,0 +1,4 @@
+{
+  "name": "capture-interruption",
+  "description": "在中断前冻结当前架构任务并写入恢复点。适合遇到突发工作或当前会话必须结束时调用。"
+}

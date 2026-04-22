@@ -1,0 +1,4 @@
+{
+  "name": "resume-architecture-work",
+  "description": "恢复当前架构改进上下文并给出下一步。适合在中断恢复、重新开工或下一步不明确时调用。"
+}
