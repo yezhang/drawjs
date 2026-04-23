@@ -12,6 +12,8 @@
 - Files:
 - Verification:
 - Decision:
+- Post-Execution Reflection:
+- New Candidate Deltas:
 - Next Step:
 ```
 

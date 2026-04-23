@@ -6,6 +6,35 @@ selection_rules:
   - 先处理高优先级 delta，再处理中低优先级 delta
   - 单轮只允许选择一个 delta
   - 如果 delta 需要跨多个子系统，先拆分
+  - 新问题默认先作为 candidate，评估后再进入正式 backlog
+
+status_definitions:
+  candidate: 已发现但尚未进入正式 backlog
+  rejected: 已评估但当前不值得进入 backlog
+  pending: 已进入正式 backlog，等待执行
+  proposed: 已完成根因分析，待实施
+  in_progress: 正在执行
+  split: 已拆分成多个更小的 delta
+  blocked: 暂时无法推进
+  verified: 已通过验证
+  done: 已完成并回写状态
+
+candidate_items:
+  - id: CAD-001
+    title: Update listener responsibility audit
+    contract: "更新监听器只承担监听语义，不吞并编排或图状态职责"
+    priority: medium
+    status: candidate
+    evidence:
+      - novadraw-scene/src/update/listener.rs
+      - novadraw-scene/src/update/mod.rs
+    promote_when:
+      - 能明确指出监听器与 UpdateManager 的边界偏差
+      - 能写出清晰的 done_when
+      - 问题不是 AD-001 的重复项
+    reject_when:
+      - 只是命名层面问题
+      - 不能落到具体职责边界或可验证行为
 
 items:
   - id: AD-001

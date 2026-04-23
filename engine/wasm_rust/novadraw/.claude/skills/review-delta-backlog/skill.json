@@ -1,0 +1,4 @@
+{
+  "name": "review-delta-backlog",
+  "description": "审查并整理架构 backlog，执行去重、拆分和重排优先级。适合 backlog 变旧、变乱或一轮执行完成后调用。"
+}

@@ -1,0 +1,4 @@
+{
+  "name": "discover-architecture-deltas",
+  "description": "从理想架构与当前实现偏差中发现候选问题。适合开始新阶段、backlog 失真或执行后需要继续发现问题时调用。"
+}
