@@ -98,7 +98,7 @@ impl FigureBlock {
         self.children.len()
     }
 
-    /// 获取图形的边界（局部坐标）
+    /// 获取图形的边界（面向最近坐标根的绝对坐标）
     pub fn figure_bounds(&self) -> Rectangle {
         self.figure.bounds()
     }
@@ -270,7 +270,7 @@ impl FigureGraph {
     ///
     /// # 坐标语义
     ///
-    /// - bounds 是绝对坐标（相对于坐标根），不是相对于父节点的偏移
+    /// - bounds 是绝对坐标（相对于最近坐标根），不是相对于父节点的偏移
     /// - 添加后，子节点的 bounds 保持不变
     /// - 平移操作由 `prim_translate` 负责，会修改 bounds 并传播到子节点
     ///
@@ -1211,28 +1211,23 @@ impl FigureGraph {
     ///
     /// # 算法
     ///
-    /// 当父节点是坐标根（`useLocalCoordinates() = true`）时：
-    /// - 本地坐标需要累加父节点的 insets 才能得到父节点坐标
-    /// - 因为本地 (0, 0) 对应父坐标 (left_insets, top_insets)
+    /// 当当前节点使用本地坐标（`useLocalCoordinates() = true`）时：
+    /// - 本地坐标需要累加当前节点的 `bounds.x/y + insets.left/top`
+    /// - 因为当前节点的局部坐标原点映射到父坐标中的内容区起点
     ///
     /// # 示例
     ///
     /// 假设：
-    /// - 父节点 bounds = (0, 0, 100, 100)，left/top insets = 5
-    /// - 子节点的本地坐标 (10, 20) 转换为父坐标 (15, 25)
+    /// - 当前节点 bounds = (20, 30, 100, 100)，left/top insets = 5
+    /// - 当前节点本地坐标 (10, 20) 转换为父坐标 (35, 55)
     #[allow(clippy::collapsible_if, clippy::needless_return)]
     pub fn translate_to_parent<T: Translatable>(&self, block_id: BlockId, t: &mut T) {
         if let Some(block) = self.blocks.get(block_id) {
-            if let Some(parent_id) = block.parent {
-                if let Some(parent) = self.blocks.get(parent_id) {
-                    if parent.figure.use_local_coordinates() {
-                        // 只有当父节点是坐标根时才转换
-                        // 本地 (0, 0) 对应父坐标 (left, top)
-                        let (top, left, _, _) = parent.figure.insets();
-                        t.translate(left, top);
-                        return;
-                    }
-                }
+            if block.figure.use_local_coordinates() {
+                let bounds = block.figure.bounds();
+                let (top, left, _, _) = block.figure.insets();
+                t.translate(bounds.x + left, bounds.y + top);
+                return;
             }
         }
     }
@@ -1243,21 +1238,17 @@ impl FigureGraph {
     ///
     /// # 算法
     ///
-    /// 当父节点是坐标根时：
-    /// - 父坐标需要减去父节点的 insets 才能得到本地坐标
-    /// - 因为父坐标 (left_insets, top_insets) 对应本地 (0, 0)
+    /// 当当前节点使用本地坐标时：
+    /// - 父坐标需要减去当前节点的 `bounds.x/y + insets.left/top` 才能得到本地坐标
+    /// - 因为父坐标中的内容区起点对应当前节点本地 (0, 0)
     #[allow(clippy::collapsible_if, clippy::needless_return)]
     pub fn translate_from_parent<T: Translatable>(&self, block_id: BlockId, t: &mut T) {
         if let Some(block) = self.blocks.get(block_id) {
-            if let Some(parent_id) = block.parent {
-                if let Some(parent) = self.blocks.get(parent_id) {
-                    if parent.figure.use_local_coordinates() {
-                        // 只有当父节点是坐标根时才转换
-                        let (top, left, _, _) = parent.figure.insets();
-                        t.translate(-left, -top);
-                        return;
-                    }
-                }
+            if block.figure.use_local_coordinates() {
+                let bounds = block.figure.bounds();
+                let (top, left, _, _) = block.figure.insets();
+                t.translate(-(bounds.x + left), -(bounds.y + top));
+                return;
             }
         }
     }
@@ -1270,10 +1261,8 @@ impl FigureGraph {
     ///
     /// 绝对坐标是相对于场景根的坐标。
     /// 递归向父节点遍历：
-    /// 1. 递归处理父节点
-    /// 2. 如果当前节点的父节点是坐标根，减去父节点的 bounds
-    ///    因为：absolute = coord_root_bounds + local
-    ///    所以：local = absolute - coord_root_bounds
+    /// 1. 先将绝对坐标转换到父节点的局部坐标
+    /// 2. 再使用当前节点的 `translate_from_parent` 转换为当前节点的局部坐标
     ///
     /// # 注意
     ///
@@ -1282,18 +1271,8 @@ impl FigureGraph {
     pub fn translate_to_relative<T: Translatable>(&self, block_id: BlockId, t: &mut T) {
         if let Some(block) = self.blocks.get(block_id) {
             if let Some(parent_id) = block.parent {
-                // 递归处理父节点
                 self.translate_to_relative(parent_id, t);
-
-                // 如果父节点是坐标根，减去父节点的 bounds
-                // 因为 absolute = coord_root_bounds + local
-                // 所以 local = absolute - coord_root_bounds
-                if let Some(parent) = self.blocks.get(parent_id) {
-                    if parent.figure.use_local_coordinates() {
-                        let bounds = parent.figure.bounds();
-                        t.translate(-bounds.x, -bounds.y);
-                    }
-                }
+                self.translate_from_parent(block_id, t);
             }
         }
     }
@@ -2019,8 +1998,8 @@ mod tests {
 
     /// 测试 translate_to_parent 基本功能
     ///
-    /// 场景：父节点是坐标根且无 insets
-    /// 期望：本地坐标 (10, 20) 转换为父坐标 (10, 20)
+    /// 场景：当前节点是坐标根且无 insets
+    /// 期望：本地坐标 (10, 20) 转换为父坐标 (30, 50)
     #[test]
     fn test_translate_to_parent_basic() {
         let mut scene = FigureGraph::new();
@@ -2028,24 +2007,20 @@ mod tests {
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
 
-        let parent_id = scene.add_child_to(
+        let coord_root_id = scene.add_child_to(
             contents_id,
-            Box::new(TestCoordinateRootFigure::new(0.0, 0.0, 100.0, 100.0)),
+            Box::new(TestCoordinateRootFigure::new(20.0, 30.0, 100.0, 100.0)),
         );
 
-        let child = RectangleFigure::new(10.0, 20.0, 50.0, 50.0);
-        let child_id = scene.add_child_to(parent_id, Box::new(child));
-
-        // 本地坐标 (10, 20) 转换为父坐标 (10, 20)
         let mut point = (10.0, 20.0);
-        scene.translate_to_parent(child_id, &mut point);
-        assert_eq!(point, (10.0, 20.0));
+        scene.translate_to_parent(coord_root_id, &mut point);
+        assert_eq!(point, (30.0, 50.0));
     }
 
     /// 测试 translate_to_parent 带 insets
     ///
-    /// 场景：父节点是坐标根且有 insets
-    /// 期望：本地坐标 (10, 20) 转换为父坐标 (15, 25)，其中 insets = (5, 5, 0, 0)
+    /// 场景：当前节点是坐标根且有 insets
+    /// 期望：本地坐标 (10, 20) 转换为父坐标 (35, 55)，其中 bounds=(20,30), insets=(5,5,0,0)
     #[test]
     fn test_translate_to_parent_with_insets() {
         let mut scene = FigureGraph::new();
@@ -2053,30 +2028,25 @@ mod tests {
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
 
-        let parent_id = scene.add_child_to(
+        let coord_root_id = scene.add_child_to(
             contents_id,
             Box::new(TestFigureWithInsets::new(
-                0.0,
-                0.0,
+                20.0,
+                30.0,
                 100.0,
                 100.0,
                 (5.0, 5.0, 0.0, 0.0),
             )),
         );
-
-        let child = RectangleFigure::new(10.0, 20.0, 50.0, 50.0);
-        let child_id = scene.add_child_to(parent_id, Box::new(child));
-
-        // 本地坐标 (10, 20) 转换为父坐标 (15, 25)，即本地 + insets
         let mut point = (10.0, 20.0);
-        scene.translate_to_parent(child_id, &mut point);
-        assert_eq!(point.0, 15.0, "x 应为 10 + 5");
-        assert_eq!(point.1, 25.0, "y 应为 20 + 5");
+        scene.translate_to_parent(coord_root_id, &mut point);
+        assert_eq!(point.0, 35.0, "x 应为 10 + 20 + 5");
+        assert_eq!(point.1, 55.0, "y 应为 20 + 30 + 5");
     }
 
     /// 测试 translate_to_parent 父节点不是坐标根
     ///
-    /// 场景：父节点不是坐标根
+    /// 场景：当前节点不是坐标根
     /// 期望：不进行转换，返回原坐标
     #[test]
     fn test_translate_to_parent_not_coordinate_root() {
@@ -2091,18 +2061,17 @@ mod tests {
         let child = RectangleFigure::new(10.0, 20.0, 50.0, 50.0);
         let child_id = scene.add_child_to(parent_id, Box::new(child));
 
-        // 父节点不是坐标根，不转换
         let mut point = (10.0, 20.0);
         scene.translate_to_parent(child_id, &mut point);
-        assert_eq!(point, (10.0, 20.0), "父节点不是坐标根时不转换");
+        assert_eq!(point, (10.0, 20.0), "当前节点不是坐标根时不转换");
     }
 
     // ========== translate_from_parent 测试 ==========
 
     /// 测试 translate_from_parent 基本功能
     ///
-    /// 场景：父节点是坐标根且无 insets
-    /// 期望：父坐标 (10, 20) 转换为本地坐标 (10, 20)
+    /// 场景：当前节点是坐标根且无 insets
+    /// 期望：父坐标 (30, 50) 转换为本地坐标 (10, 20)
     #[test]
     fn test_translate_from_parent_basic() {
         let mut scene = FigureGraph::new();
@@ -2110,24 +2079,19 @@ mod tests {
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
 
-        let parent_id = scene.add_child_to(
+        let coord_root_id = scene.add_child_to(
             contents_id,
-            Box::new(TestCoordinateRootFigure::new(0.0, 0.0, 100.0, 100.0)),
+            Box::new(TestCoordinateRootFigure::new(20.0, 30.0, 100.0, 100.0)),
         );
-
-        let child = RectangleFigure::new(10.0, 20.0, 50.0, 50.0);
-        let child_id = scene.add_child_to(parent_id, Box::new(child));
-
-        // 父坐标 (10, 20) 转换为本地坐标 (10, 20)
-        let mut point = (10.0, 20.0);
-        scene.translate_from_parent(child_id, &mut point);
+        let mut point = (30.0, 50.0);
+        scene.translate_from_parent(coord_root_id, &mut point);
         assert_eq!(point, (10.0, 20.0));
     }
 
     /// 测试 translate_from_parent 带 insets
     ///
-    /// 场景：父节点是坐标根且有 insets
-    /// 期望：父坐标 (15, 25) 转换为本地坐标 (10, 20)
+    /// 场景：当前节点是坐标根且有 insets
+    /// 期望：父坐标 (35, 55) 转换为本地坐标 (10, 20)
     #[test]
     fn test_translate_from_parent_with_insets() {
         let mut scene = FigureGraph::new();
@@ -2135,25 +2099,20 @@ mod tests {
         let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
         let contents_id = scene.set_contents(Box::new(contents));
 
-        let parent_id = scene.add_child_to(
+        let coord_root_id = scene.add_child_to(
             contents_id,
             Box::new(TestFigureWithInsets::new(
-                0.0,
-                0.0,
+                20.0,
+                30.0,
                 100.0,
                 100.0,
                 (5.0, 5.0, 0.0, 0.0),
             )),
         );
-
-        let child = RectangleFigure::new(10.0, 20.0, 50.0, 50.0);
-        let child_id = scene.add_child_to(parent_id, Box::new(child));
-
-        // 父坐标 (15, 25) 转换为本地坐标 (10, 20)，即减去 insets
-        let mut point = (15.0, 25.0);
-        scene.translate_from_parent(child_id, &mut point);
-        assert_eq!(point.0, 10.0, "x 应为 15 - 5");
-        assert_eq!(point.1, 20.0, "y 应为 25 - 5");
+        let mut point = (35.0, 55.0);
+        scene.translate_from_parent(coord_root_id, &mut point);
+        assert_eq!(point.0, 10.0, "x 应为 35 - 20 - 5");
+        assert_eq!(point.1, 20.0, "y 应为 55 - 30 - 5");
     }
 
     // ========== translate_to_relative 测试 ==========

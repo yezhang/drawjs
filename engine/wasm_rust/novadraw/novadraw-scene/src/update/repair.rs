@@ -106,31 +106,21 @@ pub(crate) fn execute_repair_phase<'a>(
 
 fn collect_parent_chain_steps(graph: &FigureGraph, block_id: BlockId) -> Option<Vec<DamagePropagationStep>> {
     let mut steps = Vec::new();
-    let mut current_id = block_id;
+    let mut walker_id = Some(block_id);
+    let contents_id = graph.get_contents();
 
-    loop {
+    while let Some(current_id) = walker_id {
         let current = graph.get_block(current_id)?;
-        let Some(parent_id) = current.parent else {
-            break;
-        };
-        let parent = graph.get_block(parent_id)?;
-        if parent.parent.is_none() {
-            break;
-        }
-        let bounds = current.figure_bounds();
-        let (top, left, _, _) = current.figure.insets();
-        let (offset_x, offset_y) = if current.figure.use_local_coordinates() {
-            (bounds.x + left, bounds.y + top)
-        } else {
-            (0.0, 0.0)
-        };
-
         steps.push(DamagePropagationStep {
-            offset_x,
-            offset_y,
-            clip: Some(parent.figure_bounds()),
+            offset_x: 0.0,
+            offset_y: 0.0,
+            clip: Some(current.figure_bounds()),
         });
-        current_id = parent_id;
+        walker_id = if Some(current_id) == contents_id {
+            None
+        } else {
+            current.parent
+        };
     }
 
     Some(steps)
@@ -451,18 +441,38 @@ mod tests {
         let mut graph = FigureGraph::new();
         let root = RectangleFigure::new_with_color(0.0, 0.0, 500.0, 400.0, Color::BLACK);
         let root_id = graph.set_contents(Box::new(root));
-        let parent = RectangleFigure::new_with_color(0.0, 0.0, 200.0, 150.0, Color::WHITE);
-        let parent_id = graph.add_child_to(root_id, Box::new(parent));
-        let child = RectangleFigure::new_with_color(20.0, 30.0, 80.0, 60.0, Color::WHITE)
+        let parent = RectangleFigure::new_with_color(100.0, 50.0, 200.0, 150.0, Color::WHITE)
             .with_local_coordinates(true);
+        let parent_id = graph.add_child_to(root_id, Box::new(parent));
+        let child = RectangleFigure::new_with_color(120.0, 80.0, 80.0, 60.0, Color::WHITE);
         let child_id = graph.add_child_to(parent_id, Box::new(child));
 
         let actual = propagate_damage_to_root(
             &graph,
             child_id,
-            Rectangle::new(10.0, 5.0, 20.0, 10.0),
+            Rectangle::new(120.0, 80.0, 20.0, 10.0),
         );
 
-        assert_eq!(actual, Some(Rectangle::new(30.0, 35.0, 20.0, 10.0)));
+        assert_eq!(actual, Some(Rectangle::new(120.0, 80.0, 20.0, 10.0)));
+    }
+
+    #[test]
+    fn test_propagate_damage_to_root_applies_root_clip() {
+        let mut graph = FigureGraph::new();
+        let root = RectangleFigure::new_with_color(0.0, 0.0, 100.0, 80.0, Color::BLACK);
+        let root_id = graph.set_contents(Box::new(root));
+        let parent = RectangleFigure::new_with_color(70.0, 50.0, 40.0, 40.0, Color::WHITE)
+            .with_local_coordinates(true);
+        let parent_id = graph.add_child_to(root_id, Box::new(parent));
+        let child = RectangleFigure::new_with_color(90.0, 70.0, 30.0, 30.0, Color::WHITE);
+        let child_id = graph.add_child_to(parent_id, Box::new(child));
+
+        let actual = propagate_damage_to_root(
+            &graph,
+            child_id,
+            Rectangle::new(90.0, 70.0, 30.0, 30.0),
+        );
+
+        assert_eq!(actual, Some(Rectangle::new(90.0, 70.0, 10.0, 10.0)));
     }
 }
