@@ -7,6 +7,12 @@ selection_rules:
   - 单轮只允许选择一个 delta
   - 如果 delta 需要跨多个子系统，先拆分
   - 新问题默认先作为 candidate，评估后再进入正式 backlog
+  - 默认只主动推进 evolution_kind 为 architecture 或 parity 的条目
+
+evolution_kind_definitions:
+  architecture: 理想架构收敛项，处理职责边界、状态归属、协议时序和依赖方向
+  parity: 为实现 g2 等价语义必须补齐的能力缺口
+  new_feature: 超出当前理想架构 / g2 等价目标的新能力，默认不进入主线
 
 hard_gates:
   force_split_when:
@@ -50,6 +56,7 @@ candidate_items:
   - id: CAD-001
     title: Update listener responsibility audit
     contract: "更新监听器只承担监听语义，不吞并编排或图状态职责"
+    evolution_kind: architecture
     priority: medium
     status: candidate
     evidence:
@@ -67,6 +74,7 @@ items:
   - id: AD-001
     title: UpdateManager boundary audit
     contract: "UpdateManager 只负责两阶段更新编排，不拥有图级语义"
+    evolution_kind: architecture
     priority: high
     status: in_progress
     parent_id: null
@@ -96,6 +104,7 @@ items:
   - id: AD-002
     title: SceneHost thin boundary audit
     contract: "SceneHost 是极薄平台调度层"
+    evolution_kind: architecture
     priority: high
     status: pending
     evidence:
@@ -109,6 +118,7 @@ items:
   - id: AD-003
     title: PendingMutation timing audit
     contract: "结构性变更必须通过 PendingMutation 在正确时机应用"
+    evolution_kind: architecture
     priority: high
     status: pending
     evidence:
@@ -123,6 +133,7 @@ items:
   - id: AD-004
     title: NovadrawSystem composition root audit
     contract: "NovadrawSystem 是组合根"
+    evolution_kind: architecture
     priority: medium
     status: pending
     evidence:
@@ -136,6 +147,7 @@ items:
   - id: AD-005
     title: Interaction state ownership audit
     contract: "交互状态应归属 FigureGraph"
+    evolution_kind: architecture
     priority: medium
     status: pending
     evidence:

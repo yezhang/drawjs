@@ -12,6 +12,7 @@ Usage:
   ./agent/workflow-run-once.sh resume
   ./agent/workflow-run-once.sh smoke
   ./agent/workflow-run-once.sh stabilize
+  ./agent/workflow-run-once.sh test
 
 Notes:
   - This script does not call an AI model directly.
@@ -32,6 +33,7 @@ Required files:
   - ${ROOT_DIR}/AGENTS.md
   - ${ROOT_DIR}/doc/理想架构设计.md
   - ${ROOT_DIR}/agent/governance-architecture-contracts.md
+  - ${ROOT_DIR}/agent/quality-testing-strategy.md
   - ${ROOT_DIR}/agent/outer-loop-delta-backlog.yaml
   - ${ROOT_DIR}/agent/inner-loop-checkpoint.md
   - ${ROOT_DIR}/agent/interruptions-inbox.md
@@ -49,6 +51,7 @@ Prompt:
 要求：
 - 先总结关键契约
 - 输出 candidate delta
+- 为每个 candidate 标注 evolution_kind
 - 对每个候选项给出根因摘要
 - 说明 promote/reject 建议
 - 给出建议优先级和 done_when
@@ -63,6 +66,7 @@ Prompt:
 要求：
 - 检查重复项、过大项、过期项
 - 判断 candidate 是否应提升或拒绝
+- 检查 evolution_kind 是否被错误标注
 - 重排优先级
 - 明确当前最值得执行的一个 delta
 EOF
@@ -91,6 +95,19 @@ Prompt:
 - 输出 Gate Violations
 - 输出 Current Readiness Level
 - 输出 Go / No-Go 建议
+EOF
+    ;;
+  test)
+    print_common_context
+    cat <<'EOF'
+
+Prompt:
+请基于 agent/quality-testing-strategy.md，为当前 delta 制定最小测试策略，并判断本轮是否应该新增自动测试。
+要求：
+- 说明当前契约与 failure mode
+- 指出建议验证层级（L1/L2/L3/L4）
+- 给出建议测试文件位置
+- 如果不应补测试，明确说明原因
 EOF
     ;;
   execute)

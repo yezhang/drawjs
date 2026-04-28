@@ -23,21 +23,70 @@ title: Solo Coder Architecture Workflow
 - 没有验证结果，不能标记完成
 - 执行完成后必须反思是否仍有残余架构问题
 
+## 演进范围
+
+当前工作流服务的不是“任意新功能开发”，而是“为实现理想架构和 g2 等价语义而进行的演进”。
+
+每个 backlog 条目都应属于以下三类之一：
+
+- `architecture`
+  - 纯架构收敛项
+  - 目标是职责边界、状态归属、协议时序和依赖方向收敛
+- `parity`
+  - 为实现 g2 等价语义必须补齐的能力缺口
+  - 从产品视角可能像新功能，但仍属于目标范围
+- `new_feature`
+  - 超出当前理想架构 / g2 等价目标之外的新能力
+
+默认规则：
+
+- 工作流默认主动推进 `architecture` 和 `parity`
+- 工作流默认不主动推进 `new_feature`
+- 若某项属于 `new_feature`，必须在 backlog review 中被显式标记，避免混入主线
+
+### 如何区分
+
+- 如果问题本质是“当前实现偏离理想职责边界或协议”，归为 `architecture`
+- 如果问题本质是“g2 已有明确语义，而当前 Novadraw 尚未补齐”，归为 `parity`
+- 如果问题不属于理想架构必需能力，也不属于 g2 等价范围，归为 `new_feature`
+
 ## 文件职责
 
+### 固定入口
+
+- `agent/README.md`: 工作流总入口，解释整体规则、日常路径和常用 prompt
+
+### Governance
+
 - `agent/governance-architecture-contracts.md`: 机器可执行的架构硬约束
-- `agent/outer-loop-delta-backlog.yaml`: 架构差距队列
-- `agent/inner-loop-checkpoint.md`: 当前进度、下一步、阻塞点
-- `agent/interruptions-inbox.md`: 突发任务收纳箱
-- `agent/inner-loop-worklog.md`: 每轮工作的结构化记录
-- `agent/workflow-history.md`: 工作流为何这样设计，以及后续如何迭代
 - `agent/governance-contract-coverage.md`: 理想架构契约的收敛状态总览
-- `agent/quality-discover-smoke-test.md`: 工作流自测用例，验证 discover 是否真的能发现问题
+
+### Outer Loop
+
+- `agent/outer-loop-delta-backlog.yaml`: 外循环 backlog，记录 candidate、正式 delta、门禁和基线债务
+
+### Inner Loop
+
+- `agent/inner-loop-checkpoint.md`: 当前主线、下一步、阻塞点与恢复入口
+- `agent/inner-loop-worklog.md`: 每轮执行记录，包括验证、反思和拆分决策
+
+### Interruptions
+
+- `agent/interruptions-inbox.md`: 突发任务收纳箱，避免打乱主线 backlog
+
+### Quality
+
+- `agent/quality-checkpoint-schema.md`: checkpoint 的稳定结构定义与兼容规则
+- `agent/quality-workflow-readiness.md`: 当前工作流稳定性等级与 go/no-go 检查
+- `agent/quality-discover-smoke-test.md`: discover 能力自测用例
+- `agent/quality-testing-strategy.md`: 自动测试生成原则、验证层级与契约映射
+
+### Workflow
+
+- `agent/workflow-history.md`: 工作流为什么演进成当前形态
 - `agent/workflow-map.md`: 工作流总览图、状态机图和中断决策图
-- `agent/quality-checkpoint-schema.md`: session checkpoint 的稳定结构定义
-- `agent/quality-workflow-readiness.md`: 当前工作流的稳定性等级与使用前检查
 - `agent/workflow-verify.sh`: 固定验证脚本
-- `agent/workflow-run-once.sh`: 单轮工作流启动器，输出本轮建议 prompt
+- `agent/workflow-run-once.sh`: 单轮启动器，输出本轮推荐 prompt
 
 ## 命名约定
 
@@ -103,6 +152,7 @@ title: Solo Coder Architecture Workflow
 - `outer-loop-delta-backlog.yaml` 中新增或更新候选项
 - 当前最值得处理的正式 delta
 - 不值得进入 backlog 的 rejected 项
+- 每个候选项的 `evolution_kind`
 
 ## 内循环：执行与收敛
 
@@ -201,6 +251,7 @@ title: Solo Coder Architecture Workflow
 - 新发现的 candidate delta
 - 本轮审计了哪些契约
 - 本轮检查了哪些代码入口
+- 每个 candidate 的 `evolution_kind`
 - 每个候选项的根因摘要
 - 是否建议进入正式 backlog
 - 若进入 backlog，建议优先级和完成标准
@@ -223,6 +274,7 @@ title: Solo Coder Architecture Workflow
 - 明确当前最值得执行的一个 delta
 - 如有必要，建议拆分或重排优先级
 - 如果当前 delta 命中强制拆分或强制回外循环门禁，必须明确指出，不得继续直接执行
+- 检查条目是否被错误归类为 `architecture / parity / new_feature`
 
 ### 开始工作
 
@@ -302,6 +354,11 @@ title: Solo Coder Architecture Workflow
 请执行 discover-architecture-deltas，对照理想架构找出当前最值得进入 backlog 的候选问题。
 ```
 
+要求补充：
+
+- 为每个 candidate 标注 `evolution_kind`
+- 明确说明它为什么属于 `architecture`、`parity` 或 `new_feature`
+
 ### 发现能力自测
 
 ```text
@@ -319,6 +376,11 @@ title: Solo Coder Architecture Workflow
 ```text
 请执行 review-delta-backlog，整理当前 backlog，给出去重、拆分、优先级重排建议，并指出当前最值得执行的一个 delta。
 ```
+
+要求补充：
+
+- 检查每个条目的 `evolution_kind` 是否正确
+- 若某条目属于 `new_feature`，明确指出它不应默认进入当前主线
 
 ### 强制拆分判断
 
@@ -381,6 +443,16 @@ title: Solo Coder Architecture Workflow
 
 ```text
 请执行 discover-architecture-deltas，从理想架构与当前实现偏差中找出新的 candidate delta，并说明哪些值得进入正式 backlog。
+```
+
+### 场景 3b：怀疑某项其实是目标外新功能
+
+- 先用：`review-delta-backlog`
+
+推荐提示词：
+
+```text
+请执行 review-delta-backlog，重点判断当前候选项和正式 delta 中，哪些属于 architecture，哪些属于 parity，哪些其实是目标外 new_feature；如果是 new_feature，请明确指出为什么它不应默认进入当前主线。
 ```
 
 ### 场景 3a：怀疑 discover 太乐观，想确认它真的会找问题
@@ -524,6 +596,7 @@ title: Solo Coder Architecture Workflow
 - 有足够证据指向相关代码位置
 - 不只是一次性观察或模糊抱怨
 - discover 输出若为 `0 个 candidate`，也必须同时说明已审计范围和未审计范围
+- 能明确判定其 `evolution_kind`
 
 ## 状态迁移表
 
@@ -561,6 +634,66 @@ title: Solo Coder Architecture Workflow
 - 若 `baseline_verification` 因本轮未修改文件失败，登记为基线债务
 - 基线债务必须有唯一标识、影响范围和后续处理建议
 - 基线债务不能伪装成本轮 delta 的失败，也不能被静默忽略
+
+## 架构测试策略
+
+测试相关的规则分两层：
+
+- `doc/理想架构设计.md`：定义高层测试原则与哪些契约必须可验证
+- `agent/quality-testing-strategy.md`：定义自动测试生成规则、验证层级和契约映射
+
+核心要求：
+
+- 测试契约，不测试实现镜像
+- 每个 delta 只补最小必要测试
+- 测试层级必须与风险匹配
+- 若本轮不补测试，必须在 `inner-loop-worklog.md` 中说明原因
+
+### 何时应该补自动测试
+
+- 当前 delta 改变了职责边界
+- 当前 delta 改变了结构性变更时机
+- 当前 delta 修复了已知回归风险
+- 相邻模块已有可复用的测试模式
+
+### 何时可以不补自动测试
+
+- 纯文档修改
+- 纯命名收口
+- 低风险重排且已有测试足够覆盖
+
+### 测试结果应写到哪里
+
+- `outer-loop-delta-backlog.yaml`
+  - 记录 `verification_scope`
+- `inner-loop-worklog.md`
+  - 记录本轮补了哪些测试，或为什么没补
+- `inner-loop-checkpoint.md`
+  - 记录当前验证状态和基线债务
+
+### 推荐测试提问模板
+
+#### 制定测试策略
+
+```text
+请基于 agent/quality-testing-strategy.md，为当前 delta 制定最小测试策略。回答这 4 件事：
+1. 当前契约是什么
+2. 最可能的 failure mode 是什么
+3. 应该用哪一层验证（L1/L2/L3/L4）
+4. 建议把测试放到哪个文件
+```
+
+#### 补最小必要测试
+
+```text
+请基于 agent/quality-testing-strategy.md，为当前 delta 补最小必要测试。测试必须验证契约，不要镜像当前实现；如果你判断本轮不应新增测试，请明确说明原因。
+```
+
+#### 评审测试是否符合架构
+
+```text
+请审查本轮新增测试是否符合 agent/quality-testing-strategy.md：重点检查它是在验证契约，还是在冻结当前实现细节。
+```
 
 ## 如何发现新的未知问题
 
