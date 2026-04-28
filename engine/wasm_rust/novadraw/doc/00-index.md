@@ -12,6 +12,7 @@ doc/
 │
 ├── 01-architecture/                  # 架构设计
 │   ├── gef_principle.md              # GEF 框架核心原理
+│   ├── draw2d_design_axioms.md       # Draw2D 底层设计公理
 │   ├── displaylist_design.md          # DisplayList 中间层设计
 │   ├── draw2d-history.md             # draw2d 历史与架构演变
 │   ├── ideal-directory-structure.md   # 理想目录结构设计（模块/目录/crate 演进策略）
@@ -58,6 +59,7 @@ doc/
 | 文档 | 主题 | 关键内容 |
 |------|------|----------|
 | `gef_principle.md` | GEF 框架架构 | MVC 模式、EditPart 控制器、Command 模式、Request/EditPolicy 机制、连接支持 |
+| `draw2d_design_axioms.md` | Draw2D 设计公理 | Figure 树、bounds、坐标根、两阶段更新、damage 修复、事件状态机 |
 | `displaylist_design.md` | DisplayList 设计 | crate 设计决策、协议定义、与渲染层解耦方案 |
 | `draw2d-history.md` | draw2d 历史 | draw2d 架构演变、设计决策背景 |
 | `ideal-directory-structure.md` | 理想目录结构 | 模块分层、目录命名、crate 演进顺序、目录调整禁止项 |
@@ -117,8 +119,9 @@ doc/
 
 ```text
 1. gef_principle.md              # 理解整体架构
-2. figure_core_concepts.md       # 理解 Figure 模型
-3. coordinates.md                # 理解坐标系
+2. draw2d_design_axioms.md       # 理解最底层不变量
+3. figure_core_concepts.md       # 理解 Figure 模型
+4. coordinates.md                # 理解坐标系
 ```
 
 ### 渲染开发
