@@ -44,6 +44,7 @@ pub use listener::{UpdateEvent, UpdateListener};
 pub trait UpdateManager: Send + Sync {
     fn add_dirty_region(&mut self, block_id: crate::scene::BlockId, rect: novadraw_geometry::Rectangle);
     fn add_invalid_figure(&mut self, block_id: crate::scene::BlockId);
+    fn drain_invalid_blocks(&mut self) -> Vec<crate::scene::BlockId>;
     fn perform_update(
         &mut self,
         graph: &mut crate::scene::FigureGraph,
@@ -63,8 +64,8 @@ pub trait UpdateManager: Send + Sync {
 ///
 /// # 实现说明
 ///
-/// 目前 FigureGraph 直接编排两阶段更新，此 trait 主要起文档作用，
-/// 描述 FigureGraph 在更新流程中的回调接口。
+/// 当前 validation 的图级语义由 FigureGraph 执行，
+/// SceneUpdateManager 只负责保存队列并触发 phase 边界。
 ///
 /// # 设计要点
 ///

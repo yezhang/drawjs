@@ -267,6 +267,21 @@ fn test_mark_invalid_updates_block_validity() {
 }
 
 #[test]
+fn test_hidden_block_skips_validation_but_drains_queue() {
+    let (mut scene, mut update_manager) = new_scene();
+    let container_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
+    scene.validate();
+    scene.blocks.get_mut(container_id).unwrap().is_visible = false;
+
+    scene.mark_invalid(&mut update_manager, container_id);
+    scene.perform_update(&mut update_manager);
+
+    assert!(!update_manager.has_pending_layout());
+    assert!(!update_manager.is_update_queued());
+    assert!(!scene.get_block(container_id).unwrap().is_valid);
+}
+
+#[test]
 fn test_interaction_state_accessors() {
     let mut scene = FigureGraph::new();
     let container_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));

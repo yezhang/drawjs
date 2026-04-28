@@ -604,6 +604,29 @@ impl FigureGraph {
         canvas
     }
 
+    /// 执行 validation phase 的图级语义。
+    ///
+    /// UpdateManager 只提供待验证队列与 phase 触发，
+    /// FigureGraph 自身决定哪些节点可参与验证以及如何 revalidate。
+    pub fn perform_validation_cycle(&mut self, update_manager: &mut dyn UpdateManager) {
+        loop {
+            let block_ids = update_manager.drain_invalid_blocks();
+            if block_ids.is_empty() {
+                break;
+            }
+
+            for block_id in block_ids {
+                let Some(block) = self.blocks.get(block_id) else {
+                    continue;
+                };
+                if !block.is_visible || !block.is_enabled {
+                    continue;
+                }
+                self.revalidate(block_id);
+            }
+        }
+    }
+
     /// 重新验证布局（递归），如果布局无效则重新计算
     ///
     /// 从指定容器开始，递归执行布局。

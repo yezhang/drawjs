@@ -168,6 +168,10 @@ impl crate::update::UpdateManager for SceneUpdateManager {
         SceneUpdateManager::add_invalid_figure(self, block_id);
     }
 
+    fn drain_invalid_blocks(&mut self) -> Vec<BlockId> {
+        SceneUpdateManager::drain_invalid_blocks(self)
+    }
+
     fn perform_update(
         &mut self,
         graph: &mut crate::scene::FigureGraph,
@@ -189,16 +193,7 @@ impl crate::update::UpdateManager for SceneUpdateManager {
     }
 
     fn perform_validation(&mut self, graph: &mut crate::scene::FigureGraph) {
-        while !self.invalid_blocks.is_empty() {
-            let block_ids = self.drain_invalid_blocks();
-            for block_id in block_ids {
-                if let Some(block) = graph.blocks.get(block_id) {
-                    if block.is_visible && block.is_enabled {
-                        graph.revalidate(block_id);
-                    }
-                }
-            }
-        }
+        graph.perform_validation_cycle(self);
     }
 
     fn is_updating(&self) -> bool {
