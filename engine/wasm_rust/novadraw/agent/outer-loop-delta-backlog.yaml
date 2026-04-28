@@ -1,5 +1,5 @@
 version: 1
-last_updated: "2026-04-10"
+last_updated: "2026-04-23"
 
 selection_rules:
   - 先处理职责边界错误，再处理实现细节
@@ -7,6 +7,17 @@ selection_rules:
   - 单轮只允许选择一个 delta
   - 如果 delta 需要跨多个子系统，先拆分
   - 新问题默认先作为 candidate，评估后再进入正式 backlog
+
+hard_gates:
+  force_split_when:
+    - 同一 delta 连续 2 轮仍未明显收敛
+    - Post-Execution Reflection 出现 2 个或以上独立子问题
+    - Next Step 已分叉成多个独立职责边界问题
+  return_to_outer_loop_when:
+    - 当前 delta 已触发 split
+    - backlog 优先级可能失真
+    - baseline_verification 失败主要来自仓库既有问题
+    - checkpoint 或 worklog 已明确写出需要先整理 backlog
 
 status_definitions:
   candidate: 已发现但尚未进入正式 backlog
@@ -18,6 +29,22 @@ status_definitions:
   blocked: 暂时无法推进
   verified: 已通过验证
   done: 已完成并回写状态
+
+verification_definitions:
+  delta_verification: 当前 delta 相关的最小验证，必须通过
+  baseline_verification: 全仓校验，可因既有问题失败，但必须登记基线债务
+
+baseline_debts:
+  - id: BASELINE-001
+    title: Repository-wide formatting drift
+    status: open
+    impact: medium
+    evidence:
+      - ./agent/workflow-verify.sh
+      - cargo fmt --check
+    notes:
+      - 全仓存在本轮未修改文件的格式化漂移
+      - 当前允许 delta_verification 通过后继续推进，但不能忽略该债务
 
 candidate_items:
   - id: CAD-001
@@ -41,11 +68,26 @@ items:
     title: UpdateManager boundary audit
     contract: "UpdateManager 只负责两阶段更新编排，不拥有图级语义"
     priority: high
-    status: pending
+    status: in_progress
+    parent_id: null
+    split_into: []
+    verification_scope:
+      delta_verification:
+        - cargo check
+        - cargo test -p novadraw-scene
+      baseline_verification:
+        - ./agent/workflow-verify.sh
+    baseline_debt_refs:
+      - BASELINE-001
     evidence:
       - novadraw-scene/src/update/mod.rs
       - novadraw-scene/src/update/deferred.rs
       - apps/editor/src/system.rs
+    progress_notes:
+      - 已将 validation 阶段中的图级语义从 SceneUpdateManager 回收到 FigureGraph
+      - UpdateManager 新增 invalid queue drain 接口，仅保留 phase 触发与队列所有权
+      - repair phase 与 system 调度样板仍待继续审计
+      - 若下一轮继续出现 repair 与 scheduling 双分叉，应将该条目转为 split
     done_when:
       - 明确哪些职责应保留在 UpdateManager，哪些应回归 FigureGraph 或组合根
       - 如需调整接口，调用点可以编译通过

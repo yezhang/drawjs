@@ -25,14 +25,29 @@ title: Solo Coder Architecture Workflow
 
 ## 文件职责
 
-- `agent/architecture_contracts.md`: 机器可执行的架构硬约束
-- `agent/delta_backlog.yaml`: 架构差距队列
-- `agent/session_checkpoint.md`: 当前进度、下一步、阻塞点
-- `agent/inbox.md`: 突发任务收纳箱
-- `agent/worklog.md`: 每轮工作的结构化记录
-- `agent/workflow_evolution.md`: 工作流为何这样设计，以及后续如何迭代
-- `agent/verify.sh`: 固定验证脚本
-- `agent/run_once.sh`: 单轮工作流启动器，输出本轮建议 prompt
+- `agent/governance-architecture-contracts.md`: 机器可执行的架构硬约束
+- `agent/outer-loop-delta-backlog.yaml`: 架构差距队列
+- `agent/inner-loop-checkpoint.md`: 当前进度、下一步、阻塞点
+- `agent/interruptions-inbox.md`: 突发任务收纳箱
+- `agent/inner-loop-worklog.md`: 每轮工作的结构化记录
+- `agent/workflow-history.md`: 工作流为何这样设计，以及后续如何迭代
+- `agent/governance-contract-coverage.md`: 理想架构契约的收敛状态总览
+- `agent/quality-discover-smoke-test.md`: 工作流自测用例，验证 discover 是否真的能发现问题
+- `agent/workflow-map.md`: 工作流总览图、状态机图和中断决策图
+- `agent/quality-checkpoint-schema.md`: session checkpoint 的稳定结构定义
+- `agent/quality-workflow-readiness.md`: 当前工作流的稳定性等级与使用前检查
+- `agent/workflow-verify.sh`: 固定验证脚本
+- `agent/workflow-run-once.sh`: 单轮工作流启动器，输出本轮建议 prompt
+
+## 命名约定
+
+- `governance-*`: 约束、覆盖率、治理视角的文件
+- `outer-loop-*`: 外循环，负责发现问题、整理 backlog
+- `inner-loop-*`: 内循环，负责恢复、执行、记录当前主线
+- `interruptions-*`: 中断处理与突发任务入口
+- `quality-*`: 质量门禁、自测、schema、readiness 检查
+- `workflow-*`: 工作流本身的总览、历史、地图和辅助脚本
+- `README.md`: 保持固定入口，不参与前缀化，避免破坏默认导航习惯
 
 ## 五个 Skill
 
@@ -50,6 +65,19 @@ title: Solo Coder Architecture Workflow
 - 内循环：问题执行与验证收敛
 
 只有两个循环都存在，工作流才是完整闭环。
+
+如果你想先看图，再读规则，直接查看 `agent/workflow-map.md`。
+
+## 稳定性阶段
+
+在正式长期依赖这套工作流之前，先看它处于哪个稳定性阶段。
+
+- `Level 0 / Draft`: 只有概念，没有可执行闭环
+- `Level 1 / Runnable`: 可以跑，但缺少自测或门禁
+- `Level 2 / Stable Enough`: 可以开始承载真实工作，但仍需持续观察
+- `Level 3 / Trusted`: 多轮真实使用后已足够稳定
+
+当前等级以 `agent/quality-workflow-readiness.md` 为准。
 
 ## 外循环：发现与整理
 
@@ -72,7 +100,7 @@ title: Solo Coder Architecture Workflow
 
 ### 产出
 
-- `delta_backlog.yaml` 中新增或更新候选项
+- `outer-loop-delta-backlog.yaml` 中新增或更新候选项
 - 当前最值得处理的正式 delta
 - 不值得进入 backlog 的 rejected 项
 
@@ -91,6 +119,41 @@ title: Solo Coder Architecture Workflow
 7. 反思是否仍有残余问题，必要时回流到外循环
 8. 决定下一轮是否继续
 
+## 强制门禁
+
+以下条件不是建议，而是必须执行的门禁。
+
+### 强制拆分门禁
+
+当满足任一条件时，当前 `in_progress` delta 必须转为 `split`，不得继续直接执行：
+
+- `Post-Execution Reflection` 中出现 2 个或以上独立子问题
+- `Next Step` 已分叉为多个不共享同一职责边界的问题
+- 同一 delta 连续 2 轮后仍未明显收敛
+- 为了继续推进，必须同时修改两个以上不共享同一根因的子系统
+
+### 强制回外循环门禁
+
+当满足任一条件时，不得继续直接执行旧 delta，必须先运行 `review-delta-backlog`：
+
+- 当前 delta 被标记为 `split`
+- backlog 里的当前 delta 优先级已不再明显最高
+- 当前验证失败原因主要来自仓库基线而非本轮改动
+- `worklog` 或 `checkpoint` 已写出“先整理 backlog”“先判断是否拆分”等信号
+
+### 验证门禁
+
+验证分为两层：
+
+- `delta_verification`: 当前 delta 相关的最小验证，必须通过
+- `baseline_verification`: 全仓校验，若失败但属于既有问题，必须登记为基线债务
+
+规则：
+
+- `delta_verification` 未通过，delta 不得进入 `verified`
+- `baseline_verification` 未通过且属于仓库既有问题时，允许继续推进，但必须写入 `outer-loop-delta-backlog.yaml`、`inner-loop-checkpoint.md` 和 `inner-loop-worklog.md`
+- 任何口头说明都不能替代基线债务记录
+
 ## 推荐状态机
 
 - `candidate`: 已被发现，但还没进入正式 backlog
@@ -103,6 +166,21 @@ title: Solo Coder Architecture Workflow
 - `verified`: 已通过验证
 - `done`: 已完成并回写状态
 
+## 契约覆盖视图
+
+为了确认代码在整体上持续逼近理想架构，不只跟踪 delta，还要跟踪契约收敛状态。
+
+维护文件：`agent/governance-contract-coverage.md`
+
+每条契约的状态只能是：
+
+- `unassessed`: 尚未评估
+- `drifting`: 明显偏离理想架构
+- `partially_aligned`: 已局部收敛，但仍有残余问题
+- `aligned`: 当前已与理想架构对齐
+
+每轮执行后，必须更新受影响契约的覆盖状态。
+
 ## 每日使用方式
 
 ### 发现问题
@@ -112,16 +190,29 @@ title: Solo Coder Architecture Workflow
 - `CLAUDE.md`
 - `AGENTS.md`
 - `doc/理想架构设计.md`
-- `agent/architecture_contracts.md`
-- `agent/delta_backlog.yaml`
+- `agent/governance-architecture-contracts.md`
+- `agent/outer-loop-delta-backlog.yaml`
+- `agent/governance-contract-coverage.md`
+- `agent/quality-discover-smoke-test.md`
 - 相关代码文件
 
 然后输出：
 
 - 新发现的 candidate delta
+- 本轮审计了哪些契约
+- 本轮检查了哪些代码入口
 - 每个候选项的根因摘要
 - 是否建议进入正式 backlog
 - 若进入 backlog，建议优先级和完成标准
+
+### 验证 discover 能力
+
+让 Agent 执行 `discover-architecture-deltas` 的 smoke test，要求：
+
+- 不直接重复 backlog 结论
+- 按契约级审计清单重新检查代码
+- 说明这次发现重新识别出了哪些已知偏差
+- 如果发现结果为 0，必须说明覆盖范围和遗漏范围
 
 ### 整理 backlog
 
@@ -131,6 +222,7 @@ title: Solo Coder Architecture Workflow
 - 判断 candidate 是否应提升或拒绝
 - 明确当前最值得执行的一个 delta
 - 如有必要，建议拆分或重排优先级
+- 如果当前 delta 命中强制拆分或强制回外循环门禁，必须明确指出，不得继续直接执行
 
 ### 开始工作
 
@@ -139,9 +231,9 @@ title: Solo Coder Architecture Workflow
 - `CLAUDE.md`
 - `AGENTS.md`
 - `doc/理想架构设计.md`
-- `agent/architecture_contracts.md`
-- `agent/delta_backlog.yaml`
-- `agent/session_checkpoint.md`
+- `agent/governance-architecture-contracts.md`
+- `agent/outer-loop-delta-backlog.yaml`
+- `agent/inner-loop-checkpoint.md`
 
 然后输出：
 
@@ -151,6 +243,14 @@ title: Solo Coder Architecture Workflow
 - 阻塞点
 - 推荐下一步
 
+### 使用前稳定性检查
+
+如果你准备开始真正依赖这套工作流推进代码，而不是继续调 workflow 本身，先执行一次稳定性检查：
+
+- 查看 `agent/quality-workflow-readiness.md`
+- 校验 `agent/inner-loop-checkpoint.md` 是否满足 `agent/quality-checkpoint-schema.md`
+- 跑一次 smoke test
+
 ### 推进一轮
 
 让 Agent 执行 `execute-architecture-delta`，要求：
@@ -159,17 +259,18 @@ title: Solo Coder Architecture Workflow
 - 先说明根因
 - 给最小修改方案
 - 修改代码并验证
-- 更新 `delta_backlog.yaml`
-- 更新 `session_checkpoint.md`
-- 追加 `worklog.md`
+- 更新 `outer-loop-delta-backlog.yaml`
+- 更新 `inner-loop-checkpoint.md`
+- 追加 `inner-loop-worklog.md`
+- 更新 `governance-contract-coverage.md`
 - 若发现残余问题，输出新的 candidate delta
 
 ### 被打断时
 
 让 Agent 执行 `capture-interruption`，要求：
 
-- 把突发任务写入 `agent/inbox.md`
-- 把当前主线状态写入 `agent/session_checkpoint.md`
+- 把突发任务写入 `agent/interruptions-inbox.md`
+- 把当前主线状态写入 `agent/inner-loop-checkpoint.md`
 - 明确下一步最小动作
 
 ### 单轮启动器
@@ -177,10 +278,12 @@ title: Solo Coder Architecture Workflow
 可以先运行：
 
 ```bash
-./agent/run_once.sh discover
-./agent/run_once.sh review
-./agent/run_once.sh resume
-./agent/run_once.sh execute
+./agent/workflow-run-once.sh discover
+./agent/workflow-run-once.sh review
+./agent/workflow-run-once.sh resume
+./agent/workflow-run-once.sh execute
+./agent/workflow-run-once.sh smoke
+./agent/workflow-run-once.sh stabilize
 ```
 
 它不会直接调用模型，而是输出本轮推荐 prompt 和所需上下文文件，方便你复制给 Agent。
@@ -199,10 +302,28 @@ title: Solo Coder Architecture Workflow
 请执行 discover-architecture-deltas，对照理想架构找出当前最值得进入 backlog 的候选问题。
 ```
 
+### 发现能力自测
+
+```text
+请执行 discover-architecture-deltas 的 smoke test。不要直接沿用 backlog 结论，而是按审计清单重新检查代码，并告诉我这次 discover 是否能重新发现 quality-discover-smoke-test.md 中列出的已知问题样本。
+```
+
+### 稳定性检查
+
+```text
+请执行 resume-architecture-work 和 review-delta-backlog 的稳定性检查。先验证 inner-loop-checkpoint.md 是否满足 quality-checkpoint-schema.md，再结合 quality-workflow-readiness.md 判断当前工作流是否已经达到可用于真实架构推进的等级。
+```
+
 ### 整理 backlog
 
 ```text
 请执行 review-delta-backlog，整理当前 backlog，给出去重、拆分、优先级重排建议，并指出当前最值得执行的一个 delta。
+```
+
+### 强制拆分判断
+
+```text
+请执行 review-delta-backlog，重点判断当前 in_progress delta 是否已经触发强制拆分门禁；如果触发，请直接给出拆分后的子 delta 建议，而不是继续执行旧 delta。
 ```
 
 ### 执行一轮
@@ -230,6 +351,18 @@ title: Solo Coder Architecture Workflow
 请执行 resume-architecture-work，告诉我当前主线、最近停在哪、推荐下一步；如果 backlog 可能失真，请明确建议我先跑 discover-architecture-deltas 还是 review-delta-backlog。
 ```
 
+### 场景 1a：暂时不想继续改代码，只想继续打磨 workflow
+
+- 先用：`resume-architecture-work`
+- 再用：`review-delta-backlog`
+- 结合 `quality-workflow-readiness.md` 判断还缺什么
+
+推荐提示词：
+
+```text
+请先检查当前工作流稳定性：验证 checkpoint schema 是否健康、当前 backlog 门禁是否足够、discover smoke test 是否已通过；然后告诉我还差哪些条件，工作流才能进入更稳定的使用阶段。
+```
+
 ### 场景 2：感觉 backlog 已经过时，或者做了一轮后优先级不清楚
 
 - 先用：`review-delta-backlog`
@@ -248,6 +381,17 @@ title: Solo Coder Architecture Workflow
 
 ```text
 请执行 discover-architecture-deltas，从理想架构与当前实现偏差中找出新的 candidate delta，并说明哪些值得进入正式 backlog。
+```
+
+### 场景 3a：怀疑 discover 太乐观，想确认它真的会找问题
+
+- 先用：`discover-architecture-deltas`
+- 以 smoke test 模式运行
+
+推荐提示词：
+
+```text
+请执行 discover-architecture-deltas 的 smoke test。重点回答：这次 discover 重新审计了哪些契约、看了哪些代码入口、重新发现了哪些已知偏差、漏掉了哪些样本。
 ```
 
 ### 场景 4：已经选定一个 delta，准备开始改代码
@@ -331,15 +475,27 @@ title: Solo Coder Architecture Workflow
 3. `resume-architecture-work`
 4. `execute-architecture-delta`
 
+### 稳定化模式
+
+适合你当前这种“先把 workflow 打磨稳，再正式使用”的阶段：
+
+1. `resume-architecture-work`
+2. `discover-architecture-deltas` smoke test
+3. `review-delta-backlog`
+4. 检查 `quality-workflow-readiness.md`
+5. 只在满足 go/no-go 条件后再进入 `execute-architecture-delta`
+
 ## 脚本化辅助
 
 如果你不想每次手写 prompt，可以先运行脚本再复制输出：
 
 ```bash
-./agent/run_once.sh discover
-./agent/run_once.sh review
-./agent/run_once.sh resume
-./agent/run_once.sh execute
+./agent/workflow-run-once.sh discover
+./agent/workflow-run-once.sh review
+./agent/workflow-run-once.sh resume
+./agent/workflow-run-once.sh execute
+./agent/workflow-run-once.sh smoke
+./agent/workflow-run-once.sh stabilize
 ```
 
 对应关系：
@@ -348,6 +504,8 @@ title: Solo Coder Architecture Workflow
 - `review`: 整理 backlog
 - `resume`: 恢复主线
 - `execute`: 推进一轮
+- `smoke`: 验证 discover 是否真的能发现已知问题
+- `stabilize`: 检查 workflow 是否已达到可用等级
 
 ## Delta 设计规则
 
@@ -355,6 +513,8 @@ title: Solo Coder Architecture Workflow
 - 一个 delta 的修改范围应尽量限制在一个接口簇或一个调用链
 - 如果改动超过 50 行，优先拆分为多个 delta
 - 如果还不能确定是否值得执行，先作为 `candidate`
+- 若一个 delta 的 `Next Step` 已经分叉成多个独立子问题，必须转为 `split`
+- 判断是否拆分时，优先看“独立根因数量”和“职责边界数量”，代码行数只作辅助参考
 
 ## 候选项进入 backlog 的标准
 
@@ -363,6 +523,76 @@ title: Solo Coder Architecture Workflow
 - 可以写出明确的 `done_when`
 - 有足够证据指向相关代码位置
 - 不只是一次性观察或模糊抱怨
+- discover 输出若为 `0 个 candidate`，也必须同时说明已审计范围和未审计范围
+
+## 状态迁移表
+
+| From | To | Trigger | Required Output |
+|---|---|---|---|
+| `candidate` | `pending` | 证据、done_when、入口文件齐全，且值得进入正式 backlog | backlog 更新 |
+| `candidate` | `rejected` | 当前证据不足、重复或价值较低 | reject reason |
+| `pending` | `proposed` | 已完成根因分析，形成最小实施方案 | root cause + minimal plan |
+| `proposed` | `in_progress` | 当前轮决定正式执行该 delta | checkpoint 更新 |
+| `in_progress` | `split` | 命中强制拆分门禁 | split 子项建议 |
+| `in_progress` | `verified` | `delta_verification` 通过 | verification result |
+| `verified` | `done` | backlog、checkpoint、worklog、contract coverage 均已更新 | done summary |
+| `*` | `blocked` | 缺依赖、缺契约、缺验证前置条件 | blocker note |
+
+## 双层验证定义
+
+### Delta Verification
+
+用于确认本轮改动本身是正确的，示例：
+
+- 当前 crate 的 `cargo test`
+- 当前链路的集成测试
+- 本轮接口变更相关的 `cargo check`
+
+### Baseline Verification
+
+用于确认仓库整体健康度，示例：
+
+- `./agent/workflow-verify.sh`
+- 全仓 `cargo fmt --check`
+- 全仓 `cargo clippy -- -D warnings`
+
+### 基线债务处理规则
+
+- 若 `baseline_verification` 因本轮未修改文件失败，登记为基线债务
+- 基线债务必须有唯一标识、影响范围和后续处理建议
+- 基线债务不能伪装成本轮 delta 的失败，也不能被静默忽略
+
+## 如何发现新的未知问题
+
+外循环不是“重复 backlog”，而是系统化审计契约偏差。每次 discover 至少遵守以下策略：
+
+1. 先按 `governance-contract-coverage.md` 选择 `drifting` 和 `unassessed` 契约
+2. 每条契约至少检查一个代码入口
+3. 不允许只看文档就宣布“已对齐”
+4. 如果结果是 `0 个 candidate`，必须说明为什么不是“没仔细看”
+5. 定期跑 `quality-discover-smoke-test.md`，验证 discover 仍然能发现已知偏差
+
+## 如何判断工作流本身有效
+
+工作流有效，不等于“执行了一些 delta”，而是至少满足：
+
+- discover 能从审计清单中稳定发现已知偏差样本
+- review 能识别重复项、过大项和失焦 delta
+- execute 能把一个 delta 推进到更接近理想架构的状态
+- contract coverage 能显示整体契约状态不是随机波动，而是在逐步收敛
+- checkpoint 能在中断后恢复主线，不需要重新建模全部上下文
+
+## Go / No-Go
+
+在“正式把主要精力转到代码架构改进，而不是继续打磨 workflow”之前，建议至少满足：
+
+- 最近一次 smoke test 通过
+- 当前 checkpoint 满足 `quality-checkpoint-schema.md`
+- 当前 backlog 没有明显失焦的大 delta
+- 当前 baseline debt 已登记
+- `quality-workflow-readiness.md` 的当前等级至少达到 `Stable Enough`
+
+如果以上条件仍不满足，优先继续优化 workflow，而不是盲目推进新 delta。
 
 ## 完成标准
 
@@ -371,8 +601,10 @@ title: Solo Coder Architecture Workflow
 - 根因已解释清楚
 - 代码已修改
 - 固定验证已通过
+- `delta_verification` 已通过
 - backlog 已更新
 - checkpoint 已更新
+- `governance-contract-coverage.md` 已更新
 - 对残余问题已做反思并决定是否生成新候选项
 
 ## 闭环完成的判定
@@ -391,10 +623,12 @@ title: Solo Coder Architecture Workflow
 - 每次编码时只跑一轮内循环
 - 每完成 1 到 3 个 delta 后，重新跑一次外循环
 - 如果遇到大范围漂移，暂停执行，优先整理 backlog
+- 若某个 delta 连续 2 轮仍未收敛，下一轮必须先跑 `review-delta-backlog`
 
 ## 注意事项
 
 - 如果发现理想架构文档本身不完整，优先补契约，不直接写代码
 - 如果当前 delta 需要跨多个子系统，先拆解再执行
-- 如果突发任务很多，优先保证 `session_checkpoint.md` 始终可信
+- 如果突发任务很多，优先保证 `inner-loop-checkpoint.md` 始终可信
 - 如果 backlog 很久未整理，不要盲目继续执行旧 delta
+- 不允许用“继续推进同一个大 delta”替代拆分决策

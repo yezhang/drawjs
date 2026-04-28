@@ -21,7 +21,7 @@
 ### 本轮决策
 
 - 将当前生效工作流保存在 `agent/README.md`
-- 将工作流迭代历史保存在 `agent/workflow_evolution.md`
+- 将工作流迭代历史保存在 `agent/workflow-history.md`
 - 将流程状态文件保存在 `agent/`，而不是 `.trae/`
 - 将技能入口保存在 `.trae/skills/`
 - 采用“单轮可恢复循环”，而不是无限自动 ReAct 循环
@@ -29,12 +29,12 @@
 ### 当前工作流形态
 
 - `agent/README.md`: 当前正式流程定义
-- `agent/architecture_contracts.md`: 理想架构硬约束
-- `agent/delta_backlog.yaml`: 架构差距列表
-- `agent/session_checkpoint.md`: 当前恢复点
-- `agent/inbox.md`: 突发任务箱
-- `agent/worklog.md`: 每轮工作记录
-- `agent/verify.sh`: 固定验证脚本
+- `agent/governance-architecture-contracts.md`: 理想架构硬约束
+- `agent/outer-loop-delta-backlog.yaml`: 架构差距列表
+- `agent/inner-loop-checkpoint.md`: 当前恢复点
+- `agent/interruptions-inbox.md`: 突发任务箱
+- `agent/inner-loop-worklog.md`: 每轮工作记录
+- `agent/workflow-verify.sh`: 固定验证脚本
 - `.trae/skills/*`: 恢复、执行、中断三个 Skill
 
 ### 为什么状态文件放在 `agent/`
@@ -53,15 +53,15 @@
 
 - 这是半自动工作流，不是全自动自治 Agent
 - 目前依赖人工触发 Skill
-- 目前还没有 `run_once.sh` 之类的执行器脚本
+- 目前还没有 `workflow-run-once.sh` 之类的执行器脚本
 - 当前 backlog 还是初始化版本，需要在实际使用中继续打磨粒度
 
 ### 后续迭代方向
 
-1. 增加 `agent/run_once.sh`
+1. 增加 `agent/workflow-run-once.sh`
 2. 增加 `weekly-architecture-review` Skill
-3. 在 `delta_backlog.yaml` 中补充更细的 delta 拆分规则
-4. 将 `worklog.md` 演进为按日期归档
+3. 在 `outer-loop-delta-backlog.yaml` 中补充更细的 delta 拆分规则
+4. 将 `inner-loop-worklog.md` 演进为按日期归档
 5. 视文件数量决定是否拆分 `agent/` 子目录
 
 ### 迭代规则
@@ -92,7 +92,7 @@
 - 在 `agent/README.md` 中引入双循环模型：
   - 外循环：发现与整理
   - 内循环：执行与收敛
-- 在 `delta_backlog.yaml` 中显式支持 `candidate` 和 `rejected` 状态
+- 在 `outer-loop-delta-backlog.yaml` 中显式支持 `candidate` 和 `rejected` 状态
 - 新增 `discover-architecture-deltas` Skill
 - 将“执行后反思”提升为闭环必须步骤
 
@@ -111,9 +111,9 @@
 
 ### 下一步演进方向
 
-1. 在 `worklog.md` 中增加固定的“Post-Execution Reflection”模板
+1. 在 `inner-loop-worklog.md` 中增加固定的“Post-Execution Reflection”模板
 2. 增加 `review-delta-backlog` 或 `weekly-architecture-review` Skill
-3. 增加 `agent/run_once.sh`，把发现或执行的单轮流程脚本化
+3. 增加 `agent/workflow-run-once.sh`，把发现或执行的单轮流程脚本化
 4. 视真实使用情况决定是否引入 `candidate_deltas` 单独文件
 
 ## 2026-04-22 / v1.1
@@ -133,7 +133,7 @@
 ### 本轮决策
 
 - 新增 `review-delta-backlog` Skill
-- 新增 `agent/run_once.sh`
+- 新增 `agent/workflow-run-once.sh`
 - 将“各种情况使用什么 prompt”完整写入 `agent/README.md`
 
 ### 当前收益
@@ -141,3 +141,86 @@
 - backlog 不再只能依赖发现型 Skill 间接整理
 - 日常使用不必记忆 prompt，可直接查 README 或运行脚本
 - 工作流从“设计完备”进一步升级为“更易实际使用”
+
+## 2026-04-23 / v1.2
+
+### 触发原因
+
+- 真实执行 `AD-001` 后，暴露出“单个 delta 膨胀失焦”的风险
+- 全仓 `cargo fmt --check` 失败来自仓库既有漂移，说明“全量验证”和“当前改动验证”需要分层
+- 仅靠 delta backlog 无法直接回答“哪些理想契约正在收敛”
+
+### 本轮升级目标
+
+- 把“建议拆分”升级为“强制拆分门禁”
+- 把验证升级为“delta_verification + baseline_verification”双层模型
+- 把“任务推进”补齐为“契约收敛”视角
+
+### 本轮决策
+
+- 在 `agent/README.md` 中加入强制拆分、强制回外循环和验证门禁
+- 在 `agent/outer-loop-delta-backlog.yaml` 中加入 `hard_gates`、`verification_definitions` 和 `baseline_debts`
+- 新增 `agent/governance-contract-coverage.md`
+- 更新 `inner-loop-checkpoint.md`，让下一轮先过 review 门禁
+
+### 当前收益
+
+- 单个 delta 不再能无限续命
+- 仓库基线债务被显式记录，不再模糊混入当前 delta 失败
+- 可以从契约状态而不是任务数量，观察代码是否持续逼近理想架构
+
+## 2026-04-23 / v1.3
+
+### 触发原因
+
+- 现有 discover skill 仍然偏高层，缺少契约级审计清单
+- 工作流虽然可以执行已知问题，但还不能自证“它真的会发现问题”
+- 缺少从零开始验证发现能力的冒烟测试
+
+### 本轮升级目标
+
+- 把 discover 从“高层原则”升级为“可重复的契约级审计”
+- 增加工作流自测，验证 discover 能否重新发现已知架构偏差
+- 让 README 明确说明如何发现未知问题，以及如何验证工作流本身有效
+
+### 本轮决策
+
+- 重写 `discover-architecture-deltas`，加入契约级审计清单和输出覆盖要求
+- 新增 `agent/quality-discover-smoke-test.md`
+- 在 `agent/README.md` 中加入 discover smoke test、状态迁移表和“如何发现新的未知问题”
+- 为 `agent/workflow-run-once.sh` 增加 `smoke` 模式
+
+### 当前收益
+
+- discover 不再只是“读文档然后想一想”，而是带着检查表审计代码
+- 当 discover 输出 0 个 candidate 时，必须解释覆盖范围，降低假阳性乐观
+- 工作流本身开始具备最小自证能力
+
+## 2026-04-23 / v1.4
+
+### 触发原因
+
+- 当前工作流已经能跑，但用户希望先把 workflow 打磨稳定，再正式投入长期使用
+- checkpoint 缺少 schema，resume/review 对格式漂移的防御不足
+- 还缺少一个明确的“现在能不能开始依赖这套 workflow 做真实工作”的 go/no-go 判断
+
+### 本轮升级目标
+
+- 给 checkpoint 定义稳定结构
+- 引入 workflow readiness level
+- 让 resume/review 在使用前先做稳定性检查
+
+### 本轮决策
+
+- 新增 `agent/quality-checkpoint-schema.md`
+- 新增 `agent/quality-workflow-readiness.md`
+- 为 `inner-loop-checkpoint.md` 增加 metadata
+- 增强 `resume-architecture-work` 和 `review-delta-backlog` 的 schema/gate 检查要求
+- 在 `agent/README.md` 中加入稳定化模式和 go/no-go 规则
+- 为 `agent/workflow-run-once.sh` 增加 `stabilize` 模式
+
+### 当前收益
+
+- checkpoint 格式开始稳定，不再完全依赖隐式约定
+- 工作流进入“可评估稳定性”的阶段，而不是只能靠主观感觉
+- 你可以先继续优化 workflow，本身也有明确的验收标准
