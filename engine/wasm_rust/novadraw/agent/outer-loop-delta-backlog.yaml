@@ -1,5 +1,5 @@
 version: 1
-last_updated: "2026-04-23"
+last_updated: "2026-04-29"
 
 selection_rules:
   - 先处理职责边界错误，再处理实现细节
@@ -58,10 +58,11 @@ candidate_items:
     contract: "更新监听器只承担监听语义，不吞并编排或图状态职责"
     evolution_kind: architecture
     priority: medium
-    status: candidate
+    status: rejected
     evidence:
       - novadraw-scene/src/update/listener.rs
       - novadraw-scene/src/update/mod.rs
+      - novadraw-scene/src/scene/mod.rs
     promote_when:
       - 能明确指出监听器与 UpdateManager 的边界偏差
       - 能写出清晰的 done_when
@@ -69,6 +70,9 @@ candidate_items:
     reject_when:
       - 只是命名层面问题
       - 不能落到具体职责边界或可验证行为
+    notes:
+      - 已提升并扩展为 AD-006，范围从 update listener 扩展到 notification foundation
+      - 不再保留为候选条目，避免与正式 backlog 重复
 
 items:
   - id: AD-001
@@ -76,9 +80,12 @@ items:
     contract: "UpdateManager 只负责两阶段更新编排，不拥有图级语义"
     evolution_kind: architecture
     priority: high
-    status: in_progress
+    status: split
     parent_id: null
-    split_into: []
+    split_into:
+      - AD-001A
+      - AD-001B
+      - AD-001C
     verification_scope:
       delta_verification:
         - cargo check
@@ -95,11 +102,90 @@ items:
       - 已将 validation 阶段中的图级语义从 SceneUpdateManager 回收到 FigureGraph
       - UpdateManager 新增 invalid queue drain 接口，仅保留 phase 触发与队列所有权
       - repair phase 与 system 调度样板仍待继续审计
-      - 若下一轮继续出现 repair 与 scheduling 双分叉，应将该条目转为 split
+      - backlog review 已确认该条目同时承载 validation / repair / scheduling 三个独立子问题，正式转为 split
     done_when:
       - 明确哪些职责应保留在 UpdateManager，哪些应回归 FigureGraph 或组合根
       - 如需调整接口，调用点可以编译通过
       - 相关测试通过
+
+  - id: AD-001A
+    title: UpdateManager validation boundary audit
+    contract: "UpdateManager 在 validation phase 中不承担图级 validation 语义"
+    evolution_kind: architecture
+    priority: high
+    status: verified
+    parent_id: AD-001
+    split_into: []
+    verification_scope:
+      delta_verification:
+        - cargo check
+        - cargo test -p novadraw-scene
+      baseline_verification:
+        - ./agent/workflow-verify.sh
+    baseline_debt_refs:
+      - BASELINE-001
+    evidence:
+      - novadraw-scene/src/update/mod.rs
+      - novadraw-scene/src/update/deferred.rs
+      - novadraw-scene/src/scene/mod.rs
+      - novadraw-scene/src/scene/update_integration_test.rs
+    progress_notes:
+      - validation 图级语义已从 SceneUpdateManager 回收到 FigureGraph
+      - invalid queue drain 接口已补齐，UpdateManager 仅保留 phase 触发与队列所有权
+    done_when:
+      - validation 阶段不再由 UpdateManager 读取图级语义
+      - FigureGraph 编排 validation cycle，调用链保持可编译
+      - 相关测试通过
+
+  - id: AD-001B
+    title: UpdateManager repair boundary audit
+    contract: "UpdateManager 在 repair phase 中不持有不必要的图级语义"
+    evolution_kind: architecture
+    priority: high
+    status: pending
+    parent_id: AD-001
+    split_into: []
+    verification_scope:
+      delta_verification:
+        - cargo check
+        - cargo test -p novadraw-scene
+      baseline_verification:
+        - ./agent/workflow-verify.sh
+    baseline_debt_refs:
+      - BASELINE-001
+    evidence:
+      - novadraw-scene/src/update/deferred.rs
+      - novadraw-scene/src/update/repair.rs
+      - novadraw-scene/src/scene/mod.rs
+    done_when:
+      - repair phase 的图语义与算法边界明确
+      - UpdateManager 不重新吞并 FigureGraph 级职责
+      - 相关测试通过
+
+  - id: AD-001C
+    title: Update scheduling boundary audit
+    contract: "更新调度属于组合根 / SceneHost 协作边界，不回流到 UpdateManager"
+    evolution_kind: architecture
+    priority: high
+    status: pending
+    parent_id: AD-001
+    split_into: []
+    verification_scope:
+      delta_verification:
+        - cargo check
+        - cargo check -p editor
+      baseline_verification:
+        - ./agent/workflow-verify.sh
+    baseline_debt_refs:
+      - BASELINE-001
+    evidence:
+      - apps/editor/src/system.rs
+      - apps/editor/src/scene_manager/scene_host.rs
+      - novadraw-scene/src/update/deferred.rs
+    done_when:
+      - redraw / queue / next-cycle 边界清晰
+      - UpdateManager 不承担平台调度职责
+      - 调用链可编译并通过最小验证
 
   - id: AD-002
     title: SceneHost thin boundary audit
@@ -158,3 +244,46 @@ items:
       - hover/focus/capture 等状态归属明确
       - 事件分发与状态持有边界清晰
       - 行为验证通过
+
+  - id: AD-006
+    title: Notification foundation audit
+    contract: "通知体系只承载变化传播，不吞并图状态、调度职责或业务逻辑"
+    evolution_kind: architecture
+    priority: high
+    status: pending
+    evidence:
+      - novadraw-scene/src/update/listener.rs
+      - novadraw-scene/src/update/mod.rs
+      - novadraw-scene/src/update/deferred.rs
+      - novadraw-scene/src/scene/mod.rs
+      - doc/理想架构设计.md
+    progress_notes:
+      - 当前只有 UpdateListener 协议雏形，尚未真正接入 SceneUpdateManager
+      - coordinate-system change 仍存在 fireCoordinateSystemChanged TODO
+      - 未来 viewport / scroll / router / thumbnail 等机制都会依赖通知基础设施
+    done_when:
+      - 明确 Update / Figure / Coordinate / Property 通知的最小职责边界
+      - 至少一种最小通知链路真正接入运行时主干
+      - 不因通知体系引入图状态或调度职责回流
+
+  - id: AD-007
+    title: Coordinate model alignment with g2
+    contract: "bounds 统一为相对最近坐标根的绝对坐标，坐标转换 API 与 g2 语义一致"
+    evolution_kind: parity
+    priority: high
+    status: proposed
+    evidence:
+      - novadraw-scene/src/scene/mod.rs
+      - novadraw-scene/src/update/repair.rs
+      - doc/02-figure/figure_bounds.md
+      - doc/02-figure/figure_tree_position.md
+      - doc/04-coordinates/coordinates.md
+      - org.eclipse.draw2d/src/org/eclipse/draw2d/Figure.java
+    progress_notes:
+      - 当前仓库对 bounds 存在“局部坐标”与“相对坐标根绝对坐标”两套并存描述
+      - dirty / repair / hit-test / render clip 对 bounds 的消费语义尚未统一
+      - 若不先统一坐标模型，通知体系与后续 viewport/scroll 将建立在不稳定基础上
+    done_when:
+      - 文档、注释、测试、实现对 bounds 语义给出一致定义
+      - translate_to_parent / from_parent / absolute / relative 与 g2 语义对齐
+      - dirty / repair / hit-test / render 至少在一条主链上遵守统一坐标契约
