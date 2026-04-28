@@ -14,6 +14,7 @@ doc/
 │   ├── gef_principle.md              # GEF 框架核心原理
 │   ├── displaylist_design.md          # DisplayList 中间层设计
 │   ├── draw2d-history.md             # draw2d 历史与架构演变
+│   ├── ideal-directory-structure.md   # 理想目录结构设计（模块/目录/crate 演进策略）
 │   ├── swt-gc-analysis.md           # SWT GC 底层绘制 API 分析
 │   ├── ideal-architecture-static.md   # 理想架构 - 静态结构（组件关系、Trait 层级）
 │   └── ideal-architecture-dynamic.md  # 理想架构 - 动态结构（事件流、更新流程）
@@ -59,6 +60,7 @@ doc/
 | `gef_principle.md` | GEF 框架架构 | MVC 模式、EditPart 控制器、Command 模式、Request/EditPolicy 机制、连接支持 |
 | `displaylist_design.md` | DisplayList 设计 | crate 设计决策、协议定义、与渲染层解耦方案 |
 | `draw2d-history.md` | draw2d 历史 | draw2d 架构演变、设计决策背景 |
+| `ideal-directory-structure.md` | 理想目录结构 | 模块分层、目录命名、crate 演进顺序、目录调整禁止项 |
 | `swt-gc-analysis.md` | SWT GC 分析 | SWT GC 底层绘制 API、IServerOcr2d 接口 |
 | `ideal-architecture-static.md` | 理想架构 - 静态结构 | 组件关系图、Trait 层级、数据结构、平台解耦设计（d2 绘图） |
 | `ideal-architecture-dynamic.md` | 理想架构 - 动态结构 | 事件分发流程、setCapture 机制、两阶段更新、数据流（d2 绘图） |
