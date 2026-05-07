@@ -15,6 +15,7 @@ doc/
 │   ├── draw2d_design_axioms.md       # Draw2D 底层设计公理
 │   ├── displaylist_design.md          # DisplayList 中间层设计
 │   ├── draw2d-history.md             # draw2d 历史与架构演变
+│   ├── zed_reactive_design.md        # Zed 响应式设计分析与通知机制借鉴
 │   ├── ideal-directory-structure.md   # 理想目录结构设计（模块/目录/crate 演进策略）
 │   ├── swt-gc-analysis.md           # SWT GC 底层绘制 API 分析
 │   ├── ideal-architecture-static.md   # 理想架构 - 静态结构（组件关系、Trait 层级）
@@ -62,6 +63,7 @@ doc/
 | `draw2d_design_axioms.md` | Draw2D 设计公理 | Figure 树、bounds、坐标根、两阶段更新、damage 修复、事件状态机 |
 | `displaylist_design.md` | DisplayList 设计 | crate 设计决策、协议定义、与渲染层解耦方案 |
 | `draw2d-history.md` | draw2d 历史 | draw2d 架构演变、设计决策背景 |
+| `zed_reactive_design.md` | Zed 响应式设计 | `Entity<T>`、`notify/emit` 分离、`Subscription` 生命周期、effect flush、对 draw2d 等价通知机制的借鉴 |
 | `ideal-directory-structure.md` | 理想目录结构 | 模块分层、目录命名、crate 演进顺序、目录调整禁止项 |
 | `swt-gc-analysis.md` | SWT GC 分析 | SWT GC 底层绘制 API、IServerOcr2d 接口 |
 | `ideal-architecture-static.md` | 理想架构 - 静态结构 | 组件关系图、Trait 层级、数据结构、平台解耦设计（d2 绘图） |
@@ -122,6 +124,7 @@ doc/
 2. draw2d_design_axioms.md       # 理解最底层不变量
 3. figure_core_concepts.md       # 理解 Figure 模型
 4. coordinates.md                # 理解坐标系
+5. zed_reactive_design.md        # 理解现代 Rust 响应式/通知机制参考
 ```
 
 ### 渲染开发

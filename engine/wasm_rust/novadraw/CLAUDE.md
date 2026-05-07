@@ -132,3 +132,4 @@ draw2d/GEF 的核心设计哲学：
 - SWT GC: `/Users/bytedance/Documents/code/GitHub/eclipse.platform.swt`
 - vello: `/Users/bytedance/Documents/code/GitHub/vello`
 - xilem: `/Users/bytedance/Documents/code/GitHub/xilem`
+- Zed: `/Users/bytedance/Documents/code/GitHub/zed`

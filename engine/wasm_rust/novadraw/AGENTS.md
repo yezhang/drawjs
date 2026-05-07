@@ -38,6 +38,7 @@
 - SWT GC: `/Users/bytedance/Documents/code/GitHub/eclipse.platform.swt`
 - vello: `/Users/bytedance/Documents/code/GitHub/vello`
 - xilem: `/Users/bytedance/Documents/code/GitHub/xilem`
+- Zed: `/Users/bytedance/Documents/code/GitHub/zed`
 
 ### 文档入口
 
