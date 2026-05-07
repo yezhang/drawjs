@@ -1154,42 +1154,29 @@ impl FigureGraph {
     ///
     /// # 算法
     ///
-    /// 使用栈迭代实现：
-    /// 1. 从当前节点向上遍历，记录路径上的坐标根
-    /// 2. 逆向遍历路径，累加每个坐标根的 bounds
+    /// 对应 draw2d:
+    ///
+    /// ```java
+    /// if (getParent() != null) {
+    ///     getParent().translateToParent(t);
+    ///     getParent().translateToAbsolute(t);
+    /// }
+    /// ```
+    ///
+    /// 也就是说，绝对坐标不是“手动累加所有坐标根 bounds”，
+    /// 而是沿父链递归执行父节点的 `translateToParent` 协议。
     ///
     /// # 注意
     ///
     /// 绝对坐标是相对于场景根的坐标。
-    /// 此方法将 Translatable 对象从局部坐标（相对于最近坐标根）转换为绝对坐标。
-    ///
-    /// # 示例
-    ///
-    /// 假设：
-    /// - coord_root bounds = (20, 30)
-    /// - 本地坐标 (10, 5)
-    /// - 绝对坐标 = (20 + 10, 30 + 5) = (30, 35)
+    /// 此方法将对象从“当前节点的局部坐标系”转换为场景绝对坐标。
     #[allow(clippy::collapsible_if)]
     pub fn translate_to_absolute_mut<T: Translatable>(&self, block_id: BlockId, t: &mut T) {
-        // 第一阶段：向上遍历，记录所有"父节点是坐标根"的节点
-        let mut roots: Vec<BlockId> = Vec::new();
-        let mut current = Some(block_id);
+        let mut current = self.blocks.get(block_id).and_then(|block| block.parent);
 
-        while let Some(id) = current {
-            if let Some(block) = self.blocks.get(id) {
-                if block.figure.use_local_coordinates() {
-                    roots.push(id);
-                }
-                current = block.parent;
-            }
-        }
-
-        // 第二阶段：逆向遍历，累加每个坐标根的 bounds
-        for id in roots.iter().rev() {
-            if let Some(block) = self.blocks.get(*id) {
-                let bounds = block.figure.bounds();
-                t.translate(bounds.x, bounds.y);
-            }
+        while let Some(parent_id) = current {
+            self.translate_to_parent(parent_id, t);
+            current = self.blocks.get(parent_id).and_then(|block| block.parent);
         }
     }
 
@@ -2235,6 +2222,34 @@ mod tests {
         assert_eq!(point.1, 35.0, "y 应为 5 + 30");
     }
 
+    /// 测试 translate_to_absolute_mut 在坐标根包含 insets 时会通过父链协议叠加它们。
+    #[test]
+    fn test_translate_to_absolute_mut_includes_parent_insets() {
+        let mut scene = FigureGraph::new();
+
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        let coord_root_id = scene.add_child_to(
+            contents_id,
+            Box::new(TestFigureWithInsets::new(
+                20.0,
+                30.0,
+                100.0,
+                100.0,
+                (5.0, 7.0, 0.0, 0.0),
+            )),
+        );
+
+        let child = RectangleFigure::new(10.0, 5.0, 50.0, 50.0);
+        let child_id = scene.add_child_to(coord_root_id, Box::new(child));
+
+        let mut point = (10.0, 5.0);
+        scene.translate_to_absolute_mut(child_id, &mut point);
+        assert_eq!(point.0, 37.0, "x 应为 10 + 20 + 7");
+        assert_eq!(point.1, 40.0, "y 应为 5 + 30 + 5");
+    }
+
     /// 测试 translate_to_absolute_mut 嵌套坐标根
     ///
     /// 场景：多层坐标根
@@ -2267,6 +2282,45 @@ mod tests {
         scene.translate_to_absolute_mut(child_id, &mut point);
         assert_eq!(point.0, 30.0, "x 应为 15 + 10 + 5");
         assert_eq!(point.1, 55.0, "y 应为 25 + 20 + 10");
+    }
+
+    /// 测试 translate_to_absolute_mut 在多层坐标根且包含 insets 时严格按父链协议累加。
+    #[test]
+    fn test_translate_to_absolute_mut_nested_insets_follow_parent_chain_protocol() {
+        let mut scene = FigureGraph::new();
+
+        let contents = RectangleFigure::new(0.0, 0.0, 800.0, 600.0);
+        let contents_id = scene.set_contents(Box::new(contents));
+
+        let coord_root1_id = scene.add_child_to(
+            contents_id,
+            Box::new(TestFigureWithInsets::new(
+                10.0,
+                20.0,
+                100.0,
+                100.0,
+                (2.0, 3.0, 0.0, 0.0),
+            )),
+        );
+
+        let coord_root2_id = scene.add_child_to(
+            coord_root1_id,
+            Box::new(TestFigureWithInsets::new(
+                5.0,
+                10.0,
+                50.0,
+                50.0,
+                (4.0, 6.0, 0.0, 0.0),
+            )),
+        );
+
+        let child = RectangleFigure::new(15.0, 25.0, 30.0, 30.0);
+        let child_id = scene.add_child_to(coord_root2_id, Box::new(child));
+
+        let mut point = (15.0, 25.0);
+        scene.translate_to_absolute_mut(child_id, &mut point);
+        assert_eq!(point.0, 39.0, "x 应为 15 + (5 + 6) + (10 + 3)");
+        assert_eq!(point.1, 61.0, "y 应为 25 + (10 + 4) + (20 + 2)");
     }
 
     /// 测试 translate_to_absolute_mut Rectangle 类型
