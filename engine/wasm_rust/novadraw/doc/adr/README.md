@@ -9,6 +9,7 @@ ADR (Architecture Decision Record) 是记录架构决策的文档，用于记录
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
 | [001](adr-001-webgpu-rust-stack.md) | 使用 Rust + WebGPU 实现图形框架 | 已通过 | 2025-01-13 |
+| [002](adr-002-notification-effect-queue.md) | 采用 Draw2D 语义分层与 Zed 式 effect queue 的通知机制 | 已通过 | 2026-05-06 |
 
 ## ADR 模板
 

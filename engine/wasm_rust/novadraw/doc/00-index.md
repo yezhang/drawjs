@@ -13,6 +13,7 @@ doc/
 ├── 01-architecture/                  # 架构设计
 │   ├── gef_principle.md              # GEF 框架核心原理
 │   ├── draw2d_design_axioms.md       # Draw2D 底层设计公理
+│   ├── draw2d_notification_design.md # Draw2D 通知机制设计分析
 │   ├── displaylist_design.md          # DisplayList 中间层设计
 │   ├── draw2d-history.md             # draw2d 历史与架构演变
 │   ├── zed_reactive_design.md        # Zed 响应式设计分析与通知机制借鉴
@@ -47,6 +48,11 @@ doc/
 │   ├── java_to_rust_oo.md            # Java OOP 特性等价实现
 │   └── java_to_rust_migration.md     # 迁移步骤指南 + 多态支持
 │
+├── adr/                              # 架构决策记录
+│   ├── README.md                     # ADR 列表与模板
+│   ├── adr-001-webgpu-rust-stack.md  # Rust + WebGPU 技术栈决策
+│   └── adr-002-notification-effect-queue.md # 通知机制 effect queue 决策
+│
 └── deprecated/                        # 历史文档（已被取代）
     └── 架构设计-历史.md              # 早期架构设计，已被《理想架构设计.md》取代
 ```
@@ -61,6 +67,7 @@ doc/
 |------|------|----------|
 | `gef_principle.md` | GEF 框架架构 | MVC 模式、EditPart 控制器、Command 模式、Request/EditPolicy 机制、连接支持 |
 | `draw2d_design_axioms.md` | Draw2D 设计公理 | Figure 树、bounds、坐标根、两阶段更新、damage 修复、事件状态机 |
+| `draw2d_notification_design.md` | Draw2D 通知机制 | Figure/Coordinate/Property/Ancestor/Input/Update 六类通知语义、实现方式、与 Zed/Novadraw 的对应关系 |
 | `displaylist_design.md` | DisplayList 设计 | crate 设计决策、协议定义、与渲染层解耦方案 |
 | `draw2d-history.md` | draw2d 历史 | draw2d 架构演变、设计决策背景 |
 | `zed_reactive_design.md` | Zed 响应式设计 | `Entity<T>`、`notify/emit` 分离、`Subscription` 生命周期、effect flush、对 draw2d 等价通知机制的借鉴 |
@@ -113,6 +120,14 @@ doc/
 |------|------|------|
 | `deprecated/架构设计-历史.md` | 早期架构设计 | 已被《理想架构设计.md》取代，仅作历史参考 |
 
+### 7. 架构决策记录
+
+| 文档 | 主题 | 关键内容 |
+|------|------|----------|
+| `adr/README.md` | ADR 索引 | 架构决策记录列表与模板 |
+| `adr-001-webgpu-rust-stack.md` | 技术栈决策 | Rust、WebGPU、vello、winit、cosmic-text |
+| `adr-002-notification-effect-queue.md` | 通知机制决策 | Draw2D 语义分层、Zed 式 effect queue、Novadraw 事务 flush 边界 |
+
 ---
 
 ## 阅读路径建议
@@ -122,9 +137,10 @@ doc/
 ```text
 1. gef_principle.md              # 理解整体架构
 2. draw2d_design_axioms.md       # 理解最底层不变量
-3. figure_core_concepts.md       # 理解 Figure 模型
-4. coordinates.md                # 理解坐标系
-5. zed_reactive_design.md        # 理解现代 Rust 响应式/通知机制参考
+3. draw2d_notification_design.md # 理解 draw2d 的通知语义分层
+4. figure_core_concepts.md       # 理解 Figure 模型
+5. coordinates.md                # 理解坐标系
+6. zed_reactive_design.md        # 理解现代 Rust 响应式/通知机制参考
 ```
 
 ### 渲染开发
@@ -146,6 +162,7 @@ doc/
 | 连接线 | `gef_principle.md` (连接章节) + `graphics_api.md` |
 | 撤销重做 | `gef_principle.md` (Command 章节) |
 | UpdateManager | `update_manager_pipeline.md` (g2 参考) + `update_manager_design.md` (本项目) |
+| 通知体系 | `adr/adr-002-notification-effect-queue.md` + `draw2d_notification_design.md` + `zed_reactive_design.md` |
 
 ### Java to Rust 迁移
 
