@@ -11,7 +11,10 @@ fn test_add_child_marks_layout_invalid() {
     let (mut scene, _) = new_scene();
     let container_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
     scene.validate();
-    scene.add_child_to(container_id, Box::new(RectangleFigure::new(0.0, 0.0, 50.0, 50.0)));
+    scene.add_child_to(
+        container_id,
+        Box::new(RectangleFigure::new(0.0, 0.0, 50.0, 50.0)),
+    );
     assert!(!scene.is_layout_valid());
 }
 
@@ -157,7 +160,10 @@ fn test_empty_rect_ignored() {
 fn test_multiple_blocks_independent_dirty_regions() {
     let (mut scene, mut update_manager) = new_scene();
     let container_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
-    let child1_id = scene.add_child_to(container_id, Box::new(RectangleFigure::new(0.0, 0.0, 50.0, 50.0)));
+    let child1_id = scene.add_child_to(
+        container_id,
+        Box::new(RectangleFigure::new(0.0, 0.0, 50.0, 50.0)),
+    );
     let child2_id = scene.add_child_to(
         container_id,
         Box::new(RectangleFigure::new(100.0, 0.0, 50.0, 50.0)),
@@ -239,8 +245,14 @@ fn test_perform_update_uses_damage_region() {
 fn test_batch_construction_no_updates() {
     let (mut scene, update_manager) = new_scene();
     let container_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
-    scene.add_child_to(container_id, Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)));
-    scene.add_child_to(container_id, Box::new(RectangleFigure::new(100.0, 10.0, 50.0, 50.0)));
+    scene.add_child_to(
+        container_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+    );
+    scene.add_child_to(
+        container_id,
+        Box::new(RectangleFigure::new(100.0, 10.0, 50.0, 50.0)),
+    );
     assert!(!update_manager.is_update_queued());
 }
 
@@ -248,7 +260,10 @@ fn test_batch_construction_no_updates() {
 fn test_batch_then_manual_update() {
     let (mut scene, mut update_manager) = new_scene();
     let container_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
-    scene.add_child_to(container_id, Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)));
+    scene.add_child_to(
+        container_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+    );
     scene.mark_invalid(&mut update_manager, container_id);
     scene.repaint(&mut update_manager, container_id, None);
     assert!(update_manager.is_update_queued());
@@ -313,7 +328,13 @@ fn test_apply_pending_add_child_attaches_detached_block() {
     ));
 
     assert_eq!(scene.get_block(child_id).unwrap().parent, Some(parent_id));
-    assert!(scene.get_block(parent_id).unwrap().children.contains(&child_id));
+    assert!(
+        scene
+            .get_block(parent_id)
+            .unwrap()
+            .children
+            .contains(&child_id)
+    );
     assert!(update_manager.has_pending_layout());
     assert!(update_manager.has_pending_repaint());
 }
@@ -322,7 +343,10 @@ fn test_apply_pending_add_child_attaches_detached_block() {
 fn test_apply_pending_remove_child_clears_interaction_state() {
     let (mut scene, mut update_manager) = new_scene();
     let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
-    let child_id = scene.add_child_to(parent_id, Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)));
+    let child_id = scene.add_child_to(
+        parent_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+    );
     scene.set_mouse_target(Some(child_id));
     scene.set_focus_owner(Some(child_id));
     scene.set_captured(Some(child_id));
@@ -336,7 +360,13 @@ fn test_apply_pending_remove_child_clears_interaction_state() {
     ));
 
     assert_eq!(scene.get_block(child_id).unwrap().parent, None);
-    assert!(!scene.get_block(parent_id).unwrap().children.contains(&child_id));
+    assert!(
+        !scene
+            .get_block(parent_id)
+            .unwrap()
+            .children
+            .contains(&child_id)
+    );
     assert_eq!(scene.mouse_target(), None);
     assert_eq!(scene.focus_owner(), None);
     assert_eq!(scene.captured(), None);
@@ -346,10 +376,18 @@ fn test_apply_pending_remove_child_clears_interaction_state() {
 fn test_apply_pending_reparent_moves_child_between_containers() {
     let (mut scene, mut update_manager) = new_scene();
     let root_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 400.0, 400.0)));
-    let left_id = scene.add_child_to(root_id, Box::new(RectangleFigure::new(0.0, 0.0, 100.0, 100.0)));
-    let right_id =
-        scene.add_child_to(root_id, Box::new(RectangleFigure::new(200.0, 0.0, 100.0, 100.0)));
-    let child_id = scene.add_child_to(left_id, Box::new(RectangleFigure::new(10.0, 10.0, 20.0, 20.0)));
+    let left_id = scene.add_child_to(
+        root_id,
+        Box::new(RectangleFigure::new(0.0, 0.0, 100.0, 100.0)),
+    );
+    let right_id = scene.add_child_to(
+        root_id,
+        Box::new(RectangleFigure::new(200.0, 0.0, 100.0, 100.0)),
+    );
+    let child_id = scene.add_child_to(
+        left_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 20.0, 20.0)),
+    );
 
     assert!(scene.apply_pending_mutations(
         &mut update_manager,
@@ -360,6 +398,18 @@ fn test_apply_pending_reparent_moves_child_between_containers() {
     ));
 
     assert_eq!(scene.get_block(child_id).unwrap().parent, Some(right_id));
-    assert!(!scene.get_block(left_id).unwrap().children.contains(&child_id));
-    assert!(scene.get_block(right_id).unwrap().children.contains(&child_id));
+    assert!(
+        !scene
+            .get_block(left_id)
+            .unwrap()
+            .children
+            .contains(&child_id)
+    );
+    assert!(
+        scene
+            .get_block(right_id)
+            .unwrap()
+            .children
+            .contains(&child_id)
+    );
 }

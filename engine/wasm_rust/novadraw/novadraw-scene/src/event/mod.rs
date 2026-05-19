@@ -76,7 +76,12 @@ impl BasicEventDispatcher {
 
         tracing::info!(
             "[EventDispatcher] refresh_mouse_target: captured={:?}, hit_target={:?}, next={:?}, prev={:?}, coords=({:.1}, {:.1})",
-            captured, hit_target, next_target, previous_target, x, y
+            captured,
+            hit_target,
+            next_target,
+            previous_target,
+            x,
+            y
         );
 
         if previous_target == next_target {

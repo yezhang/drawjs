@@ -1,14 +1,17 @@
 use std::{sync::Arc, time::Duration};
 
 use novadraw::{
-    backend::vello::WinitWindowProxy, BasicEventDispatcher, BlockId, DispatchContext, Event,
-    EventDispatcher, MouseButton, MouseEventKind, NdCanvas, NovadrawContext, NovadrawSystem,
-    PendingMutations, Rectangle, RenderBackend, SceneHost, SceneUpdateManager, UpdateManager,
+    BasicEventDispatcher, BlockId, DispatchContext, Event, EventDispatcher, MouseButton,
+    MouseEventKind, NdCanvas, NovadrawContext, NovadrawSystem, PendingMutations, Rectangle,
+    RenderBackend, SceneHost, SceneUpdateManager, UpdateManager, backend::vello::WinitWindowProxy,
 };
 
 use crate::scene_manager::{
-    mouse_simulator::{CGEventMouseSimulator, MouseButton as SimMouseButton, MouseSimulator, ScreenPositionConverter},
     SceneManager,
+    mouse_simulator::{
+        CGEventMouseSimulator, MouseButton as SimMouseButton, MouseSimulator,
+        ScreenPositionConverter,
+    },
     scene_host::WinitSceneHost,
 };
 
@@ -151,7 +154,8 @@ impl EditorInteractionCore {
 
     pub fn dispatch_mouse_moved(&mut self, x: f64, y: f64) {
         tracing::info!("[MouseEvent] Moved - scene_coords=({:.1}, {:.1})", x, y);
-        let mut ctx = EditorDispatchContext::new(&mut self.scene_manager.scene, &mut self.update_manager);
+        let mut ctx =
+            EditorDispatchContext::new(&mut self.scene_manager.scene, &mut self.update_manager);
         self.dispatcher.dispatch_mouse_moved(&mut ctx, x, y);
         self.apply_pending_mutations();
     }
@@ -163,7 +167,8 @@ impl EditorInteractionCore {
             y,
             button
         );
-        let mut ctx = EditorDispatchContext::new(&mut self.scene_manager.scene, &mut self.update_manager);
+        let mut ctx =
+            EditorDispatchContext::new(&mut self.scene_manager.scene, &mut self.update_manager);
         self.dispatcher
             .dispatch_mouse_pressed(&mut ctx, x, y, button);
         self.apply_pending_mutations();
@@ -176,7 +181,8 @@ impl EditorInteractionCore {
             y,
             button
         );
-        let mut ctx = EditorDispatchContext::new(&mut self.scene_manager.scene, &mut self.update_manager);
+        let mut ctx =
+            EditorDispatchContext::new(&mut self.scene_manager.scene, &mut self.update_manager);
         self.dispatcher
             .dispatch_mouse_released(&mut ctx, x, y, button);
         self.apply_pending_mutations();
@@ -334,7 +340,8 @@ impl WinitNovadrawSystem {
     }
 
     pub fn sim_click(&mut self, logical_x: f64, logical_y: f64) {
-        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter) {
+        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter)
+        {
             let screen_pos = converter.logical_to_screen(logical_x, logical_y);
             let btn = SimMouseButton::Left;
             sim.click(screen_pos, btn);
@@ -344,7 +351,8 @@ impl WinitNovadrawSystem {
     }
 
     pub fn sim_double_click(&mut self, logical_x: f64, logical_y: f64) {
-        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter) {
+        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter)
+        {
             let screen_pos = converter.logical_to_screen(logical_x, logical_y);
             let btn = SimMouseButton::Left;
             sim.double_click(screen_pos, btn);
@@ -354,7 +362,8 @@ impl WinitNovadrawSystem {
     }
 
     pub fn sim_drag(&mut self, logical_x1: f64, logical_y1: f64, logical_x2: f64, logical_y2: f64) {
-        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter) {
+        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter)
+        {
             let start = converter.logical_to_screen(logical_x1, logical_y1);
             let end = converter.logical_to_screen(logical_x2, logical_y2);
             let btn = SimMouseButton::Left;
@@ -365,7 +374,8 @@ impl WinitNovadrawSystem {
     }
 
     pub fn sim_move_to(&mut self, logical_x: f64, logical_y: f64) {
-        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter) {
+        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter)
+        {
             let screen_pos = converter.logical_to_screen(logical_x, logical_y);
             sim.move_to(screen_pos);
         } else {
@@ -374,7 +384,8 @@ impl WinitNovadrawSystem {
     }
 
     pub fn sim_hover(&mut self, logical_x: f64, logical_y: f64, duration_ms: u64) {
-        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter) {
+        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter)
+        {
             let screen_pos = converter.logical_to_screen(logical_x, logical_y);
             sim.hover(screen_pos, duration_ms);
         } else {
@@ -481,12 +492,11 @@ impl NovadrawSystem for WinitNovadrawSystem {
     }
 
     fn render(&mut self, renderer: &mut impl RenderBackend) -> NdCanvas {
-        self.scene_host
-            .execute_update(
-                &mut self.core.scene_manager.scene,
-                &mut self.core.update_manager,
-                renderer,
-            )
+        self.scene_host.execute_update(
+            &mut self.core.scene_manager.scene,
+            &mut self.core.update_manager,
+            renderer,
+        )
     }
 
     fn viewport_size(&self) -> (f64, f64) {
@@ -608,8 +618,8 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     use novadraw::{
-        command::{LineCap, LineJoin},
         Bounded, Color, FigureGraph, MouseEvent, NovadrawContext, Shape, Updatable,
+        command::{LineCap, LineJoin},
     };
 
     use super::*;
@@ -736,7 +746,8 @@ mod tests {
 
     #[test]
     fn test_raw_pointer_conversion() {
-        let logical = EditorInteractionCore::logical_from_raw(RawPointerInput::new(300.0, 200.0, 2.0));
+        let logical =
+            EditorInteractionCore::logical_from_raw(RawPointerInput::new(300.0, 200.0, 2.0));
         assert_eq!(logical, LogicalPointerPosition { x: 150.0, y: 100.0 });
     }
 
@@ -749,10 +760,20 @@ mod tests {
         }]);
 
         assert_eq!(report.traces.len(), 1);
-        assert_eq!(report.traces[0].logical, LogicalPointerPosition { x: 150.0, y: 150.0 });
+        assert_eq!(
+            report.traces[0].logical,
+            LogicalPointerPosition { x: 150.0, y: 150.0 }
+        );
         assert_eq!(report.traces[0].hit_target_before, Some(target_id));
         assert_eq!(report.traces[0].mouse_target_after, Some(target_id));
-        assert_eq!(*state.lock().unwrap(), TestFigureState { hovered: true, pressed: false, selected: false });
+        assert_eq!(
+            *state.lock().unwrap(),
+            TestFigureState {
+                hovered: true,
+                pressed: false,
+                selected: false
+            }
+        );
     }
 
     #[test]
@@ -767,7 +788,14 @@ mod tests {
         assert_eq!(report.traces[0].hit_target_before, Some(target_id));
         assert_eq!(report.traces[1].hit_target_before, Some(target_id));
         assert_eq!(report.traces[1].mouse_target_after, Some(target_id));
-        assert_eq!(*state.lock().unwrap(), TestFigureState { hovered: true, pressed: false, selected: true });
+        assert_eq!(
+            *state.lock().unwrap(),
+            TestFigureState {
+                hovered: true,
+                pressed: false,
+                selected: true
+            }
+        );
     }
 
     #[test]

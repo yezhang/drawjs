@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
-use crate::scene_manager::{mouse_simulator::ScreenPositionConverter, DPI_TEST_PROBE_BOUNDS, SceneType};
+use crate::scene_manager::{
+    DPI_TEST_PROBE_BOUNDS, SceneType, mouse_simulator::ScreenPositionConverter,
+};
 use crate::system::{EditorInteractionCore, RawPointerInput, WinitNovadrawSystem};
-use novadraw::{NovadrawSystem, RenderBackend};
 use novadraw::backend::vello::{VelloRenderer, WinitWindowProxy};
 use novadraw::traits::WindowProxy;
+use novadraw::{NovadrawSystem, RenderBackend};
 use tracing::info;
 use winit::dpi::{self, PhysicalSize};
 use winit::event::{ElementState, MouseButton as WinitMouseButton};
@@ -188,7 +190,11 @@ impl ApplicationHandler<()> for GraphicsApp {
 
                 tracing::info!(
                     "[Winit] CursorMoved: physical=({:.1}, {:.1}), scale_factor={:.2}, logical=({:.1}, {:.1})",
-                    position.x, position.y, scale_factor, logical_position.x, logical_position.y
+                    position.x,
+                    position.y,
+                    scale_factor,
+                    logical_position.x,
+                    logical_position.y
                 );
 
                 self.log_dpi_probe_cursor(
@@ -322,12 +328,12 @@ impl ApplicationHandler<()> for GraphicsApp {
                             if system.scene_manager().current_scene
                                 == crate::scene_manager::SceneType::BoundsTranslate
                             {
-                                if let Some(root_id) =
-                                    system.scene_manager().scene().get_contents()
+                                if let Some(root_id) = system.scene_manager().scene().get_contents()
                                 {
-                                    system.scene_manager_mut().scene_mut().prim_translate(
-                                        root_id, 10.0, 10.0,
-                                    );
+                                    system
+                                        .scene_manager_mut()
+                                        .scene_mut()
+                                        .prim_translate(root_id, 10.0, 10.0);
                                     self.request_update();
                                 }
                             }

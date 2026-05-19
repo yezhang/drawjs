@@ -1,8 +1,8 @@
 use novadraw::{Color, EllipseFigure, FigureGraph, PolylineFigure, Rectangle, RectangleFigure};
 
 mod interactive_figure;
-pub mod scene_host;
 pub mod mouse_simulator;
+pub mod scene_host;
 
 use interactive_figure::InteractiveRectFigure;
 

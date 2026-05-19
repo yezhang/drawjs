@@ -5,7 +5,7 @@
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub use novadraw::{RenderBackend, FigureGraph, WindowProxy};
+pub use novadraw::{FigureGraph, RenderBackend, WindowProxy};
 pub use novadraw_render::backend::vello::{VelloRenderer, WinitWindowProxy};
 pub use winit::dpi::{LogicalSize, PhysicalSize};
 pub use winit::event::WindowEvent;

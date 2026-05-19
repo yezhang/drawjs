@@ -1,6 +1,6 @@
+use core_graphics::base::CGFloat;
 use core_graphics::event::{CGEvent, CGEventTapLocation, CGEventType, CGMouseButton};
 use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
-use core_graphics::base::CGFloat;
 use core_graphics::geometry::CGPoint;
 use tracing::info;
 
@@ -76,7 +76,8 @@ impl CGEventMouseSimulator {
             event_type,
             pos.to_cgpoint(),
             button.to_cg(),
-        ).ok()
+        )
+        .ok()
     }
 
     fn post(&self, event: &CGEvent) {
@@ -86,7 +87,9 @@ impl CGEventMouseSimulator {
 
 impl MouseSimulator for CGEventMouseSimulator {
     fn move_to(&mut self, pos: ScreenPosition) {
-        if let Some(event) = self.create_mouse_event(CGEventType::MouseMoved, pos, MouseButton::Left) {
+        if let Some(event) =
+            self.create_mouse_event(CGEventType::MouseMoved, pos, MouseButton::Left)
+        {
             self.post(&event);
             info!("CGEvent: MouseMoved to ({:.1}, {:.1})", pos.x, pos.y);
         }
@@ -172,7 +175,10 @@ impl MouseSimulator for CGEventMouseSimulator {
         }
 
         self.release(end, button);
-        info!("CGEvent: Drag from ({:.1}, {:.1}) to ({:.1}, {:.1})", start.x, start.y, end.x, end.y);
+        info!(
+            "CGEvent: Drag from ({:.1}, {:.1}) to ({:.1}, {:.1})",
+            start.x, start.y, end.x, end.y
+        );
     }
 
     fn scroll(&mut self, pos: ScreenPosition, delta_x: f64, delta_y: f64) {
@@ -184,7 +190,10 @@ impl MouseSimulator for CGEventMouseSimulator {
 
     fn hover(&mut self, pos: ScreenPosition, duration_ms: u64) {
         self.move_to(pos);
-        info!("CGEvent: Hover at ({:.1}, {:.1}) for {} ms", pos.x, pos.y, duration_ms);
+        info!(
+            "CGEvent: Hover at ({:.1}, {:.1}) for {} ms",
+            pos.x, pos.y, duration_ms
+        );
         std::thread::sleep(std::time::Duration::from_millis(duration_ms));
     }
 }
@@ -198,7 +207,13 @@ pub struct ScreenPositionConverter {
 }
 
 impl ScreenPositionConverter {
-    pub fn new(scale_factor: f64, window_x: f64, window_y: f64, window_width: f64, window_height: f64) -> Self {
+    pub fn new(
+        scale_factor: f64,
+        window_x: f64,
+        window_y: f64,
+        window_width: f64,
+        window_height: f64,
+    ) -> Self {
         Self {
             scale_factor,
             window_x,
@@ -235,13 +250,19 @@ mod tests {
             println!("  打开: System Settings → Privacy & Security → Accessibility");
             println!("  添加并启用: target/debug/editor 或 cargo");
         }
-        assert!(available, "CGEventMouseSimulator requires Accessibility permissions");
+        assert!(
+            available,
+            "CGEventMouseSimulator requires Accessibility permissions"
+        );
     }
 
     #[test]
     fn test_mouse_simulator_lifecycle() {
         let simulator = CGEventMouseSimulator::new();
-        assert!(simulator.is_some(), "Should create simulator when permissions granted");
+        assert!(
+            simulator.is_some(),
+            "Should create simulator when permissions granted"
+        );
 
         if let Some(mut sim) = simulator {
             let pos = ScreenPosition::new(100.0, 100.0);

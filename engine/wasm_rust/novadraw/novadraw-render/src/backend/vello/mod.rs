@@ -182,7 +182,6 @@ impl VelloRenderer {
         (fallback_union, regions)
     }
 
-
     /// 获取当前状态
     fn current_state(&self) -> &RenderState {
         self.state_stack.last().unwrap()
@@ -690,7 +689,11 @@ impl RenderBackend for VelloRenderer {
     fn render(&mut self, submission: &crate::RenderSubmission) {
         let commands = &submission.commands;
         let damage = &submission.damage;
-        debug!("damage set: union={:?}, regions={}", damage.union, damage.regions.len());
+        debug!(
+            "damage set: union={:?}, regions={}",
+            damage.union,
+            damage.regions.len()
+        );
 
         let (width, height) = self.current_surface_size();
         let (effective_damage, effective_regions) = self.effective_damage_regions(submission);

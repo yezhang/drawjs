@@ -104,7 +104,10 @@ pub(crate) fn execute_repair_phase<'a>(
     union
 }
 
-fn collect_parent_chain_steps(graph: &FigureGraph, block_id: BlockId) -> Option<Vec<DamagePropagationStep>> {
+fn collect_parent_chain_steps(
+    graph: &FigureGraph,
+    block_id: BlockId,
+) -> Option<Vec<DamagePropagationStep>> {
     let mut steps = Vec::new();
     let mut walker_id = Some(block_id);
     let contents_id = graph.get_contents();
@@ -254,8 +257,8 @@ fn union_rectangles(a: Rectangle, b: Rectangle) -> Rectangle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use novadraw_core::Color;
     use crate::RectangleFigure;
+    use novadraw_core::Color;
     use slotmap::KeyData;
 
     fn create_test_key(data: u64) -> BlockId {
@@ -292,7 +295,9 @@ mod tests {
     #[test]
     fn test_write_damage_set_clears_canvas_for_empty_damage() {
         let mut canvas = NdCanvas::new();
-        canvas.damage_mut().set_union(Rectangle::new(1.0, 2.0, 3.0, 4.0));
+        canvas
+            .damage_mut()
+            .set_union(Rectangle::new(1.0, 2.0, 3.0, 4.0));
 
         let union = write_damage_set(&mut canvas, Vec::new());
 
@@ -447,11 +452,8 @@ mod tests {
         let child = RectangleFigure::new_with_color(120.0, 80.0, 80.0, 60.0, Color::WHITE);
         let child_id = graph.add_child_to(parent_id, Box::new(child));
 
-        let actual = propagate_damage_to_root(
-            &graph,
-            child_id,
-            Rectangle::new(120.0, 80.0, 20.0, 10.0),
-        );
+        let actual =
+            propagate_damage_to_root(&graph, child_id, Rectangle::new(120.0, 80.0, 20.0, 10.0));
 
         assert_eq!(actual, Some(Rectangle::new(120.0, 80.0, 20.0, 10.0)));
     }
@@ -467,11 +469,8 @@ mod tests {
         let child = RectangleFigure::new_with_color(90.0, 70.0, 30.0, 30.0, Color::WHITE);
         let child_id = graph.add_child_to(parent_id, Box::new(child));
 
-        let actual = propagate_damage_to_root(
-            &graph,
-            child_id,
-            Rectangle::new(90.0, 70.0, 30.0, 30.0),
-        );
+        let actual =
+            propagate_damage_to_root(&graph, child_id, Rectangle::new(90.0, 70.0, 30.0, 30.0));
 
         assert_eq!(actual, Some(Rectangle::new(90.0, 70.0, 10.0, 10.0)));
     }

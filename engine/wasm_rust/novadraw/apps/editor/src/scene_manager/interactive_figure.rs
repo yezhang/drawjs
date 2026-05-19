@@ -1,10 +1,10 @@
 use std::sync::Mutex;
 
+use novadraw::NdCanvas;
 use novadraw::{
     Bounded, Color, MouseEvent, NovadrawContext, Rectangle, Shape, Updatable,
     command::{LineCap, LineJoin},
 };
-use novadraw::NdCanvas;
 use tracing::info;
 
 struct InteractiveState {
@@ -128,13 +128,7 @@ impl Shape for InteractiveRectFigure {
 
     fn fill_shape(&self, gc: &mut NdCanvas) {
         let bounds = self.bounds;
-        gc.fill_rect(
-            bounds.x,
-            bounds.y,
-            bounds.width,
-            bounds.height,
-            self.fill(),
-        );
+        gc.fill_rect(bounds.x, bounds.y, bounds.width, bounds.height, self.fill());
     }
 
     fn outline_shape(&self, gc: &mut NdCanvas) {
@@ -176,7 +170,11 @@ impl Shape for InteractiveRectFigure {
         let mut state = self.state.lock().unwrap();
         state.hovered = true;
         drop(state);
-        info!("interactive_rect entered: target={:?}, bounds={:?}", ctx.target_id(), self.bounds);
+        info!(
+            "interactive_rect entered: target={:?}, bounds={:?}",
+            ctx.target_id(),
+            self.bounds
+        );
         ctx.repaint(None);
         true
     }
@@ -186,7 +184,11 @@ impl Shape for InteractiveRectFigure {
         state.hovered = false;
         state.pressed = false;
         drop(state);
-        info!("interactive_rect exited: target={:?}, bounds={:?}", ctx.target_id(), self.bounds);
+        info!(
+            "interactive_rect exited: target={:?}, bounds={:?}",
+            ctx.target_id(),
+            self.bounds
+        );
         ctx.repaint(None);
         true
     }
