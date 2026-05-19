@@ -20,6 +20,7 @@ use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
 use crate::scene::BlockId;
+use crate::update::listener::{NotificationEffect, NotificationQueue, UpdateEvent};
 use crate::update::repair::{compute_damage_union, execute_repair_phase, merge_dirty_region};
 
 /// Scene Update Manager
@@ -48,6 +49,7 @@ pub struct SceneUpdateManager {
     /// 是否有更新待处理
     pub(crate) update_queued: bool,
     pub(crate) updating: bool,
+    notification_effects: NotificationQueue,
 }
 
 impl SceneUpdateManager {
@@ -58,6 +60,7 @@ impl SceneUpdateManager {
             invalid_blocks: Vec::new(),
             update_queued: false,
             updating: false,
+            notification_effects: NotificationQueue::new(),
         }
     }
 
@@ -128,6 +131,17 @@ impl SceneUpdateManager {
         self.invalid_blocks.clear();
         self.update_queued = false;
         self.updating = false;
+        self.notification_effects.drain();
+    }
+
+    /// 返回当前积累的更新通知 effect。
+    pub fn notification_effects(&self) -> &[NotificationEffect] {
+        self.notification_effects.effects()
+    }
+
+    /// 排空更新通知 effect。
+    pub fn drain_notification_effects(&mut self) -> Vec<NotificationEffect> {
+        self.notification_effects.drain()
     }
 
     /// 获取失效块数量
@@ -172,21 +186,26 @@ impl crate::update::UpdateManager for SceneUpdateManager {
         SceneUpdateManager::drain_invalid_blocks(self)
     }
 
-    fn perform_update(
-        &mut self,
-        graph: &mut crate::scene::FigureGraph,
-        canvas: &mut NdCanvas,
-    ) {
+    fn perform_update(&mut self, graph: &mut crate::scene::FigureGraph, canvas: &mut NdCanvas) {
         if self.updating {
             return;
         }
 
         self.updating = true;
+        self.notification_effects
+            .emit_update(UpdateEvent::Validating);
         self.perform_validation(graph);
+        self.notification_effects
+            .emit_update(UpdateEvent::Validated);
         self.update_queued = false;
         let dirty_snapshot = self.take_dirty_snapshot();
+        let damage = compute_damage_union(dirty_snapshot.values());
 
+        self.notification_effects
+            .emit_update(UpdateEvent::Painting { damage });
         execute_repair_phase(graph, canvas, dirty_snapshot.iter());
+        self.notification_effects
+            .emit_update(UpdateEvent::Painted { damage });
 
         self.clear_dirty_and_flag();
         self.updating = false;
@@ -366,6 +385,41 @@ mod tests {
             canvas.damage().union,
             Some(Rectangle::new(10.0, 20.0, 30.0, 40.0))
         );
-        assert_eq!(canvas.damage().regions, vec![Rectangle::new(10.0, 20.0, 30.0, 40.0)]);
+        assert_eq!(
+            canvas.damage().regions,
+            vec![Rectangle::new(10.0, 20.0, 30.0, 40.0)]
+        );
+    }
+
+    #[test]
+    fn test_perform_update_records_update_phase_effects() {
+        let mut manager = SceneUpdateManager::new();
+        let mut graph = FigureGraph::new();
+        let root_id = graph.set_contents(Box::new(RectangleFigure::new_with_color(
+            0.0,
+            0.0,
+            400.0,
+            300.0,
+            Color::rgba(0.1, 0.1, 0.1, 1.0),
+        )));
+        manager.add_dirty_region(root_id, Rectangle::new(10.0, 20.0, 30.0, 40.0));
+
+        let mut canvas = NdCanvas::new();
+        manager.perform_update(&mut graph, &mut canvas);
+        let effects = manager.drain_notification_effects();
+
+        assert_eq!(
+            effects,
+            vec![
+                NotificationEffect::EmitUpdate(UpdateEvent::Validating),
+                NotificationEffect::EmitUpdate(UpdateEvent::Validated),
+                NotificationEffect::EmitUpdate(UpdateEvent::Painting {
+                    damage: Rectangle::new(10.0, 20.0, 30.0, 40.0),
+                }),
+                NotificationEffect::EmitUpdate(UpdateEvent::Painted {
+                    damage: Rectangle::new(10.0, 20.0, 30.0, 40.0),
+                }),
+            ]
+        );
     }
 }

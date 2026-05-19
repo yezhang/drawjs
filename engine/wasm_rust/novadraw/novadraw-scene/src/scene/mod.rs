@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use super::figure::Updatable;
 use super::layout::LayoutManager;
-use super::update::UpdateManager;
+use super::update::{FigureEvent, NotificationEffect, NotificationQueue, UpdateManager};
 use crate::PendingMutation;
 
 // 渲染模块
@@ -19,7 +19,7 @@ pub mod render_iterative;
 pub mod render_recursive;
 
 pub use render_iterative::FigureRendererIter;
-pub use render_recursive::{FigureRenderer, FigureGraphRenderRef};
+pub use render_recursive::{FigureGraphRenderRef, FigureRenderer};
 
 #[cfg(test)]
 pub mod bounds_test;
@@ -202,6 +202,7 @@ pub struct FigureGraph {
     mouse_target: Option<BlockId>,
     focus_owner: Option<BlockId>,
     captured: Option<BlockId>,
+    notification_effects: NotificationQueue,
 }
 
 impl FigureGraph {
@@ -235,7 +236,29 @@ impl FigureGraph {
             mouse_target: None,
             focus_owner: None,
             captured: None,
+            notification_effects: NotificationQueue::new(),
         }
+    }
+
+    /// 返回当前积累的通知 effect。
+    ///
+    /// 这些 effect 只描述已经发生的语义变化，不在产生时立即执行回调。
+    /// 后续完整 listener/subscription 系统应在稳定事务边界 drain/flush 它们。
+    pub fn notification_effects(&self) -> &[NotificationEffect] {
+        self.notification_effects.effects()
+    }
+
+    /// 排空通知 effect 队列。
+    pub fn drain_notification_effects(&mut self) -> Vec<NotificationEffect> {
+        self.notification_effects.drain()
+    }
+
+    fn notify_block_changed(&mut self, block_id: BlockId) {
+        self.notification_effects.notify(block_id);
+    }
+
+    fn emit_figure_event(&mut self, event: FigureEvent) {
+        self.notification_effects.emit_figure(event);
     }
 
     /// 设置内容块
@@ -792,10 +815,15 @@ impl FigureGraph {
     pub fn find_mouse_event_target_at(&self, x: f64, y: f64) -> Option<BlockId> {
         tracing::info!(
             "[FigureGraph] find_mouse_event_target_at: coords=({:.1}, {:.1}), contents={:?}",
-            x, y, self.contents
+            x,
+            y,
+            self.contents
         );
         let result = self.find_mouse_event_target_from(self.contents.unwrap_or(self.root), (x, y));
-        tracing::info!("[FigureGraph] find_mouse_event_target_at: result={:?}", result);
+        tracing::info!(
+            "[FigureGraph] find_mouse_event_target_at: result={:?}",
+            result
+        );
         result
     }
 
@@ -1086,27 +1114,54 @@ impl FigureGraph {
         let mut stack = vec![block_id];
 
         while let Some(id) = stack.pop() {
-            if let Some(block) = self.blocks.get_mut(id) {
-                // 修改当前节点的 bounds (x, y)
-                let current_bounds = block.figure.bounds();
-                block.figure.set_bounds(
-                    current_bounds.x + dx,
-                    current_bounds.y + dy,
-                    current_bounds.width,
-                    current_bounds.height,
-                );
+            let Some((old_bounds, new_bounds, use_local_coordinates, children)) =
+                self.blocks.get_mut(id).map(|block| {
+                    // 修改当前节点的 bounds (x, y)
+                    let old_bounds = block.figure.bounds();
+                    let new_bounds = Rectangle::new(
+                        old_bounds.x + dx,
+                        old_bounds.y + dy,
+                        old_bounds.width,
+                        old_bounds.height,
+                    );
+                    block.figure.set_bounds(
+                        new_bounds.x,
+                        new_bounds.y,
+                        new_bounds.width,
+                        new_bounds.height,
+                    );
 
-                // 检查是否使用本地坐标模式
-                if block.figure.use_local_coordinates() {
-                    // 本地坐标模式：不传播，但可能需要触发事件
-                    // TODO: 实现 fireCoordinateSystemChanged()
-                    continue;
-                }
+                    (
+                        old_bounds,
+                        new_bounds,
+                        block.figure.use_local_coordinates(),
+                        block.children.clone(),
+                    )
+                })
+            else {
+                continue;
+            };
 
-                // 默认模式：将所有子节点加入栈进行平移
-                for &child_id in &block.children {
-                    stack.push(child_id);
-                }
+            self.notify_block_changed(id);
+            self.emit_figure_event(FigureEvent::FigureMoved {
+                block_id: id,
+                old_bounds,
+                new_bounds,
+            });
+
+            // 检查是否使用本地坐标模式
+            if use_local_coordinates {
+                self.emit_figure_event(FigureEvent::CoordinateSystemChanged {
+                    block_id: id,
+                    old_bounds,
+                    new_bounds,
+                });
+                continue;
+            }
+
+            // 默认模式：将所有子节点加入栈进行平移
+            for child_id in children {
+                stack.push(child_id);
             }
         }
     }
@@ -1318,16 +1373,20 @@ impl FigureGraph {
         let block = self.blocks.get(block_id)?;
         if !block.is_visible || !block.is_enabled {
             tracing::info!(
-            "[FigureGraph] find_mouse_event_target_from: block_id={:?} skipped (invisible/disabled)",
-            block_id
-        );
+                "[FigureGraph] find_mouse_event_target_from: block_id={:?} skipped (invisible/disabled)",
+                block_id
+            );
             return None;
         }
 
         let contains = block.figure.contains_point(point.0, point.1);
         tracing::trace!(
             "[FigureGraph] find_mouse_event_target_from: block_id={:?}, bounds={:?}, contains_point=({}, {})={}",
-            block_id, block.figure.bounds(), point.0, point.1, contains
+            block_id,
+            block.figure.bounds(),
+            point.0,
+            point.1,
+            contains
         );
 
         if !contains {
@@ -1362,7 +1421,10 @@ impl FigureGraph {
         {
             self.mouse_target = None;
         }
-        if self.captured.is_some_and(|id| self.is_in_subtree(id, subtree_root)) {
+        if self
+            .captured
+            .is_some_and(|id| self.is_in_subtree(id, subtree_root))
+        {
             self.captured = None;
         }
         if self
@@ -1445,7 +1507,7 @@ impl Default for FigureGraph {
 mod tests {
     use super::super::figure::{Bounded, RectangleFigure, Shape, Updatable};
     use crate::scene::FigureGraphRenderRef;
-    use crate::{Rectangle, FigureGraph};
+    use crate::{FigureEvent, FigureGraph, NotificationEffect, Rectangle};
     use novadraw_core::Color as NovadrawCoreColor;
     use novadraw_render::NdCanvas;
 
@@ -1925,6 +1987,74 @@ mod tests {
         let child_bounds = scene.blocks.get(child_id).unwrap().figure_bounds();
         assert_eq!(child_bounds.x, 20.0, "子节点 x 应为 20 (10 + 10)");
         assert_eq!(child_bounds.y, 30.0, "子节点 y 应为 30 (10 + 20)");
+    }
+
+    #[test]
+    fn test_prim_translate_records_figure_moved_effects() {
+        let mut scene = FigureGraph::new();
+        let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 100.0, 100.0)));
+        let child_id = scene.add_child_to(
+            parent_id,
+            Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+        );
+
+        scene.drain_notification_effects();
+        scene.prim_translate(parent_id, 10.0, 20.0);
+
+        let effects = scene.drain_notification_effects();
+
+        assert!(effects.contains(&NotificationEffect::Notify {
+            block_id: parent_id
+        }));
+        assert!(effects.contains(&NotificationEffect::Notify { block_id: child_id }));
+        assert!(
+            effects.contains(&NotificationEffect::EmitFigure(FigureEvent::FigureMoved {
+                block_id: parent_id,
+                old_bounds: Rectangle::new(0.0, 0.0, 100.0, 100.0),
+                new_bounds: Rectangle::new(10.0, 20.0, 100.0, 100.0),
+            }))
+        );
+        assert!(
+            effects.contains(&NotificationEffect::EmitFigure(FigureEvent::FigureMoved {
+                block_id: child_id,
+                old_bounds: Rectangle::new(10.0, 10.0, 50.0, 50.0),
+                new_bounds: Rectangle::new(20.0, 30.0, 50.0, 50.0),
+            }))
+        );
+    }
+
+    #[test]
+    fn test_prim_translate_records_coordinate_system_changed_effect() {
+        let mut scene = FigureGraph::new();
+        let root_id = scene.set_contents(Box::new(TestCoordinateRootFigure::new(
+            0.0, 0.0, 100.0, 100.0,
+        )));
+        let child_id = scene.add_child_to(
+            root_id,
+            Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+        );
+
+        scene.drain_notification_effects();
+        scene.prim_translate(root_id, 5.0, 10.0);
+
+        let effects = scene.drain_notification_effects();
+        let child_bounds = scene.blocks.get(child_id).unwrap().figure_bounds();
+
+        assert_eq!(child_bounds, Rectangle::new(10.0, 10.0, 50.0, 50.0));
+        assert!(effects.contains(&NotificationEffect::EmitFigure(
+            FigureEvent::CoordinateSystemChanged {
+                block_id: root_id,
+                old_bounds: Rectangle::new(0.0, 0.0, 100.0, 100.0),
+                new_bounds: Rectangle::new(5.0, 10.0, 100.0, 100.0),
+            }
+        )));
+        assert!(!effects.iter().any(|effect| {
+            matches!(
+                effect,
+                NotificationEffect::EmitFigure(FigureEvent::FigureMoved { block_id, .. })
+                    if *block_id == child_id
+            )
+        }));
     }
 
     /// 测试 prim_translate 嵌套传播

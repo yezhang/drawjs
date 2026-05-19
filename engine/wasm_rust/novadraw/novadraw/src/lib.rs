@@ -23,12 +23,13 @@ pub use novadraw_render::traits;
 #[cfg(feature = "vello")]
 pub use novadraw_scene::{
     BasicEventDispatcher, BlockId, Border, BorderLayout, BorderRegion, Bounded, Direction,
-    DispatchContext, EllipseFigure, Event, EventDispatcher, Figure, FigureBlock, FigureGraph,
-    FigureRenderer, FillLayout, FlowDirection, FlowLayout, LayoutManager, LineBorder,
-    MarginBorder, MouseButton, MouseEvent, MouseEventKind, MutationContext, NovadrawContext,
-    NovadrawSystem, PendingMutation, PendingMutations, Point, PolygonFigure, PolylineFigure,
-    Rectangle, RectangleBorder, RectangleFigure, RootFigure, RoundedRectangleFigure, SceneHost,
-    SceneUpdateManager, Shape, TriangleFigure, UpdateManager, Updatable, Viewport, XYLayout,
+    DispatchContext, EllipseFigure, Event, EventDispatcher, Figure, FigureBlock, FigureEvent,
+    FigureGraph, FigureRenderer, FillLayout, FlowDirection, FlowLayout, LayoutManager, LineBorder,
+    MarginBorder, MouseButton, MouseEvent, MouseEventKind, MutationContext, NotificationEffect,
+    NotificationQueue, NovadrawContext, NovadrawSystem, PendingMutation, PendingMutations, Point,
+    PolygonFigure, PolylineFigure, Rectangle, RectangleBorder, RectangleFigure, RootFigure,
+    RoundedRectangleFigure, SceneHost, SceneUpdateManager, Shape, TriangleFigure, Updatable,
+    UpdateEvent, UpdateManager, Viewport, XYLayout,
 };
 
 #[cfg(feature = "vello")]

@@ -39,10 +39,16 @@ mod listener;
 mod repair;
 
 pub use deferred::SceneUpdateManager;
-pub use listener::{UpdateEvent, UpdateListener};
+pub use listener::{
+    FigureEvent, NotificationEffect, NotificationQueue, UpdateEvent, UpdateListener,
+};
 
 pub trait UpdateManager: Send + Sync {
-    fn add_dirty_region(&mut self, block_id: crate::scene::BlockId, rect: novadraw_geometry::Rectangle);
+    fn add_dirty_region(
+        &mut self,
+        block_id: crate::scene::BlockId,
+        rect: novadraw_geometry::Rectangle,
+    );
     fn add_invalid_figure(&mut self, block_id: crate::scene::BlockId);
     fn drain_invalid_blocks(&mut self) -> Vec<crate::scene::BlockId>;
     fn perform_update(

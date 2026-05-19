@@ -35,13 +35,16 @@ pub use figure::{
     Bounded, Direction, EllipseFigure, Figure, PolygonFigure, PolylineFigure, RectangleFigure,
     RootFigure, RoundedRectangleFigure, Shape, TriangleFigure, Updatable,
 };
-pub use mutation::{MutationContext, PendingMutation, PendingMutations};
 pub use layout::{
     BorderLayout, BorderRegion, FillLayout, FlowDirection, FlowLayout, LayoutManager, XYLayout,
 };
+pub use mutation::{MutationContext, PendingMutation, PendingMutations};
 pub use novadraw_geometry::{Point, Rectangle};
-pub use scene::{BlockId, FigureBlock, FigureRenderer, FigureGraph};
+pub use scene::{BlockId, FigureBlock, FigureGraph, FigureRenderer};
 pub use scene_host::SceneHost;
 pub use system::NovadrawSystem;
-pub use update::{SceneUpdateManager, UpdateEvent, UpdateListener, UpdateManager};
+pub use update::{
+    FigureEvent, NotificationEffect, NotificationQueue, SceneUpdateManager, UpdateEvent,
+    UpdateListener, UpdateManager,
+};
 pub use viewport::Viewport;
