@@ -1,19 +1,12 @@
 use std::{sync::Arc, time::Duration};
 
 use novadraw::{
-    BasicEventDispatcher, BlockId, DispatchContext, Event, EventDispatcher, MouseButton,
-    MouseEventKind, NdCanvas, NovadrawContext, NovadrawSystem, PendingMutations, Rectangle,
-    RenderBackend, SceneHost, SceneUpdateManager, UpdateManager, backend::vello::WinitWindowProxy,
+    BasicEventDispatcher, BlockId, EventDispatcher, FigureEvent, MouseButton, NdCanvas,
+    NovadrawSystem, PendingMutations, RenderBackend, SceneDispatchContext, SceneHost,
+    SceneUpdateManager, UpdateEvent, UpdateListener, backend::vello::WinitWindowProxy,
 };
 
-use crate::scene_manager::{
-    SceneManager,
-    mouse_simulator::{
-        CGEventMouseSimulator, MouseButton as SimMouseButton, MouseSimulator,
-        ScreenPositionConverter,
-    },
-    scene_host::WinitSceneHost,
-};
+use crate::scene_manager::{SceneManager, scene_host::WinitSceneHost};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RawPointerInput {
@@ -53,11 +46,14 @@ pub struct InteractionTrace {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InteractionStep {
+    #[cfg(test)]
     Move(RawPointerInput),
+    #[cfg(test)]
     Press {
         input: RawPointerInput,
         button: MouseButton,
     },
+    #[cfg(test)]
     Release {
         input: RawPointerInput,
         button: MouseButton,
@@ -69,9 +65,6 @@ pub enum InteractionStep {
     Click {
         input: RawPointerInput,
         button: MouseButton,
-    },
-    Wait {
-        duration_ms: u64,
     },
 }
 
@@ -95,9 +88,13 @@ impl Default for EditorInteractionCore {
 
 impl EditorInteractionCore {
     pub fn new() -> Self {
+        let mut update_manager = SceneUpdateManager::new();
+
+        update_manager.add_listener(Box::new(TraceUpdateListener));
+
         Self {
             scene_manager: SceneManager::new(),
-            update_manager: SceneUpdateManager::new(),
+            update_manager,
             dispatcher: BasicEventDispatcher,
             pending_mutations: PendingMutations::new(),
         }
@@ -117,6 +114,7 @@ impl EditorInteractionCore {
         } else {
             1.0
         };
+        // Winit 输入是窗口物理像素；分发到场景前统一转换到入口节点坐标域使用的逻辑坐标。
         LogicalPointerPosition {
             x: input.physical_x / scale_factor,
             y: input.physical_y / scale_factor,
@@ -153,22 +151,28 @@ impl EditorInteractionCore {
     }
 
     pub fn dispatch_mouse_moved(&mut self, x: f64, y: f64) {
-        tracing::info!("[MouseEvent] Moved - scene_coords=({:.1}, {:.1})", x, y);
-        let mut ctx =
-            EditorDispatchContext::new(&mut self.scene_manager.scene, &mut self.update_manager);
+        tracing::info!("[MouseEvent] Moved - entry_coords=({:.1}, {:.1})", x, y);
+        let mut ctx = SceneDispatchContext::new(
+            &mut self.scene_manager.scene,
+            &mut self.update_manager,
+            &mut self.pending_mutations,
+        );
         self.dispatcher.dispatch_mouse_moved(&mut ctx, x, y);
         self.apply_pending_mutations();
     }
 
     pub fn dispatch_mouse_pressed(&mut self, x: f64, y: f64, button: MouseButton) {
         tracing::info!(
-            "[MouseEvent] Pressed - scene_coords=({:.1}, {:.1}), button={:?}",
+            "[MouseEvent] Pressed - entry_coords=({:.1}, {:.1}), button={:?}",
             x,
             y,
             button
         );
-        let mut ctx =
-            EditorDispatchContext::new(&mut self.scene_manager.scene, &mut self.update_manager);
+        let mut ctx = SceneDispatchContext::new(
+            &mut self.scene_manager.scene,
+            &mut self.update_manager,
+            &mut self.pending_mutations,
+        );
         self.dispatcher
             .dispatch_mouse_pressed(&mut ctx, x, y, button);
         self.apply_pending_mutations();
@@ -176,35 +180,19 @@ impl EditorInteractionCore {
 
     pub fn dispatch_mouse_released(&mut self, x: f64, y: f64, button: MouseButton) {
         tracing::info!(
-            "[MouseEvent] Released - scene_coords=({:.1}, {:.1}), button={:?}",
+            "[MouseEvent] Released - entry_coords=({:.1}, {:.1}), button={:?}",
             x,
             y,
             button
         );
-        let mut ctx =
-            EditorDispatchContext::new(&mut self.scene_manager.scene, &mut self.update_manager);
+        let mut ctx = SceneDispatchContext::new(
+            &mut self.scene_manager.scene,
+            &mut self.update_manager,
+            &mut self.pending_mutations,
+        );
         self.dispatcher
             .dispatch_mouse_released(&mut ctx, x, y, button);
         self.apply_pending_mutations();
-    }
-
-    pub fn dispatch_hover(&mut self, x: f64, y: f64, duration_ms: u64) {
-        tracing::info!(
-            "[Internal Hover] dispatching hover at ({:.1}, {:.1}) for {} ms",
-            x,
-            y,
-            duration_ms
-        );
-        self.dispatch_mouse_moved(x, y);
-        std::thread::sleep(Duration::from_millis(duration_ms));
-        tracing::info!("[Internal Hover] completed");
-    }
-
-    pub fn dispatch_click(&mut self, x: f64, y: f64) {
-        tracing::info!("[Internal Click] dispatching click at ({:.1}, {:.1})", x, y);
-        self.dispatch_mouse_pressed(x, y, MouseButton::Left);
-        self.dispatch_mouse_released(x, y, MouseButton::Left);
-        tracing::info!("[Internal Click] completed");
     }
 
     pub fn dispatch_raw_mouse_moved(&mut self, input: RawPointerInput) -> InteractionTrace {
@@ -269,14 +257,17 @@ impl EditorInteractionCore {
         let mut report = InteractionReport::default();
         for step in steps {
             match *step {
+                #[cfg(test)]
                 InteractionStep::Move(input) => {
                     report.traces.push(self.dispatch_raw_mouse_moved(input));
                 }
+                #[cfg(test)]
                 InteractionStep::Press { input, button } => {
                     report
                         .traces
                         .push(self.dispatch_raw_mouse_pressed(input, button));
                 }
+                #[cfg(test)]
                 InteractionStep::Release { input, button } => {
                     report
                         .traces
@@ -294,9 +285,6 @@ impl EditorInteractionCore {
                         .traces
                         .push(self.dispatch_raw_mouse_released(input, button));
                 }
-                InteractionStep::Wait { duration_ms } => {
-                    std::thread::sleep(Duration::from_millis(duration_ms));
-                }
             }
         }
         report
@@ -313,8 +301,7 @@ impl EditorInteractionCore {
 pub struct WinitNovadrawSystem {
     core: EditorInteractionCore,
     scene_host: WinitSceneHost,
-    mouse_simulator: Option<CGEventMouseSimulator>,
-    position_converter: Option<ScreenPositionConverter>,
+    use_iterative_render: bool,
 }
 
 impl WinitNovadrawSystem {
@@ -322,8 +309,7 @@ impl WinitNovadrawSystem {
         Self {
             core: EditorInteractionCore::new(),
             scene_host: WinitSceneHost::new(window_proxy),
-            mouse_simulator: CGEventMouseSimulator::new(),
-            position_converter: None,
+            use_iterative_render: false,
         }
     }
 
@@ -331,66 +317,28 @@ impl WinitNovadrawSystem {
         self.core.scene_manager()
     }
 
-    pub fn scene_manager_mut(&mut self) -> &mut SceneManager {
-        self.core.scene_manager_mut()
+    pub fn switch_scene(&mut self, scene_type: crate::scene_manager::SceneType) {
+        self.core.scene_manager_mut().switch_scene(scene_type);
+        self.scene_host.request_update();
     }
 
-    pub fn set_position_converter(&mut self, converter: ScreenPositionConverter) {
-        self.position_converter = Some(converter);
-    }
-
-    pub fn sim_click(&mut self, logical_x: f64, logical_y: f64) {
-        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter)
-        {
-            let screen_pos = converter.logical_to_screen(logical_x, logical_y);
-            let btn = SimMouseButton::Left;
-            sim.click(screen_pos, btn);
+    pub fn translate_contents(&mut self, dx: f64, dy: f64) -> bool {
+        if let Some(root_id) = self.core.scene_manager.scene().get_contents() {
+            self.core
+                .scene_manager_mut()
+                .scene_mut()
+                .prim_translate(root_id, dx, dy);
+            self.scene_host.request_update();
+            true
         } else {
-            tracing::warn!("MouseSimulator not available - run with Accessibility permissions");
+            false
         }
     }
 
-    pub fn sim_double_click(&mut self, logical_x: f64, logical_y: f64) {
-        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter)
-        {
-            let screen_pos = converter.logical_to_screen(logical_x, logical_y);
-            let btn = SimMouseButton::Left;
-            sim.double_click(screen_pos, btn);
-        } else {
-            tracing::warn!("MouseSimulator not available - run with Accessibility permissions");
-        }
-    }
-
-    pub fn sim_drag(&mut self, logical_x1: f64, logical_y1: f64, logical_x2: f64, logical_y2: f64) {
-        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter)
-        {
-            let start = converter.logical_to_screen(logical_x1, logical_y1);
-            let end = converter.logical_to_screen(logical_x2, logical_y2);
-            let btn = SimMouseButton::Left;
-            sim.drag(start, end, btn);
-        } else {
-            tracing::warn!("MouseSimulator not available - run with Accessibility permissions");
-        }
-    }
-
-    pub fn sim_move_to(&mut self, logical_x: f64, logical_y: f64) {
-        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter)
-        {
-            let screen_pos = converter.logical_to_screen(logical_x, logical_y);
-            sim.move_to(screen_pos);
-        } else {
-            tracing::warn!("MouseSimulator not available - run with Accessibility permissions");
-        }
-    }
-
-    pub fn sim_hover(&mut self, logical_x: f64, logical_y: f64, duration_ms: u64) {
-        if let (Some(sim), Some(converter)) = (&mut self.mouse_simulator, &self.position_converter)
-        {
-            let screen_pos = converter.logical_to_screen(logical_x, logical_y);
-            sim.hover(screen_pos, duration_ms);
-        } else {
-            tracing::warn!("MouseSimulator not available - run with Accessibility permissions");
-        }
+    pub fn toggle_iterative_render(&mut self) -> bool {
+        self.use_iterative_render = !self.use_iterative_render;
+        self.scene_host.request_update();
+        self.use_iterative_render
     }
 
     fn schedule_update_if_transitioned(&self, was_queued: bool) {
@@ -399,11 +347,15 @@ impl WinitNovadrawSystem {
         }
     }
 
-    pub fn dispatch_raw_mouse_moved(&mut self, input: RawPointerInput) -> InteractionTrace {
+    fn run_update_transaction<R>(&mut self, f: impl FnOnce(&mut EditorInteractionCore) -> R) -> R {
         let was_queued = self.core.update_manager.is_update_queued();
-        let trace = self.core.dispatch_raw_mouse_moved(input);
+        let result = f(&mut self.core);
         self.schedule_update_if_transitioned(was_queued);
-        trace
+        result
+    }
+
+    pub fn dispatch_raw_mouse_moved(&mut self, input: RawPointerInput) -> InteractionTrace {
+        self.run_update_transaction(|core| core.dispatch_raw_mouse_moved(input))
     }
 
     pub fn dispatch_raw_mouse_pressed(
@@ -411,10 +363,7 @@ impl WinitNovadrawSystem {
         input: RawPointerInput,
         button: MouseButton,
     ) -> InteractionTrace {
-        let was_queued = self.core.update_manager.is_update_queued();
-        let trace = self.core.dispatch_raw_mouse_pressed(input, button);
-        self.schedule_update_if_transitioned(was_queued);
-        trace
+        self.run_update_transaction(|core| core.dispatch_raw_mouse_pressed(input, button))
     }
 
     pub fn dispatch_raw_mouse_released(
@@ -422,75 +371,19 @@ impl WinitNovadrawSystem {
         input: RawPointerInput,
         button: MouseButton,
     ) -> InteractionTrace {
-        let was_queued = self.core.update_manager.is_update_queued();
-        let trace = self.core.dispatch_raw_mouse_released(input, button);
-        self.schedule_update_if_transitioned(was_queued);
-        trace
+        self.run_update_transaction(|core| core.dispatch_raw_mouse_released(input, button))
     }
 
     pub fn run_interaction_script(&mut self, steps: &[InteractionStep]) -> InteractionReport {
-        let was_queued = self.core.update_manager.is_update_queued();
-        let report = self.core.run_interaction_script(steps);
-        self.schedule_update_if_transitioned(was_queued);
-        report
-    }
-
-    pub fn dispatch_hover(&mut self, x: f64, y: f64, duration_ms: u64) {
-        let was_queued = self.core.update_manager.is_update_queued();
-        self.core.dispatch_hover(x, y, duration_ms);
-        self.schedule_update_if_transitioned(was_queued);
-    }
-
-    pub fn dispatch_click(&mut self, x: f64, y: f64) {
-        let was_queued = self.core.update_manager.is_update_queued();
-        self.core.dispatch_click(x, y);
-        self.schedule_update_if_transitioned(was_queued);
-    }
-
-    pub fn dispatch_mouse_moved(&mut self, x: f64, y: f64) {
-        let was_queued = self.core.update_manager.is_update_queued();
-        self.core.dispatch_mouse_moved(x, y);
-        self.schedule_update_if_transitioned(was_queued);
-    }
-
-    pub fn dispatch_mouse_pressed(&mut self, x: f64, y: f64, button: MouseButton) {
-        let was_queued = self.core.update_manager.is_update_queued();
-        self.core.dispatch_mouse_pressed(x, y, button);
-        self.schedule_update_if_transitioned(was_queued);
-    }
-
-    pub fn dispatch_mouse_released(&mut self, x: f64, y: f64, button: MouseButton) {
-        let was_queued = self.core.update_manager.is_update_queued();
-        self.core.dispatch_mouse_released(x, y, button);
-        self.schedule_update_if_transitioned(was_queued);
+        self.run_update_transaction(|core| core.run_interaction_script(steps))
     }
 
     pub fn request_update(&self) {
         self.scene_host.request_update();
     }
-
-    pub fn set_use_iterative_render(&mut self, value: bool) {
-        self.scene_host.set_use_iterative_render(value);
-    }
-
-    pub fn use_iterative_render(&self) -> bool {
-        self.scene_host.use_iterative_render()
-    }
 }
 
 impl NovadrawSystem for WinitNovadrawSystem {
-    fn scene(&mut self) -> &mut novadraw::FigureGraph {
-        &mut self.core.scene_manager.scene
-    }
-
-    fn update_manager(&mut self) -> &mut dyn UpdateManager {
-        &mut self.core.update_manager
-    }
-
-    fn dispatcher(&mut self) -> &mut dyn EventDispatcher {
-        &mut self.core.dispatcher
-    }
-
     fn render(&mut self, renderer: &mut impl RenderBackend) -> NdCanvas {
         self.scene_host.execute_update(
             &mut self.core.scene_manager.scene,
@@ -508,138 +401,40 @@ impl NovadrawSystem for WinitNovadrawSystem {
     }
 }
 
-struct EditorDispatchContext<'a> {
-    scene: &'a mut novadraw::FigureGraph,
-    update_manager: &'a mut dyn UpdateManager,
-}
+struct TraceUpdateListener;
 
-impl<'a> EditorDispatchContext<'a> {
-    fn new(
-        scene: &'a mut novadraw::FigureGraph,
-        update_manager: &'a mut dyn UpdateManager,
-    ) -> Self {
-        Self {
-            scene,
-            update_manager,
-        }
-    }
-}
-
-impl DispatchContext for EditorDispatchContext<'_> {
-    fn find_mouse_event_target_at(&self, x: f64, y: f64) -> Option<novadraw::BlockId> {
-        self.scene.find_mouse_event_target_at(x, y)
+impl UpdateListener for TraceUpdateListener {
+    fn on_update_event(&self, event: UpdateEvent) {
+        tracing::info!("[Notification] update event: {:?}", event);
     }
 
-    fn mouse_target(&self) -> Option<novadraw::BlockId> {
-        self.scene.mouse_target()
+    fn on_figure_event(&self, event: FigureEvent) {
+        tracing::info!("[Notification] figure event: {:?}", event);
     }
 
-    fn set_mouse_target(&mut self, id: Option<novadraw::BlockId>) {
-        self.scene.set_mouse_target(id);
-    }
-
-    fn focus_owner(&self) -> Option<novadraw::BlockId> {
-        self.scene.focus_owner()
-    }
-
-    fn set_focus_owner(&mut self, id: Option<novadraw::BlockId>) {
-        self.scene.set_focus_owner(id);
-    }
-
-    fn captured(&self) -> Option<novadraw::BlockId> {
-        self.scene.captured()
-    }
-
-    fn set_captured(&mut self, id: Option<novadraw::BlockId>) {
-        self.scene.set_captured(id);
-    }
-
-    fn dispatch_to_target(&mut self, target_id: Option<novadraw::BlockId>, event: &Event) -> bool {
-        let Some(target_id) = target_id else {
-            return false;
-        };
-        let scene = &mut self.scene;
-        let update_manager = &mut self.update_manager;
-        let Some(block) = scene.blocks.get(target_id) else {
-            return false;
-        };
-        let bounds = block.figure_bounds();
-        let mut ctx = EditorNovadrawContext::new(target_id, bounds, *update_manager);
-
-        match event {
-            Event::Mouse(mouse_event) => match mouse_event.kind {
-                MouseEventKind::Pressed => block.figure.on_mouse_pressed(mouse_event, &mut ctx),
-                MouseEventKind::Released => block.figure.on_mouse_released(mouse_event, &mut ctx),
-                MouseEventKind::Moved => block.figure.on_mouse_moved(mouse_event, &mut ctx),
-                MouseEventKind::Entered => block.figure.on_mouse_entered(mouse_event, &mut ctx),
-                MouseEventKind::Exited => block.figure.on_mouse_exited(mouse_event, &mut ctx),
-            },
-        }
-    }
-}
-
-struct EditorNovadrawContext<'a> {
-    target_id: novadraw::BlockId,
-    bounds: Rectangle,
-    update_manager: &'a mut dyn UpdateManager,
-}
-
-impl<'a> EditorNovadrawContext<'a> {
-    fn new(
-        target_id: novadraw::BlockId,
-        bounds: Rectangle,
-        update_manager: &'a mut dyn UpdateManager,
-    ) -> Self {
-        Self {
-            target_id,
-            bounds,
-            update_manager,
-        }
-    }
-}
-
-impl NovadrawContext for EditorNovadrawContext<'_> {
-    fn target_id(&self) -> novadraw::BlockId {
-        self.target_id
-    }
-
-    fn repaint(&mut self, rect: Option<Rectangle>) {
-        self.update_manager
-            .add_dirty_region(self.target_id, rect.unwrap_or(self.bounds));
-    }
-
-    fn invalidate(&mut self) {
-        self.update_manager.add_invalid_figure(self.target_id);
+    fn on_notify(&self, block_id: BlockId) {
+        tracing::info!("[Notification] notify: {:?}", block_id);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
-
     use novadraw::{
-        Bounded, Color, FigureGraph, MouseEvent, NovadrawContext, Shape, Updatable,
+        Bounded, Color, FigureGraph, MouseEvent, NdCanvas, NovadrawContext, Rectangle,
+        RenderCommandKind, Shape, Updatable,
         command::{LineCap, LineJoin},
     };
 
     use super::*;
     use crate::scene_manager::SceneType;
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-    struct TestFigureState {
-        hovered: bool,
-        pressed: bool,
-        selected: bool,
-    }
-
     struct TestInteractiveFigure {
         bounds: Rectangle,
-        state: Arc<Mutex<TestFigureState>>,
     }
 
     impl TestInteractiveFigure {
-        fn new(bounds: Rectangle, state: Arc<Mutex<TestFigureState>>) -> Self {
-            Self { bounds, state }
+        fn new(bounds: Rectangle) -> Self {
+            Self { bounds }
         }
     }
 
@@ -692,35 +487,27 @@ mod tests {
             true
         }
 
-        fn on_mouse_pressed(&self, _event: &MouseEvent, _ctx: &mut dyn NovadrawContext) -> bool {
-            let mut state = self.state.lock().unwrap();
-            state.pressed = true;
+        fn on_mouse_pressed(&self, event: &MouseEvent, ctx: &mut dyn NovadrawContext) -> bool {
+            if event.button == MouseButton::Left {
+                ctx.select_target();
+            }
             true
         }
 
         fn on_mouse_released(&self, _event: &MouseEvent, _ctx: &mut dyn NovadrawContext) -> bool {
-            let mut state = self.state.lock().unwrap();
-            state.pressed = false;
-            state.selected = true;
             true
         }
 
         fn on_mouse_entered(&self, _event: &MouseEvent, _ctx: &mut dyn NovadrawContext) -> bool {
-            let mut state = self.state.lock().unwrap();
-            state.hovered = true;
             true
         }
 
         fn on_mouse_exited(&self, _event: &MouseEvent, _ctx: &mut dyn NovadrawContext) -> bool {
-            let mut state = self.state.lock().unwrap();
-            state.hovered = false;
-            state.pressed = false;
             true
         }
     }
 
-    fn build_test_core() -> (EditorInteractionCore, Arc<Mutex<TestFigureState>>, BlockId) {
-        let state = Arc::new(Mutex::new(TestFigureState::default()));
+    fn build_test_core() -> (EditorInteractionCore, BlockId) {
         let mut scene = FigureGraph::new();
         let root_id = scene.set_contents(Box::new(novadraw::RectangleFigure::new_with_color(
             0.0,
@@ -731,17 +518,70 @@ mod tests {
         )));
         let target_id = scene.add_child_to(
             root_id,
-            Box::new(TestInteractiveFigure::new(
-                Rectangle::new(100.0, 100.0, 100.0, 100.0),
-                Arc::clone(&state),
-            )),
+            Box::new(TestInteractiveFigure::new(Rectangle::new(
+                100.0, 100.0, 100.0, 100.0,
+            ))),
         );
         let mut core = EditorInteractionCore::new();
         core.scene_manager = SceneManager {
             scene,
             current_scene: SceneType::DpiTest,
         };
-        (core, state, target_id)
+        (core, target_id)
+    }
+
+    fn build_coordinate_root_test_core() -> (EditorInteractionCore, BlockId) {
+        let mut scene = FigureGraph::new();
+        let root_id = scene.set_contents(Box::new(novadraw::RectangleFigure::new_with_color(
+            0.0,
+            0.0,
+            400.0,
+            300.0,
+            Color::rgba(0.0, 0.0, 0.0, 0.0),
+        )));
+        let coordinate_root_id = scene.add_child_to(
+            root_id,
+            Box::new(
+                novadraw::RectangleFigure::new_with_color(
+                    100.0,
+                    50.0,
+                    200.0,
+                    150.0,
+                    Color::rgba(0.2, 0.2, 0.2, 0.0),
+                )
+                .with_local_coordinates(true),
+            ),
+        );
+        let target_id = scene.add_child_to(
+            coordinate_root_id,
+            Box::new(TestInteractiveFigure::new(Rectangle::new(
+                20.0, 30.0, 40.0, 40.0,
+            ))),
+        );
+        let mut core = EditorInteractionCore::new();
+        core.scene_manager = SceneManager {
+            scene,
+            current_scene: SceneType::DpiTest,
+        };
+        (core, target_id)
+    }
+
+    const TEST_SELECTION_OUTLINE_COLOR: Color = Color {
+        r: 0.98,
+        g: 0.86,
+        b: 0.22,
+        a: 1.0,
+    };
+    const TEST_SELECTION_OUTLINE_STROKE_WIDTH: f64 = 4.0;
+
+    fn has_selection_stroke(canvas: &NdCanvas) -> bool {
+        canvas.commands().iter().any(|command| match &command.kind {
+            RenderCommandKind::StrokeRect { color, width, .. } => {
+                *color == TEST_SELECTION_OUTLINE_COLOR
+                    && (*width - TEST_SELECTION_OUTLINE_STROKE_WIDTH).abs() < f64::EPSILON
+            }
+            _ => false,
+        })
     }
 
     #[test]
@@ -753,7 +593,7 @@ mod tests {
 
     #[test]
     fn test_hover_script_hits_expected_target() {
-        let (mut core, state, target_id) = build_test_core();
+        let (mut core, target_id) = build_test_core();
         let report = core.run_interaction_script(&[InteractionStep::Hover {
             input: RawPointerInput::new(300.0, 300.0, 2.0),
             duration_ms: 0,
@@ -766,19 +606,14 @@ mod tests {
         );
         assert_eq!(report.traces[0].hit_target_before, Some(target_id));
         assert_eq!(report.traces[0].mouse_target_after, Some(target_id));
-        assert_eq!(
-            *state.lock().unwrap(),
-            TestFigureState {
-                hovered: true,
-                pressed: false,
-                selected: false
-            }
-        );
+        assert!(core.scene_manager.scene.is_hovered(target_id));
+        assert!(!core.scene_manager.scene.is_pressed(target_id));
+        assert!(!core.scene_manager.scene.is_selected(target_id));
     }
 
     #[test]
-    fn test_click_script_updates_figure_state() {
-        let (mut core, state, target_id) = build_test_core();
+    fn test_click_script_updates_graph_interaction_state() {
+        let (mut core, target_id) = build_test_core();
         let report = core.run_interaction_script(&[InteractionStep::Click {
             input: RawPointerInput::new(300.0, 300.0, 2.0),
             button: MouseButton::Left,
@@ -788,19 +623,14 @@ mod tests {
         assert_eq!(report.traces[0].hit_target_before, Some(target_id));
         assert_eq!(report.traces[1].hit_target_before, Some(target_id));
         assert_eq!(report.traces[1].mouse_target_after, Some(target_id));
-        assert_eq!(
-            *state.lock().unwrap(),
-            TestFigureState {
-                hovered: true,
-                pressed: false,
-                selected: true
-            }
-        );
+        assert!(core.scene_manager.scene.is_hovered(target_id));
+        assert!(!core.scene_manager.scene.is_pressed(target_id));
+        assert!(core.scene_manager.scene.is_selected(target_id));
     }
 
     #[test]
     fn test_release_after_dragging_outside_still_reaches_pressed_target() {
-        let (mut core, state, target_id) = build_test_core();
+        let (mut core, target_id) = build_test_core();
         let report = core.run_interaction_script(&[
             InteractionStep::Move(RawPointerInput::new(300.0, 300.0, 2.0)),
             InteractionStep::Press {
@@ -821,13 +651,41 @@ mod tests {
         assert_eq!(report.traces[3].mouse_target_before, Some(target_id));
         assert_eq!(report.traces[3].captured_after, None);
         assert_eq!(report.traces[3].mouse_target_after, None);
+        assert!(!core.scene_manager.scene.is_hovered(target_id));
+        assert!(!core.scene_manager.scene.is_pressed(target_id));
+        assert!(core.scene_manager.scene.is_selected(target_id));
+    }
+
+    #[test]
+    fn test_raw_pointer_dispatch_uses_entry_domain_point_through_coordinate_root() {
+        let (mut core, target_id) = build_coordinate_root_test_core();
+        let report = core.run_interaction_script(&[InteractionStep::Click {
+            input: RawPointerInput::new(260.0, 180.0, 2.0),
+            button: MouseButton::Left,
+        }]);
+
+        assert_eq!(report.traces.len(), 2);
         assert_eq!(
-            *state.lock().unwrap(),
-            TestFigureState {
-                hovered: false,
-                pressed: false,
-                selected: true,
-            }
+            report.traces[0].logical,
+            LogicalPointerPosition { x: 130.0, y: 90.0 }
         );
+        assert_eq!(report.traces[0].hit_target_before, Some(target_id));
+        assert_eq!(report.traces[1].hit_target_before, Some(target_id));
+        assert_eq!(report.traces[1].mouse_target_after, Some(target_id));
+        assert!(core.scene_manager.scene.is_hovered(target_id));
+        assert!(!core.scene_manager.scene.is_pressed(target_id));
+        assert!(core.scene_manager.scene.is_selected(target_id));
+    }
+
+    #[test]
+    fn test_selected_target_renders_highlight_overlay() {
+        let (mut core, target_id) = build_test_core();
+        core.scene_manager.scene.set_selected(Some(target_id));
+
+        let recursive = core.scene_manager.scene.render();
+        let iterative = core.scene_manager.scene.render_iterative();
+
+        assert!(has_selection_stroke(&recursive));
+        assert!(has_selection_stroke(&iterative));
     }
 }

@@ -1,12 +1,11 @@
 //! Winit 平台 SceneHost 实现
 //!
-//! 对应 draw2d: LightweightSystem 中持有 root + UpdateManager + paint() 的职责。
+//! 对应 draw2d: LightweightSystem 的平台 paint 调度入口职责。
 //!
 //! # 调度策略
 //!
-//! 利用 winit 的 `about_to_wait` + `request_redraw` 实现帧合并：
+//! 利用 winit 的 `request_redraw` 实现 request-driven 帧合并：
 //! - `request_update()` → `window.request_redraw()`（幂等，系统自动去重）
-//! - `about_to_wait` → `window.request_redraw()` 保证每帧执行一次
 //! - `RedrawRequested` 事件 → `execute_update()` 执行两阶段更新
 
 use std::sync::Arc;
@@ -19,15 +18,13 @@ use novadraw::{
 
 /// Winit 平台的 SceneHost 实现
 ///
-/// 持有 winit 窗口引用和更新标记，协调 FigureGraph 和渲染器之间的更新流程。
+/// 持有 winit 窗口引用和 redraw 挂起标记，协调平台 redraw 入口。
 ///
-/// 对应 draw2d: DeferredUpdateManager 编排 update + LightweightSystem 持有 root。
+/// 不持有 FigureGraph / UpdateManager；核心对象由组合根在调用 `execute_update()` 时传入。
 pub struct WinitSceneHost {
     window: Arc<WinitWindowProxy>,
     /// 是否有待执行的更新
     update_queued: AtomicBool,
-    /// 是否使用迭代渲染模式（true = 脏区域裁剪，false = 全量重绘）
-    use_iterative_render: bool,
 }
 
 impl WinitSceneHost {
@@ -36,18 +33,7 @@ impl WinitSceneHost {
         Self {
             window,
             update_queued: AtomicBool::new(false),
-            use_iterative_render: false,
         }
-    }
-
-    /// 设置是否使用迭代渲染模式
-    pub fn set_use_iterative_render(&mut self, value: bool) {
-        self.use_iterative_render = value;
-    }
-
-    /// 是否使用迭代渲染模式
-    pub fn use_iterative_render(&self) -> bool {
-        self.use_iterative_render
     }
 }
 
@@ -68,7 +54,7 @@ impl SceneHost for WinitSceneHost {
         update_manager: &mut dyn UpdateManager,
         renderer: &mut impl RenderBackend,
     ) -> NdCanvas {
-        if !self.update_queued.load(Ordering::Relaxed) {
+        if !self.update_queued.load(Ordering::Relaxed) && !update_manager.is_update_queued() {
             return NdCanvas::new();
         }
 

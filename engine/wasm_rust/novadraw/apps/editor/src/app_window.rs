@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
-use crate::scene_manager::{
-    DPI_TEST_PROBE_BOUNDS, SceneType, mouse_simulator::ScreenPositionConverter,
-};
+use crate::scene_manager::{DPI_TEST_PROBE_BOUNDS, SceneType};
 use crate::system::{EditorInteractionCore, RawPointerInput, WinitNovadrawSystem};
 use novadraw::backend::vello::{VelloRenderer, WinitWindowProxy};
 use novadraw::traits::WindowProxy;
@@ -136,20 +134,7 @@ impl ApplicationHandler<()> for GraphicsApp {
         self.renderer = Some(renderer);
 
         if self.system.is_none() {
-            let mut system = WinitNovadrawSystem::new(window_proxy);
-            let win = self.cached_window.as_ref().unwrap();
-            let scale_factor = win.scale_factor();
-            let inner = win.inner_size();
-            let position = win.outer_position().unwrap_or_default();
-            let converter = ScreenPositionConverter::new(
-                scale_factor,
-                position.x as f64,
-                position.y as f64,
-                inner.width as f64,
-                inner.height as f64,
-            );
-            system.set_position_converter(converter);
-            self.system = Some(system);
+            self.system = Some(WinitNovadrawSystem::new(window_proxy));
         }
 
         self.request_update();
@@ -242,10 +227,7 @@ impl ApplicationHandler<()> for GraphicsApp {
                 match event.physical_key {
                     PhysicalKey::Code(KeyCode::Digit0) => {
                         if let Some(system) = &mut self.system {
-                            system
-                                .scene_manager_mut()
-                                .switch_scene(crate::scene_manager::SceneType::BasicAnchors);
-                            self.request_update();
+                            system.switch_scene(SceneType::BasicAnchors);
                         }
                     }
                     PhysicalKey::Code(KeyCode::Escape) => {
@@ -253,96 +235,59 @@ impl ApplicationHandler<()> for GraphicsApp {
                     }
                     PhysicalKey::Code(KeyCode::Digit1) => {
                         if let Some(system) = &mut self.system {
-                            system
-                                .scene_manager_mut()
-                                .switch_scene(crate::scene_manager::SceneType::Nested);
-                            self.request_update();
+                            system.switch_scene(SceneType::Nested);
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit2) => {
                         if let Some(system) = &mut self.system {
-                            system
-                                .scene_manager_mut()
-                                .switch_scene(crate::scene_manager::SceneType::NestedWithRoot);
-                            self.request_update();
+                            system.switch_scene(SceneType::NestedWithRoot);
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit3) => {
                         if let Some(system) = &mut self.system {
-                            system
-                                .scene_manager_mut()
-                                .switch_scene(crate::scene_manager::SceneType::ZOrder);
-                            self.request_update();
+                            system.switch_scene(SceneType::ZOrder);
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit4) => {
                         if let Some(system) = &mut self.system {
-                            system
-                                .scene_manager_mut()
-                                .switch_scene(crate::scene_manager::SceneType::Visibility);
-                            self.request_update();
+                            system.switch_scene(SceneType::Visibility);
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit5) => {
                         if let Some(system) = &mut self.system {
-                            system
-                                .scene_manager_mut()
-                                .switch_scene(crate::scene_manager::SceneType::BoundsTranslate);
-                            self.request_update();
+                            system.switch_scene(SceneType::BoundsTranslate);
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit6) => {
                         if let Some(system) = &mut self.system {
-                            system
-                                .scene_manager_mut()
-                                .switch_scene(crate::scene_manager::SceneType::ClipTest);
-                            self.request_update();
+                            system.switch_scene(SceneType::ClipTest);
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit7) => {
                         if let Some(system) = &mut self.system {
-                            system
-                                .scene_manager_mut()
-                                .switch_scene(crate::scene_manager::SceneType::EllipseTest);
-                            self.request_update();
+                            system.switch_scene(SceneType::EllipseTest);
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit8) => {
                         if let Some(system) = &mut self.system {
-                            system
-                                .scene_manager_mut()
-                                .switch_scene(crate::scene_manager::SceneType::LineTest);
-                            self.request_update();
+                            system.switch_scene(SceneType::LineTest);
                         }
                     }
                     PhysicalKey::Code(KeyCode::Digit9) => {
                         if let Some(system) = &mut self.system {
-                            system
-                                .scene_manager_mut()
-                                .switch_scene(crate::scene_manager::SceneType::DpiTest);
-                            self.request_update();
+                            system.switch_scene(SceneType::DpiTest);
                         }
                     }
                     PhysicalKey::Code(KeyCode::KeyT) => {
                         if let Some(system) = &mut self.system {
-                            if system.scene_manager().current_scene
-                                == crate::scene_manager::SceneType::BoundsTranslate
-                            {
-                                if let Some(root_id) = system.scene_manager().scene().get_contents()
-                                {
-                                    system
-                                        .scene_manager_mut()
-                                        .scene_mut()
-                                        .prim_translate(root_id, 10.0, 10.0);
-                                    self.request_update();
-                                }
+                            if system.scene_manager().current_scene == SceneType::BoundsTranslate {
+                                system.translate_contents(10.0, 10.0);
                             }
                         }
                     }
                     PhysicalKey::Code(KeyCode::KeyI) => {
                         if let Some(system) = &mut self.system {
-                            let new_mode = !system.use_iterative_render();
-                            system.set_use_iterative_render(new_mode);
+                            let new_mode = system.toggle_iterative_render();
                             println!(
                                 "渲染模式: {}",
                                 if new_mode {

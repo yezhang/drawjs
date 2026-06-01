@@ -1,7 +1,6 @@
 use novadraw::{Color, EllipseFigure, FigureGraph, PolylineFigure, Rectangle, RectangleFigure};
 
 mod interactive_figure;
-pub mod mouse_simulator;
 pub mod scene_host;
 
 use interactive_figure::InteractiveRectFigure;
@@ -156,7 +155,7 @@ impl SceneManager {
         let gc_id = scene.add_child_to(child_id, Box::new(grandchild));
 
         // 选中 Grandchild
-        scene.blocks.get_mut(gc_id).unwrap().is_selected = true;
+        scene.set_selected(Some(gc_id));
     }
 
     /// 场景 3：不可见节点过滤测试
@@ -267,7 +266,7 @@ impl SceneManager {
         let gc_id = scene.add_child_to(child_id, Box::new(grandchild));
 
         // 选中 Grandchild
-        scene.blocks.get_mut(gc_id).unwrap().is_selected = true;
+        scene.set_selected(Some(gc_id));
     }
 
     /// 场景 2：嵌套场景（含透明根节点）
@@ -319,7 +318,7 @@ impl SceneManager {
         )
         .with_local_coordinates(true);
         let gc_id = scene.add_child_to(child_id, Box::new(gc));
-        scene.blocks.get_mut(gc_id).unwrap().is_selected = true;
+        scene.set_selected(Some(gc_id));
     }
 
     /// 场景 6：裁剪测试

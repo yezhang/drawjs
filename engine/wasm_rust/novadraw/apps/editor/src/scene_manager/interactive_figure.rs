@@ -1,87 +1,41 @@
-use std::sync::Mutex;
-
 use novadraw::NdCanvas;
 use novadraw::{
-    Bounded, Color, MouseEvent, NovadrawContext, Rectangle, Shape, Updatable,
+    Bounded, Color, MouseButton, MouseEvent, NovadrawContext, Rectangle, Shape, Updatable,
     command::{LineCap, LineJoin},
 };
 use tracing::info;
 
-struct InteractiveState {
-    hovered: bool,
-    pressed: bool,
-    selected: bool,
-}
-
 pub struct InteractiveRectFigure {
     bounds: Rectangle,
     normal_fill: Color,
-    hover_fill: Color,
-    pressed_fill: Color,
     normal_stroke: Color,
-    selected_stroke: Color,
-    state: Mutex<InteractiveState>,
 }
 
 impl InteractiveRectFigure {
-    pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
-        Self::with_palette(
-            x,
-            y,
-            width,
-            height,
-            Color::rgba(0.20, 0.47, 0.86, 1.0),
-            Color::rgba(0.18, 0.72, 0.64, 1.0),
-            Color::rgba(0.95, 0.56, 0.18, 1.0),
-            Color::rgba(0.10, 0.16, 0.24, 1.0),
-            Color::rgba(0.98, 0.86, 0.22, 1.0),
-        )
-    }
-
     pub fn with_palette(
         x: f64,
         y: f64,
         width: f64,
         height: f64,
         normal_fill: Color,
-        hover_fill: Color,
-        pressed_fill: Color,
+        _hover_fill: Color,
+        _pressed_fill: Color,
         normal_stroke: Color,
-        selected_stroke: Color,
+        _selected_stroke: Color,
     ) -> Self {
         Self {
             bounds: Rectangle::new(x, y, width, height),
             normal_fill,
-            hover_fill,
-            pressed_fill,
             normal_stroke,
-            selected_stroke,
-            state: Mutex::new(InteractiveState {
-                hovered: false,
-                pressed: false,
-                selected: false,
-            }),
         }
     }
 
     fn fill(&self) -> Color {
-        let state = self.state.lock().unwrap();
-        if state.pressed {
-            self.pressed_fill
-        } else if state.hovered {
-            self.hover_fill
-        } else {
-            self.normal_fill
-        }
+        self.normal_fill
     }
 
     fn stroke(&self) -> Color {
-        let state = self.state.lock().unwrap();
-        if state.selected {
-            self.selected_stroke
-        } else {
-            self.normal_stroke
-        }
+        self.normal_stroke
     }
 }
 
@@ -149,27 +103,20 @@ impl Shape for InteractiveRectFigure {
         true
     }
 
-    fn on_mouse_pressed(&self, _event: &MouseEvent, ctx: &mut dyn NovadrawContext) -> bool {
-        let mut state = self.state.lock().unwrap();
-        state.pressed = true;
-        drop(state);
+    fn on_mouse_pressed(&self, event: &MouseEvent, ctx: &mut dyn NovadrawContext) -> bool {
+        if event.button == MouseButton::Left {
+            ctx.select_target();
+        }
         ctx.repaint(None);
         true
     }
 
     fn on_mouse_released(&self, _event: &MouseEvent, ctx: &mut dyn NovadrawContext) -> bool {
-        let mut state = self.state.lock().unwrap();
-        state.pressed = false;
-        state.selected = !state.selected;
-        drop(state);
         ctx.repaint(None);
         true
     }
 
     fn on_mouse_entered(&self, _event: &MouseEvent, ctx: &mut dyn NovadrawContext) -> bool {
-        let mut state = self.state.lock().unwrap();
-        state.hovered = true;
-        drop(state);
         info!(
             "interactive_rect entered: target={:?}, bounds={:?}",
             ctx.target_id(),
@@ -180,10 +127,6 @@ impl Shape for InteractiveRectFigure {
     }
 
     fn on_mouse_exited(&self, _event: &MouseEvent, ctx: &mut dyn NovadrawContext) -> bool {
-        let mut state = self.state.lock().unwrap();
-        state.hovered = false;
-        state.pressed = false;
-        drop(state);
         info!(
             "interactive_rect exited: target={:?}, bounds={:?}",
             ctx.target_id(),
