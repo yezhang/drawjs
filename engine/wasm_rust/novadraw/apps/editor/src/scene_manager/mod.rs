@@ -183,7 +183,7 @@ impl SceneManager {
         let id_b = scene.add_child_to(root_id, Box::new(rect_b));
 
         // 设置不可见
-        scene.blocks.get_mut(id_b).unwrap().is_visible = false;
+        scene.set_visible(id_b, false);
 
         // Visible C - 绿色
         let rect_c = RectangleFigure::new_with_color(

@@ -97,6 +97,19 @@
 - Split Decision: 本轮只建议先处理 `FigureGraph.blocks` / `uuid_map` 公开存储面；`FigureBlock` 字段/方法收窄留作 AD-011 后重新评估，避免一次性跨 render/event/layout 大改
 - Next Step: 执行 AD-011 时先设计受控 accessor，再把 `blocks` / `uuid_map` 收窄为私有或 crate-private，并验证 event/render/layout 行为不变
 
+## 2026-06-01 / AD-011
+
+- Goal: 封装 `FigureGraph.blocks` / `uuid_map` 存储面，防止 crate 外绕过图级不变量直接修改 SlotMap 或 UUID 映射
+- Root Cause: `FigureGraph` 是树关系、图级交互状态和命中测试 owner，但公开 `blocks` / `uuid_map` 会让外部 crate 直接插入、删除或修改节点，绕过 `new_block_with_parent()`、parent/children 维护、notification effects、dirty/update 协议
+- Minimal Fix: 将 `FigureGraph.blocks` / `uuid_map` 收窄为私有字段；新增 `figure_bounds()` / `set_visible()` 图级命名方法，并给 crate 内 context 使用只读 `block()` accessor；apps/editor 与 apps/update-app 不再直接访问 `scene.blocks`
+- Files: `novadraw-scene/src/scene/mod.rs`, `novadraw-scene/src/context/mod.rs`, `apps/editor/src/scene_manager/mod.rs`, `apps/update-app/src/main.rs`, `agent/outer-loop-delta-backlog.yaml`, `agent/governance-contract-coverage.md`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: cargo fmt --check ✅, cargo check ✅, cargo check -p editor -p update-app ✅, cargo test -p novadraw-scene 139/139 + 3 doctests ✅, cargo test -p editor 6/6 ✅, GetDiagnostics ✅
+- Decision: C-03 提升为 aligned；`FigureGraph` 存储不再是 crate 外 public mutation surface，树结构、UUID 映射和图级状态必须通过 FigureGraph 命名 API 进入
+- Split Decision: 不收窄所有 `FigureBlock` 字段/方法；该范围更大且会触碰 render/event/layout 内部遍历，已登记为 `CAD-007 FigureBlock public mutation surface audit`
+- Post-Execution Reflection: 本轮更接近理想架构，因为图级存储重新回到 `FigureGraph` 的单一所有权边界，外部 app 只能表达图级意图而不能直接操作内部 SlotMap
+- New Candidate Deltas: `CAD-007 FigureBlock public mutation surface audit`
+- Next Step: 下一轮从 REVIEW 开始，优先评估 `CAD-007` 是否应提升为 `AD-012`；若不提升，再回到 CAD-003/CAD-004/CAD-005/CAD-006
+
 
 ## 2026-05-27 / AD-008
 

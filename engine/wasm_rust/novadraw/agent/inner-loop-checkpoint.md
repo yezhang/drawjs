@@ -3,7 +3,7 @@
 ## Metadata
 
 - schema_version: 1
-- updated_at: 2026-05-28
+- updated_at: 2026-06-01
 - checkpoint_kind: architecture-loop
 
 ## Current Delta
@@ -12,7 +12,7 @@
 
 ## Current Status
 
-- review-complete（CAD-002 已提升为 AD-011，等待执行）
+- verified（AD-011 已完成，等待下一轮 REVIEW）
 
 ## What Was Done
 
@@ -131,6 +131,16 @@
 - **Promote Decision**：`CAD-002` 提升为 `AD-011 FigureGraph storage encapsulation audit`。
 - **Split Decision**：原 CAD-002 过大；AD-011 先处理 `FigureGraph.blocks` / `uuid_map` 公开存储面，`FigureBlock` 字段/方法公开面留待 AD-011 后评估是否拆出后续 delta。
 
+### AD-011 FigureGraph storage encapsulation audit（本轮，verified）
+- **根因分析**：`FigureGraph` 是树关系与图级状态 owner，但公开 `blocks` / `uuid_map` 会让 crate 外绕过 `new_block_with_parent()`、parent/children 维护、notification effects、dirty/update 协议直接修改 SlotMap 或 UUID 映射。
+- **最小修复**：
+  - `FigureGraph.blocks` / `uuid_map` 收窄为私有字段。
+  - 新增 `FigureGraph::figure_bounds()` / `set_visible()` 图级命名方法。
+  - `SceneDispatchContext` 改用 crate 内只读 `block()` accessor 与 `figure_bounds()`。
+  - apps/editor 与 apps/update-app 不再直接访问 `scene.blocks`。
+- **Coverage Decision**：C-03 提升为 aligned；C-02 仍 partially_aligned，并新增 `CAD-007 FigureBlock public mutation surface audit` 承接后续 REVIEW。
+- **验证**：cargo fmt --check ✅，cargo check ✅，cargo check -p editor -p update-app ✅，cargo test -p novadraw-scene 139/139 + 3 doctests ✅，cargo test -p editor 6/6 ✅。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
@@ -142,19 +152,19 @@
 - ✅ AD-004 已完成：平台事件层只做输入映射，子系统协作由 `WinitNovadrawSystem` 组合根承载。
 - ✅ AD-005 已完成：hovered / pressed / mouse_target / focus_owner / captured 等通用交互状态归属 `FigureGraph`。
 - ✅ AD-008 已完成：event / hit-test 热路径不再打印运行时日志，默认路径符合“热路径禁止日志”约束。
-- ✅ AD-009 已完成：Figure 只保留内在能力；但 completion audit 发现 FigureBlock / FigureGraph public mutation surface 仍需审计，C-02 / C-03 已回退为 partially_aligned。
+- ✅ AD-009 已完成：Figure 只保留内在能力；AD-011 已封装 FigureGraph 存储面，C-03 回到 aligned；FigureBlock 字段/方法公开面仍需通过 CAD-007 评估。
 - ✅ AD-001 已收敛：AD-001A validation、AD-001B repair、AD-001C scheduling 均 verified，父项已 done；C-04 已 aligned。
 - ✅ AD-010 已完成：公开接口逃生口与默认 panic 能力边界已收敛；C-09 已 aligned。
 - ✅ C-10 已收敛：架构改动说明“为何更接近理想架构”已成为持续工作流强制项，并有多轮真实 delta 证据。
 - ⚠️ 文档中仍可能存在历史图示或 WinitEventDispatcher 旧命名，需要后续全量清扫。
 - ⚠️ `focus_owner` 只有基础 owner 字段，完整 focus gained/lost/key state machine 仍需后续 delta。
-- ⚠️ Contract coverage 当前不再全部 aligned：C-02 / C-03 / C-05 / C-07 / C-08 / C-09 为 partially_aligned。
-- ⚠️ `AD-011 FigureGraph storage encapsulation audit` 已 proposed，应作为下一轮最小 delta 执行。
-- ⚠️ Backlog 仍有 CAD-003 / CAD-004 / CAD-005 / CAD-006 candidates，需要后续 REVIEW。
+- ⚠️ Contract coverage 当前不再全部 aligned：C-02 / C-05 / C-07 / C-08 / C-09 为 partially_aligned。
+- ✅ `AD-011 FigureGraph storage encapsulation audit` 已 verified；`FigureGraph.blocks` / `uuid_map` 不再是 crate 外 public mutation surface。
+- ⚠️ Backlog 仍有 CAD-003 / CAD-004 / CAD-005 / CAD-006 / CAD-007 candidates，需要后续 REVIEW。
 
 ## Next Small Step
 
-- 下一轮进入 EXECUTE，执行 `AD-011 FigureGraph storage encapsulation audit`。先设计受控 accessor，再收窄 `FigureGraph.blocks` / `uuid_map` 的公开存储面，避免同时重构所有 `FigureBlock` 字段。
+- 下一轮进入 REVIEW，优先评估 `CAD-007 FigureBlock public mutation surface audit` 是否应提升为 `AD-012`。若不提升，再按优先级评估 CAD-003 / CAD-004 / CAD-005 / CAD-006。
 - Viewport/ScrollPane 的真实 Figure-tree 集成仍应作为后续独立 delta，不与 SceneHost 边界混在一起。
 
 ## Blockers
@@ -166,11 +176,12 @@
 
 - cargo fmt: passed ✅
 - cargo check: passed ✅
+- cargo check -p editor -p update-app: passed ✅
 - cargo test -p novadraw-scene: 139/139 + 3 doctests passed ✅
 - cargo test -p editor: 6/6 passed ✅
 
 ## Resume Prompt
 
 ```text
-请按 agent/workflow-continuous.md 从 EXECUTE 继续，当前 delta 为 AD-011 FigureGraph storage encapsulation audit。CAD-002 REVIEW 已完成并提升为 AD-011：根因是 `FigureGraph.blocks` / `uuid_map` 作为 public 字段允许 crate 外绕过 parent/children、uuid、validation、notification、dirty/update 协议直接修改图存储。执行时先设计受控 accessor，再收窄 `blocks` / `uuid_map` 的公开存储面；不要同时重构所有 FigureBlock 字段/方法。
+请按 agent/workflow-continuous.md 从 REVIEW 继续。AD-011 FigureGraph storage encapsulation audit 已 verified：`FigureGraph.blocks` / `uuid_map` 已收窄为私有字段，外部 app 改用图级命名方法。下一步优先 REVIEW `CAD-007 FigureBlock public mutation surface audit`，判断是否提升为 AD-012；不要把 CAD-003/CAD-004/CAD-005/CAD-006 混入同一轮。
 ```

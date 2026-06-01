@@ -165,6 +165,25 @@ candidate_items:
     notes:
       - Completion audit 未发现主路径时序破坏，但发现类型层面仍有可审计空间
 
+  - id: CAD-007
+    title: FigureBlock public mutation surface audit
+    contract: "FigureBlock 是节点运行时状态容器；公开方法不能绕过 FigureGraph 图级不变量"
+    evolution_kind: architecture
+    priority: high
+    status: candidate
+    parent_id: AD-011
+    evidence:
+      - novadraw-scene/src/scene/mod.rs
+      - novadraw-scene/src/scene/render_recursive.rs
+      - novadraw-scene/src/scene/render_iterative.rs
+    promote_when:
+      - "确认 `FigureBlock` 公开字段或方法允许外部绕过 parent/children、selection、bounds、visibility、update/dirty 协议"
+      - "能拆出不破坏 render/event/layout 内部遍历的最小封装步骤"
+    reject_when:
+      - "公开面仅为只读或受 FigureGraph 命名方法保护，无法破坏图级不变量"
+    notes:
+      - "AD-011 已先封装 `FigureGraph.blocks` / `uuid_map`；`FigureBlock` 字段/方法公开面范围更大，需单独 REVIEW"
+
 items:
   - id: AD-001
     title: UpdateManager boundary audit
@@ -512,7 +531,7 @@ items:
     contract: "FigureGraph 持有树关系和图级状态；公开接口不能绕过图级不变量"
     evolution_kind: architecture
     priority: high
-    status: proposed
+    status: verified
     parent_id: CAD-002
     evidence:
       - novadraw-scene/src/scene/mod.rs
@@ -524,6 +543,8 @@ items:
       - "从 CAD-002 REVIEW 提升：`FigureGraph.blocks` / `uuid_map` 当前是 public 字段，crate 外可直接插入、删除或修改节点，绕过 parent/children、uuid、validation、notification、dirty/update 协议"
       - "实际代码中内部模块大量读取 `blocks`；因此最小 delta 应先封装 FigureGraph 存储面，并为 context/render/layout 提供受控内部 accessor，不同时重构所有 FigureBlock 字段"
       - "`FigureBlock` 字段和方法公开面是相邻问题，但范围更大，应在 AD-011 后重新评估是否拆出 AD-012"
+      - "`FigureGraph.blocks` / `uuid_map` 已收窄为私有存储；外部 crate 改用 `figure_bounds()` / `set_visible()` 等图级命名方法，context 使用 crate 内 `block()` 只读 accessor"
+      - "验证通过：cargo fmt --check ✅，cargo check ✅，cargo check -p editor -p update-app ✅，cargo test -p novadraw-scene 139/139 + 3 doctests ✅，cargo test -p editor 6/6 ✅"
     done_when:
       - "`FigureGraph.blocks` 与 `uuid_map` 不再是 crate 外 public mutation surface"
       - 保留必要的只读查询或 crate 内访问能力，避免破坏 render/event/layout 内部遍历

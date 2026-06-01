@@ -230,8 +230,8 @@ fn rect_intersects(a: &Rectangle, b: &Rectangle) -> bool {
 /// scene.add_child_to(contents_id, Box::new(child));
 /// ```
 pub struct FigureGraph {
-    pub blocks: SlotMap<BlockId, FigureBlock>,
-    pub uuid_map: std::collections::HashMap<Uuid, BlockId>,
+    blocks: SlotMap<BlockId, FigureBlock>,
+    uuid_map: std::collections::HashMap<Uuid, BlockId>,
     /// 根块（内部使用）
     root: BlockId,
     /// 内容块（用户可访问的根容器）
@@ -1002,6 +1002,30 @@ impl FigureGraph {
     /// 获取块
     pub fn get_block(&self, id: BlockId) -> Option<&FigureBlock> {
         self.blocks.get(id)
+    }
+
+    pub(crate) fn block(&self, id: BlockId) -> Option<&FigureBlock> {
+        self.blocks.get(id)
+    }
+
+    /// 获取指定块的 Figure bounds。
+    pub fn figure_bounds(&self, id: BlockId) -> Option<Rectangle> {
+        self.blocks.get(id).map(FigureBlock::figure_bounds)
+    }
+
+    /// 设置块可见性。
+    pub fn set_visible(&mut self, id: BlockId, visible: bool) -> bool {
+        let Some(block) = self.blocks.get_mut(id) else {
+            return false;
+        };
+
+        if block.is_visible == visible {
+            return false;
+        }
+
+        block.is_visible = visible;
+        self.notify_block_changed(id);
+        true
     }
 
     /// 设置布局管理器

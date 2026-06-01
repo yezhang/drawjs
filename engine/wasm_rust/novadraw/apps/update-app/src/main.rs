@@ -278,7 +278,7 @@ fn create_scene_6_damage_repair() -> FigureGraph {
         effects: captured.clone(),
     }));
 
-    let old_bounds = scene.blocks.get(r2).map(|b| b.figure_bounds()).unwrap();
+    let old_bounds = scene.figure_bounds(r2).unwrap();
 
     scene.prim_translate(r2, 80.0, 60.0);
     scene.repaint(&mut update_manager, r2, None);
@@ -286,10 +286,7 @@ fn create_scene_6_damage_repair() -> FigureGraph {
     let damage_before = update_manager.compute_damage();
     println!("[Scene 6] Damage Repair:");
     println!("  rect2 old_bounds: {:?}", old_bounds);
-    println!(
-        "  rect2 new_bounds: {:?}",
-        scene.blocks.get(r2).map(|b| b.figure_bounds()).unwrap()
-    );
+    println!("  rect2 new_bounds: {:?}", scene.figure_bounds(r2).unwrap());
     println!("  Damage before perform_update: {:?}", damage_before);
 
     let _canvas = scene.perform_update(&mut update_manager);

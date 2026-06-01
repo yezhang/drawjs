@@ -161,7 +161,7 @@ impl DispatchContext for SceneDispatchContext<'_> {
         let Some(target_id) = target_id else {
             return false;
         };
-        let Some(block) = self.scene.blocks.get(target_id) else {
+        let Some(block) = self.scene.block(target_id) else {
             return false;
         };
         let mut selection_request = None;
@@ -204,10 +204,8 @@ impl DispatchContext for SceneDispatchContext<'_> {
         if let Some(selected) = selection_request {
             let previous = self.scene.selected_block();
             if previous != selected {
-                let previous_bounds = previous
-                    .and_then(|id| self.scene.blocks.get(id).map(|block| block.figure_bounds()));
-                let selected_bounds = selected
-                    .and_then(|id| self.scene.blocks.get(id).map(|block| block.figure_bounds()));
+                let previous_bounds = previous.and_then(|id| self.scene.figure_bounds(id));
+                let selected_bounds = selected.and_then(|id| self.scene.figure_bounds(id));
                 self.scene.set_selected(selected);
                 if let (Some(id), Some(bounds)) = (previous, previous_bounds) {
                     self.update_manager.add_dirty_region(id, bounds);
