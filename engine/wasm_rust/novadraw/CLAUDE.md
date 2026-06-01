@@ -30,6 +30,7 @@ apps/editor/       - 编辑器示例
 - **禁止热路径日志**：渲染循环中不打印日志
 - **禁止 magic numbers**：业务代码中不使用硬编码数字
 - **保留渲染模式切换**：`use_iterative_render` 字段和 I 键切换必须保留
+- **通用机制下沉引擎层**：事件分发、坐标转换、target/source Figure 事件点适配、通用上下文等机制必须位于引擎 crate（如 `novadraw-scene`），`apps/*` 只做平台输入适配与示例编排
 
 ## 提交前检查
 
@@ -69,6 +70,7 @@ cargo fmt --check && cargo check && cargo clippy -- -D warnings && cargo test
 2. **参考 g2 设计理念**：draw2d/GEF 经过 20+ 年生产验证，核心设计决策优先对标 g2
 3. **不考虑当前代码状态**：架构讨论独立于实现，代码应追随架构而非反之
 4. **接口 vs 实现分离**：核心抽象必须是接口（trait），具体实现可替换
+5. **引擎层承载通用机制**：draw2d 风格的事件链路、坐标域切换和 Figure 回调上下文属于引擎语义，不属于应用层便利逻辑
 
 ### 架构设计执行规则
 

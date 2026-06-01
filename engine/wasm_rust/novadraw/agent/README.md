@@ -85,8 +85,10 @@ title: Solo Coder Architecture Workflow
 
 - `agent/workflow-history.md`: 工作流为什么演进成当前形态
 - `agent/workflow-map.md`: 工作流总览图、状态机图和中断决策图
+- `agent/workflow-continuous.md`: 持续运行控制层，定义循环调度、终局判定和防失控门禁
 - `agent/workflow-verify.sh`: 固定验证脚本
 - `agent/workflow-run-once.sh`: 单轮启动器，输出本轮推荐 prompt
+- `agent/workflow-run-continuous.sh`: 持续运行启动器，输出带预算的连续闭环 prompt
 
 ## 命名约定
 
@@ -336,9 +338,11 @@ title: Solo Coder Architecture Workflow
 ./agent/workflow-run-once.sh execute
 ./agent/workflow-run-once.sh smoke
 ./agent/workflow-run-once.sh stabilize
+./agent/workflow-run-continuous.sh 3
 ```
 
 它不会直接调用模型，而是输出本轮推荐 prompt 和所需上下文文件，方便你复制给 Agent。
+`workflow-run-continuous.sh` 同样不直接调用模型；它输出一个带循环预算的持续运行 prompt。
 
 ## 推荐提问模板
 
@@ -547,6 +551,20 @@ title: Solo Coder Architecture Workflow
 3. `resume-architecture-work`
 4. `execute-architecture-delta`
 
+### 持续运行模式
+
+适合你希望 Agent 按预算连续推进，直到遇到门禁、停止条件或理想完成态：
+
+1. `workflow-continuous` 的 `BOOTSTRAP`
+2. `ASSESS`
+3. 按 gate 选择 `discover` / `review` / `resume` / `execute` / `test`
+4. `VERIFY`
+5. `RECORD`
+6. `REFLECT`
+7. 未停止则回到 `ASSESS`
+
+持续运行不是无人值守无限循环。每次启动必须带预算，并且每轮最多执行一个 delta。
+
 ### 稳定化模式
 
 适合你当前这种“先把 workflow 打磨稳，再正式使用”的阶段：
@@ -568,6 +586,7 @@ title: Solo Coder Architecture Workflow
 ./agent/workflow-run-once.sh execute
 ./agent/workflow-run-once.sh smoke
 ./agent/workflow-run-once.sh stabilize
+./agent/workflow-run-continuous.sh 3
 ```
 
 对应关系：
@@ -578,6 +597,22 @@ title: Solo Coder Architecture Workflow
 - `execute`: 推进一轮
 - `smoke`: 验证 discover 是否真的能发现已知问题
 - `stabilize`: 检查 workflow 是否已达到可用等级
+- `workflow-run-continuous.sh <max_cycles>`: 输出持续运行 prompt，默认最多 3 轮
+
+### 持续运行启动器
+
+```bash
+./agent/workflow-run-continuous.sh 3
+```
+
+该脚本输出的 prompt 会要求 Agent：
+
+- 先执行 `BOOTSTRAP` 和 `ASSESS`
+- 自动选择下一轮模式
+- 每轮只执行一个最小 delta
+- 每轮结束更新 backlog、checkpoint、worklog、contract coverage
+- 命中停止条件时输出 restart prompt
+- 满足理想完成态时执行 completion audit
 
 ## Delta 设计规则
 

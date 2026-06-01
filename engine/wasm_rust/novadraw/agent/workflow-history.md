@@ -250,3 +250,30 @@
 - 自动测试生成不再只靠临场判断
 - 测试开始与架构契约显式对齐
 - 工作流能够把“是否补测试”当作正式决策，而不是附带动作
+
+## 2026-05-27 / v1.6
+
+### 触发原因
+
+- 用户希望以现有工作流为基础，形成可持续运行的闭环，最终推进到项目理想目标。
+- v1.5 已经具备单轮 discover / review / resume / execute 能力，但缺少一个显式的持续控制层。
+- 如果只把单轮执行简单重复，容易退化为无限循环、跨边界大改或为了 demo 效果引入临时方案。
+
+### 本轮升级目标
+
+- 定义持续运行控制器，而不是替换现有单轮工作流。
+- 明确理想完成态、循环状态、预算、停止条件和 completion audit。
+- 让持续模式能自动选择 discover / review / resume / execute / test，但每轮仍保持一个最小 delta。
+
+### 本轮决策
+
+- 新增 `agent/workflow-continuous.md` 作为持续运行控制层 SSOT。
+- 新增 `agent/workflow-run-continuous.sh`，输出带预算的持续运行 prompt。
+- 更新 `agent/README.md`，加入持续运行模式与脚本入口。
+- 更新 `agent/workflow-map.md`，加入持续运行控制层图。
+
+### 当前收益
+
+- 工作流从“单轮可恢复”升级为“预算化连续闭环”。
+- 持续推进有明确终局判定：contract coverage、backlog、discover、baseline、文档与代码必须一致。
+- 持续模式仍保留人工监督与停止门禁，避免无人值守式错误扩散。

@@ -73,12 +73,43 @@ flowchart TD
 ## 4. 图与真源的对应关系
 
 - 总体闭环、门禁与日常路径以 `agent/README.md` 为准。
+- 持续运行控制层、终局判定和防失控预算以 `agent/workflow-continuous.md` 为准。
 - 当前进行中的 delta、阻塞点和推荐下一步以 `agent/inner-loop-checkpoint.md` 为准。
 - 状态定义、强制门禁和基线债务以 `agent/outer-loop-delta-backlog.yaml` 为准。
 - 工作流可用等级以 `agent/quality-workflow-readiness.md` 为准。
 
-## 5. 维护建议
+## 5. 持续运行控制层
+
+```mermaid
+flowchart TD
+    A[BOOTSTRAP<br/>读取规则/理想架构/状态文件] --> B[ASSESS<br/>检查 checkpoint/backlog/coverage]
+    B --> C{选择下一模式}
+    C -- coverage 未评估或 backlog 过时 --> D[DISCOVER]
+    C -- candidate 多或 delta 分叉 --> E[REVIEW]
+    C -- 当前 delta 明确 --> F[RESUME]
+    C -- 验证策略不清楚 --> G[TEST]
+    D --> E
+    E --> F
+    G --> F
+    F --> H{可执行?}
+    H -- 否，命中门禁 --> E
+    H -- 是 --> I[EXECUTE<br/>一个最小 delta]
+    I --> J[VERIFY]
+    J --> K{验证通过?}
+    K -- 否，可快速归因 --> I
+    K -- 否，不可快速归因 --> L[STOP<br/>输出 restart prompt]
+    K -- 是 --> M[RECORD<br/>backlog/checkpoint/worklog/coverage]
+    M --> N[REFLECT]
+    N --> O{达到理想完成态?}
+    O -- 是 --> P[COMPLETE<br/>completion audit]
+    O -- 否 --> Q{达到预算或停止条件?}
+    Q -- 是 --> L
+    Q -- 否 --> B
+```
+
+## 6. 维护建议
 
 - 如果工作流规则变更，优先改真源文件，再同步本图。
 - 这份图更适合作为导航图，不替代 `README` 中的完整规则文本。
 - 若后续新增新的硬门禁，优先更新“总览闭环”和“中断与回外循环决策”两张图。
+- 若持续运行的状态或停止条件变更，必须同步更新 `workflow-continuous.md` 和本文件第 5 节。
