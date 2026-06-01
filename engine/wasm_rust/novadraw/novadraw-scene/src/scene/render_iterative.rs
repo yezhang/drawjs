@@ -6,8 +6,8 @@
 use novadraw_render::NdCanvas;
 
 use super::{BlockId, FigureGraphRenderRef};
+use crate::debug_render;
 use crate::figure::Bounded;
-use crate::{debug_render, trace_render};
 
 /// 四状态渲染任务
 ///
@@ -186,17 +186,21 @@ impl<'a> FigureRendererIter<'a> {
                 bounds.height - top - bottom,
             );
         } else {
-            let bounds = Bounded::bounds(block.figure.as_ref());
+            let client_area = Bounded::client_area(block.figure.as_ref());
             debug_render!(
                 "[ITER] #{:02} EnterClientArea use_local=false, clip({},{},{},{})",
                 id,
-                bounds.x,
-                bounds.y,
-                bounds.width,
-                bounds.height
+                client_area.x,
+                client_area.y,
+                client_area.width,
+                client_area.height
             );
-            self.gc
-                .clip_rect(bounds.x, bounds.y, bounds.width, bounds.height);
+            self.gc.clip_rect(
+                client_area.x,
+                client_area.y,
+                client_area.width,
+                client_area.height,
+            );
         }
 
         // 2. 收集可见子节点（需要获取 bounds 用于 clip）
@@ -256,7 +260,7 @@ impl<'a> FigureRendererIter<'a> {
     /// 处理退出子节点状态
     ///
     /// 执行：`restore_state()` - 恢复到 EnterChild 前的状态（parent client area）
-    fn handle_exit_child(&mut self, block_id: BlockId) {
+    fn handle_exit_child(&mut self, _block_id: BlockId) {
         self.counter += 1;
         let id = self.counter;
         debug_render!("[ITER] #{:02} ExitChild restore_state", id);
@@ -266,7 +270,7 @@ impl<'a> FigureRendererIter<'a> {
     /// 处理退出客户区域状态
     ///
     /// 执行：`restore_state()` - 恢复到 EnterClientArea 前的状态
-    fn handle_exit_client_area(&mut self, block_id: BlockId) {
+    fn handle_exit_client_area(&mut self, _block_id: BlockId) {
         self.counter += 1;
         let id = self.counter;
         debug_render!("[ITER] #{:02} ExitClientArea restore_state", id);
@@ -291,6 +295,7 @@ impl<'a> FigureRendererIter<'a> {
         // 绘制边框
         #[allow(clippy::needless_borrow)]
         block.figure.paint_border(&mut self.gc);
+        super::paint_selection_overlay(block, &mut self.gc);
 
         // 恢复初始状态
         self.gc.pop_state();

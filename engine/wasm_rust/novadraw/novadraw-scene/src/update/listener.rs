@@ -108,16 +108,23 @@ impl NotificationQueue {
 
 /// Update Listener trait
 ///
-/// 监听场景图的更新事件。
+/// 监听场景图的更新和图形事件。
 ///
 /// # 使用场景
 ///
 /// - 调试：观察更新时机和区域
 /// - 性能分析：统计更新频率和耗时
 /// - 动画：协调多个视图的更新
+/// - 视图同步：当 Figure 移动或坐标系统变化时更新视图状态
 pub trait UpdateListener: Send + Sync {
-    /// 通知更新事件
-    fn notify(&self, event: UpdateEvent);
+    /// 通知 Update 层事件（验证、重绘阶段变化）
+    fn on_update_event(&self, event: UpdateEvent);
+
+    /// 通知 Figure 层事件（FigureMoved, CoordinateSystemChanged）
+    fn on_figure_event(&self, event: FigureEvent);
+
+    /// 通知块状态变化（Notify 语义）
+    fn on_notify(&self, block_id: BlockId);
 
     /// 检查是否为验证监听器
     fn as_validating_listener(&self) -> Option<&dyn ValidatingListener> {
@@ -138,7 +145,9 @@ pub trait ValidatingListener: Send + Sync {
 
 /// No-op 实现
 impl UpdateListener for () {
-    fn notify(&self, _event: UpdateEvent) {}
+    fn on_update_event(&self, _event: UpdateEvent) {}
+    fn on_figure_event(&self, _event: FigureEvent) {}
+    fn on_notify(&self, _block_id: BlockId) {}
 }
 
 impl ValidatingListener for () {

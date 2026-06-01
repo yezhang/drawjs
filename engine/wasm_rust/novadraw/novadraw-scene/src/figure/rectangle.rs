@@ -84,8 +84,8 @@ impl RectangleFigure {
 
     /// 设置坐标模式
     ///
-    /// `true`: 使用本地坐标（子元素相对于 bounds 左上角定位）
-    /// `false`: 使用绝对坐标（子元素使用全局坐标）
+    /// `true`: 当前 Figure 成为坐标根，子元素相对于它的 client area 定位
+    /// `false`: 子元素继续与当前 Figure 共享父坐标域
     pub fn with_local_coordinates(mut self, enable: bool) -> Self {
         self.use_local_coordinates = enable;
         self

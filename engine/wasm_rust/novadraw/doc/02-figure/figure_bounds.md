@@ -228,8 +228,8 @@ public boolean isCoordinateSystem() {
 | x, y 的含义是什么？ | **绝对坐标**（相对于坐标根） |
 | 什么是坐标根？ | 使用 `useLocalCoordinates() = true` 的 Figure |
 | 默认模式下如何变成绝对坐标？ | 父节点移动时自动 `translate()` 传播到子节点 |
-| `useLocalCoordinates()` 的作用？ | 设为 `true` 时，bounds 是相对坐标，不自动传播 |
-| 命中测试的坐标？ | 使用**绝对坐标**，点在全局坐标系中 |
+| `useLocalCoordinates()` 的作用？ | 设为 `true` 时，当前 Figure 成为坐标根，子节点切换到新的坐标域 |
+| 命中测试的坐标？ | 输入点始于入口坐标域，递归下降时通过 `translateFromParent()` 切换到子坐标域 |
 | 绘制时如何使用 bounds？ | `graphics.fillRectangle(getBounds())` - 绝对坐标 |
 | 子节点如何定位？ | 遍历时通过 `translateFromParent()` 转换坐标 |
 | 常见坐标根有哪些？ | ScalableFreeformLayeredPane、Viewport、FreeformLayer 等 |
@@ -290,12 +290,12 @@ public interface LayoutManager {
 ### 5.1 命中测试的完整流程
 
 ```
-点击点 (global_x, global_y)
+点击点 (入口坐标域 x, y)
         │
         ▼
 ┌─────────────────────────────────────┐
 │ findMouseEventTargetAt              │
-│ 坐标转换: global → parent           │
+│ 坐标转换: 父坐标域 → 当前坐标域      │
 │ containsPoint(parent)?              │
 └─────────────────────────────────────┘
         │
@@ -323,7 +323,7 @@ public interface LayoutManager {
 ### 5.2 关键点
 
 1. **逆序遍历**：`getChildrenRevIterable()` 确保后添加的节点（视觉上层）先被检测
-2. **坐标转换**：使用 `translateFromParent()` 将全局坐标转换为本地坐标
+2. **坐标转换**：使用 `translateFromParent()` 在父子坐标域之间切换
 3. **剪枝**：`!getClientArea().contains(point)` 跳过不在父节点内的整个子树
 4. **递归**：找到最深层的命中节点即返回
 

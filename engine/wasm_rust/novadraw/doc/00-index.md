@@ -105,7 +105,7 @@ doc/
 
 | 文档 | 主题 | 关键内容 |
 |------|------|----------|
-| `coordinates.md` | 坐标系统 | 屏幕坐标、逻辑坐标、世界坐标、视口/内容变换、Figure 树变换 |
+| `coordinates.md` | 坐标系统 | 物理像素、入口域逻辑坐标、坐标根分段、Figure 树变换、MouseEvent 事件点降域 |
 
 ### 5. Java to Rust 迁移
 

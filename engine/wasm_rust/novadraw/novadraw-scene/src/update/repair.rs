@@ -1,13 +1,21 @@
 //! Damage repair 语义实现。
 //!
-//! 当前语义参考 draw2d/GEF 的 DeferredUpdateManager：
-//! - dirty 以 `(BlockId, local_rect)` 的形式进入 repair；
-//! - repair 开始前由 UpdateManager 冻结 oldRegions，本模块只消费该快照；
-//! - 每个 dirty rect 沿 parent-chain 向上传播，在每层做 bounds 相交；
-//! - 传播结果先做 region 规范化，再写入 `DamageSet.regions`；
-//! - `DamageSet.union` 始终作为强约束输出，供后端做保守裁剪与兼容回退。
+//! # 坐标模型契约
 //!
-//! 当前阶段故意只采用 bounds-based propagation，不引入 client-area/clip-area
+//! `bounds` 处于所属 Figure 最近坐标根的坐标域内。`repaint()` 产生的 dirty rect
+//! 也必须与该 Figure 的 `bounds` 同域。
+//!
+//! 因此 damage 传播必须遵循 Draw2D 的 repairDamage 协议：
+//!
+//! - 先与当前 Figure 的 `bounds` 求交；
+//! - 沿父链向上遍历；
+//! - 每到一层父节点，先应用该父节点的 `translateToParent()` 语义；
+//! - 再与该父节点的 `bounds` 求交。
+//!
+//! 只有遇到 `use_local_coordinates() == true` 的父节点时，才会发生
+//! `bounds.x/y + insets.left/top` 的坐标提升；否则该层 offset 为 0。
+//!
+//! 当前阶段仍只采用 bounds-based propagation，不引入 client-area/clip-area
 //! 的更细语义；待该路径稳定后再继续扩展。
 
 use std::collections::HashMap;
@@ -109,21 +117,37 @@ fn collect_parent_chain_steps(
     block_id: BlockId,
 ) -> Option<Vec<DamagePropagationStep>> {
     let mut steps = Vec::new();
-    let mut walker_id = Some(block_id);
+    let current = graph.get_block(block_id)?;
     let contents_id = graph.get_contents();
+    steps.push(DamagePropagationStep {
+        offset_x: 0.0,
+        offset_y: 0.0,
+        clip: Some(current.figure_bounds()),
+    });
+    let mut walker_id = if Some(block_id) == contents_id {
+        None
+    } else {
+        current.parent
+    };
 
     while let Some(current_id) = walker_id {
         let current = graph.get_block(current_id)?;
-        steps.push(DamagePropagationStep {
-            offset_x: 0.0,
-            offset_y: 0.0,
-            clip: Some(current.figure_bounds()),
-        });
-        walker_id = if Some(current_id) == contents_id {
-            None
+        let bounds = current.figure_bounds();
+        let (offset_x, offset_y) = if current.figure.use_local_coordinates() {
+            let (top, left, _, _) = current.figure.insets();
+            (bounds.x + left, bounds.y + top)
         } else {
-            current.parent
+            (0.0, 0.0)
         };
+        steps.push(DamagePropagationStep {
+            offset_x,
+            offset_y,
+            clip: Some(bounds),
+        });
+        if Some(current_id) == contents_id {
+            break;
+        }
+        walker_id = current.parent;
     }
 
     Some(steps)
@@ -382,6 +406,8 @@ mod tests {
         assert_eq!(normalized, vec![Rectangle::new(0.0, 0.0, 190.0, 10.0)]);
     }
 
+    /// 当 dirty rect 与当前 Figure 的 bounds 同域时，
+    /// 传播遇到坐标根父节点需要应用 offset 平移。
     #[test]
     fn test_parent_chain_single_level_propagation() {
         let local_damage = Rectangle::new(10.0, 20.0, 30.0, 40.0);
@@ -397,6 +423,7 @@ mod tests {
         assert_eq!(actual, Some(expected_root_damage));
     }
 
+    /// 多层坐标根时应逐层累加 offset。
     #[test]
     fn test_parent_chain_multi_level_propagation() {
         let local_damage = Rectangle::new(5.0, 6.0, 20.0, 10.0);
@@ -419,6 +446,7 @@ mod tests {
         assert_eq!(actual, Some(expected_root_damage));
     }
 
+    /// offset 与 clip 需要按父链协议组合。
     #[test]
     fn test_parent_chain_propagation_intersects_clip_regions() {
         let local_damage = Rectangle::new(10.0, 10.0, 80.0, 60.0);
@@ -449,6 +477,22 @@ mod tests {
         let parent = RectangleFigure::new_with_color(100.0, 50.0, 200.0, 150.0, Color::WHITE)
             .with_local_coordinates(true);
         let parent_id = graph.add_child_to(root_id, Box::new(parent));
+        let child = RectangleFigure::new_with_color(20.0, 30.0, 80.0, 60.0, Color::WHITE);
+        let child_id = graph.add_child_to(parent_id, Box::new(child));
+
+        let actual =
+            propagate_damage_to_root(&graph, child_id, Rectangle::new(20.0, 30.0, 20.0, 10.0));
+
+        assert_eq!(actual, Some(Rectangle::new(120.0, 80.0, 20.0, 10.0)));
+    }
+
+    #[test]
+    fn test_propagate_damage_to_root_does_not_translate_through_non_coordinate_ancestors() {
+        let mut graph = FigureGraph::new();
+        let root = RectangleFigure::new_with_color(0.0, 0.0, 500.0, 400.0, Color::BLACK);
+        let root_id = graph.set_contents(Box::new(root));
+        let parent = RectangleFigure::new_with_color(100.0, 50.0, 200.0, 150.0, Color::WHITE);
+        let parent_id = graph.add_child_to(root_id, Box::new(parent));
         let child = RectangleFigure::new_with_color(120.0, 80.0, 80.0, 60.0, Color::WHITE);
         let child_id = graph.add_child_to(parent_id, Box::new(child));
 
@@ -466,11 +510,11 @@ mod tests {
         let parent = RectangleFigure::new_with_color(70.0, 50.0, 40.0, 40.0, Color::WHITE)
             .with_local_coordinates(true);
         let parent_id = graph.add_child_to(root_id, Box::new(parent));
-        let child = RectangleFigure::new_with_color(90.0, 70.0, 30.0, 30.0, Color::WHITE);
+        let child = RectangleFigure::new_with_color(20.0, 20.0, 30.0, 30.0, Color::WHITE);
         let child_id = graph.add_child_to(parent_id, Box::new(child));
 
         let actual =
-            propagate_damage_to_root(&graph, child_id, Rectangle::new(90.0, 70.0, 30.0, 30.0));
+            propagate_damage_to_root(&graph, child_id, Rectangle::new(20.0, 20.0, 30.0, 30.0));
 
         assert_eq!(actual, Some(Rectangle::new(90.0, 70.0, 10.0, 10.0)));
     }

@@ -28,8 +28,9 @@ pub use novadraw_scene::{
     MarginBorder, MouseButton, MouseEvent, MouseEventKind, MutationContext, NotificationEffect,
     NotificationQueue, NovadrawContext, NovadrawSystem, PendingMutation, PendingMutations, Point,
     PolygonFigure, PolylineFigure, Rectangle, RectangleBorder, RectangleFigure, RootFigure,
-    RoundedRectangleFigure, SceneHost, SceneUpdateManager, Shape, TriangleFigure, Updatable,
-    UpdateEvent, UpdateManager, Viewport, XYLayout,
+    RoundedRectangleFigure, SceneDispatchContext, SceneHost, SceneNovadrawContext,
+    SceneUpdateManager, Shape, TriangleFigure, Updatable, UpdateEvent, UpdateListener,
+    UpdateManager, Viewport, XYLayout,
 };
 
 #[cfg(feature = "vello")]

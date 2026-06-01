@@ -1,10 +1,22 @@
 use crate::{BlockId, Figure};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PendingMutation {
-    AddChild { parent: BlockId, child: BlockId },
-    RemoveChild { parent: BlockId, child: BlockId },
-    Reparent { child: BlockId, new_parent: BlockId },
+    AddChild {
+        parent: BlockId,
+        child: BlockId,
+    },
+    AddChildFigure {
+        parent: BlockId,
+        figure: Box<dyn Figure>,
+    },
+    RemoveChild {
+        parent: BlockId,
+        child: BlockId,
+    },
+    Reparent {
+        child: BlockId,
+        new_parent: BlockId,
+    },
 }
 
 #[derive(Default)]
@@ -31,6 +43,17 @@ impl PendingMutations {
 }
 
 pub trait MutationContext {
-    fn allocate_block(&mut self, figure: Box<dyn Figure>) -> BlockId;
     fn enqueue_mutation(&mut self, mutation: PendingMutation);
+
+    fn add_child_later(&mut self, parent: BlockId, figure: Box<dyn Figure>) {
+        self.enqueue_mutation(PendingMutation::AddChildFigure { parent, figure });
+    }
+
+    fn remove_child_later(&mut self, parent: BlockId, child: BlockId) {
+        self.enqueue_mutation(PendingMutation::RemoveChild { parent, child });
+    }
+
+    fn reparent_later(&mut self, child: BlockId, new_parent: BlockId) {
+        self.enqueue_mutation(PendingMutation::Reparent { child, new_parent });
+    }
 }

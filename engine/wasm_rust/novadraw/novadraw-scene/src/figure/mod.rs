@@ -47,6 +47,20 @@ use crate::{MouseEvent, NovadrawContext};
 ///
 /// 包含图形的边界、名称、位置检测等基础方法。
 /// 所有图形类型都需要实现此 trait。
+///
+/// # 坐标模型契约
+///
+/// `bounds()` 返回的是**相对于最近坐标根的绝对值**，而不是相对于父节点的偏移。
+/// 当父链上出现 `use_local_coordinates() = true` 的节点时，
+/// 其后代会切换到新的坐标域。
+///
+/// `use_local_coordinates()` 只控制 `prim_translate` 是否传播到子节点，
+/// 以及渲染时是否对 children 做 `translate(x+left, y+top)`，
+/// 同时决定该节点是否为其子树的坐标根。
+///
+/// 与 g2/draw2d 的对齐点：
+/// - 坐标根会在 `translateToParent/FromParent` 时进行 offset 变换
+/// - hit-test / repair / render 都必须遵循父链坐标变换协议
 pub trait Bounded: Send + Sync {
     /// 获取图形边界
     ///
@@ -89,8 +103,11 @@ pub trait Bounded: Send + Sync {
     /// 是否使用本地坐标
     ///
     /// 对应 draw2d: useLocalCoordinates()
-    /// true: 子元素使用 Figure 内部坐标（相对于 bounds 左上角）
-    /// false: 子元素使用父节点坐标（默认）
+    /// - true: `prim_translate` 不传播到子节点，渲染时子节点会做 translate 变换
+    /// - false: 默认模式，`prim_translate` 会传播到所有子孙节点
+    ///
+    /// 注意：设为 true 后，当前节点会成为其子树的坐标根。
+    /// 子节点的 bounds 将处于该坐标根的坐标域中。
     fn use_local_coordinates(&self) -> bool {
         false
     }
@@ -100,16 +117,20 @@ pub trait Bounded: Send + Sync {
     /// 获取客户区域
     ///
     /// 对应 draw2d: getClientArea()
-    /// 返回 bounds 减去 insets 后的区域
+    ///
+    /// 返回值位于当前 Figure 为其子节点提供的坐标域中：
+    /// - `use_local_coordinates() == true` 时，当前 Figure 是子树坐标根，client area 原点重置为 `(0, 0)`；
+    /// - 否则 client area 仍位于当前 Figure 所属坐标域，原点为 `bounds.x/y + insets`。
     fn client_area(&self) -> Rectangle {
         let b = self.bounds();
         let (top, left, bottom, right) = self.insets();
-        Rectangle::new(
-            b.x + left,
-            b.y + top,
-            b.width - left - right,
-            b.height - top - bottom,
-        )
+        let width = b.width - left - right;
+        let height = b.height - top - bottom;
+        if self.use_local_coordinates() {
+            Rectangle::new(0.0, 0.0, width, height)
+        } else {
+            Rectangle::new(b.x + left, b.y + top, width, height)
+        }
     }
 
     /// 获取首选大小

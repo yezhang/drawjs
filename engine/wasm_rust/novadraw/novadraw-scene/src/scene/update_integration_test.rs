@@ -1,6 +1,9 @@
+use std::sync::Arc;
+
+use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 
-use crate::{FigureGraph, PendingMutation, RectangleFigure, SceneUpdateManager};
+use crate::{FigureGraph, PendingMutation, RectangleFigure, SceneUpdateManager, XYLayout};
 
 fn new_scene() -> (FigureGraph, SceneUpdateManager) {
     (FigureGraph::new(), SceneUpdateManager::new())
@@ -215,6 +218,84 @@ fn test_add_child_triggers_updates() {
 }
 
 #[test]
+fn test_add_child_under_coordinate_root_repair_uses_child_coordinate_domain() {
+    let (mut scene, mut update_manager) = new_scene();
+    let contents_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 400.0, 300.0)));
+    let coordinate_root_id = scene.add_child_to(
+        contents_id,
+        Box::new(
+            RectangleFigure::new_with_color(100.0, 50.0, 200.0, 150.0, Color::WHITE)
+                .with_local_coordinates(true),
+        ),
+    );
+
+    scene.add_child(
+        &mut update_manager,
+        coordinate_root_id,
+        Box::new(RectangleFigure::new(20.0, 30.0, 40.0, 40.0)),
+    );
+
+    let canvas = scene.perform_update(&mut update_manager);
+    assert_eq!(
+        canvas.damage().union,
+        Some(Rectangle::new(120.0, 80.0, 40.0, 40.0))
+    );
+}
+
+#[test]
+fn test_layout_repositions_descendants_via_set_bounds_protocol() {
+    let (mut scene, mut update_manager) = new_scene();
+    let contents_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 400.0, 300.0)));
+    let container_id = scene.add_child_to(
+        contents_id,
+        Box::new(RectangleFigure::new(50.0, 50.0, 200.0, 150.0)),
+    );
+    let child_id = scene.add_child_to(
+        container_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 40.0, 40.0)),
+    );
+    let grandchild_id = scene.add_child_to(
+        child_id,
+        Box::new(RectangleFigure::new(15.0, 15.0, 10.0, 10.0)),
+    );
+
+    scene.set_block_layout_manager(container_id, Arc::new(XYLayout::new()));
+    scene.set_constraint(child_id, Rectangle::new(30.0, 40.0, 40.0, 40.0));
+    scene.mark_invalid(&mut update_manager, container_id);
+    scene.perform_update(&mut update_manager);
+
+    let child_bounds = scene.blocks.get(child_id).unwrap().figure_bounds();
+    let grandchild_bounds = scene.blocks.get(grandchild_id).unwrap().figure_bounds();
+    assert_eq!(child_bounds, Rectangle::new(80.0, 90.0, 40.0, 40.0));
+    assert_eq!(grandchild_bounds, Rectangle::new(85.0, 95.0, 10.0, 10.0));
+}
+
+#[test]
+fn test_layout_uses_local_client_area_for_coordinate_root_container() {
+    let (mut scene, mut update_manager) = new_scene();
+    let contents_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 400.0, 300.0)));
+    let container_id = scene.add_child_to(
+        contents_id,
+        Box::new(
+            RectangleFigure::new_with_color(100.0, 50.0, 200.0, 150.0, Color::WHITE)
+                .with_local_coordinates(true),
+        ),
+    );
+    let child_id = scene.add_child_to(
+        container_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 40.0, 40.0)),
+    );
+
+    scene.set_block_layout_manager(container_id, Arc::new(XYLayout::new()));
+    scene.set_constraint(child_id, Rectangle::new(20.0, 30.0, 40.0, 40.0));
+    scene.mark_invalid(&mut update_manager, container_id);
+    scene.perform_update(&mut update_manager);
+
+    let child_bounds = scene.blocks.get(child_id).unwrap().figure_bounds();
+    assert_eq!(child_bounds, Rectangle::new(20.0, 30.0, 40.0, 40.0));
+}
+
+#[test]
 fn test_perform_update_clears_dirty_regions() {
     let (mut scene, mut update_manager) = new_scene();
     let container_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
@@ -303,12 +384,18 @@ fn test_interaction_state_accessors() {
     assert_eq!(scene.mouse_target(), None);
     assert_eq!(scene.focus_owner(), None);
     assert_eq!(scene.captured(), None);
+    assert!(!scene.is_hovered(container_id));
+    assert!(!scene.is_pressed(container_id));
     scene.set_mouse_target(Some(container_id));
     scene.set_focus_owner(Some(container_id));
     scene.set_captured(Some(container_id));
+    scene.set_hovered(container_id, true);
+    scene.set_pressed(container_id, true);
     assert_eq!(scene.mouse_target(), Some(container_id));
     assert_eq!(scene.focus_owner(), Some(container_id));
     assert_eq!(scene.captured(), Some(container_id));
+    assert!(scene.is_hovered(container_id));
+    assert!(scene.is_pressed(container_id));
 }
 
 #[test]

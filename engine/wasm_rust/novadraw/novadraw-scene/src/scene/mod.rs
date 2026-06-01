@@ -4,8 +4,12 @@
 
 use std::sync::Arc;
 
+use novadraw_core::Color;
 use novadraw_geometry::{Rectangle, Translatable};
-use novadraw_render::NdCanvas;
+use novadraw_render::{
+    NdCanvas,
+    command::{LineCap, LineJoin},
+};
 use slotmap::{Key, SlotMap};
 use uuid::Uuid;
 
@@ -28,6 +32,35 @@ pub mod bounds_test;
 pub mod update_integration_test;
 
 slotmap::new_key_type! { pub struct BlockId; }
+
+const SELECTION_OUTLINE_COLOR: Color = Color {
+    r: 0.98,
+    g: 0.86,
+    b: 0.22,
+    a: 1.0,
+};
+const SELECTION_OUTLINE_INSET: f64 = 2.0;
+const SELECTION_OUTLINE_STROKE_WIDTH: f64 = 4.0;
+
+pub(crate) fn paint_selection_overlay(block: &FigureBlock, gc: &mut NdCanvas) {
+    if !block.is_selected {
+        return;
+    }
+
+    let bounds = block.figure_bounds();
+    let width = (bounds.width - SELECTION_OUTLINE_INSET - SELECTION_OUTLINE_INSET).max(0.0);
+    let height = (bounds.height - SELECTION_OUTLINE_INSET - SELECTION_OUTLINE_INSET).max(0.0);
+    gc.stroke_rect(
+        bounds.x + SELECTION_OUTLINE_INSET,
+        bounds.y + SELECTION_OUTLINE_INSET,
+        width,
+        height,
+        SELECTION_OUTLINE_COLOR,
+        SELECTION_OUTLINE_STROKE_WIDTH,
+        LineCap::default(),
+        LineJoin::default(),
+    );
+}
 
 /// FigureBlock - 图形节点
 ///
@@ -54,6 +87,10 @@ pub struct FigureBlock {
     pub layout_manager: Option<Arc<dyn super::layout::LayoutManager>>,
     /// 是否选中
     pub is_selected: bool,
+    /// 鼠标是否悬停在该节点上
+    pub is_hovered: bool,
+    /// 鼠标是否按压在该节点上
+    pub is_pressed: bool,
     /// 是否可见
     pub is_visible: bool,
     /// 是否启用
@@ -79,6 +116,8 @@ impl FigureBlock {
             figure,
             layout_manager: None,
             is_selected: false,
+            is_hovered: false,
+            is_pressed: false,
             is_visible: true,
             is_enabled: true,
             is_valid: true,
@@ -219,6 +258,8 @@ impl FigureGraph {
             figure: Box::new(super::figure::RootFigure::new(0.0, 0.0, 0.0, 0.0)),
             layout_manager: None,
             is_selected: false,
+            is_hovered: false,
+            is_pressed: false,
             is_visible: true,
             is_enabled: true,
             is_valid: true,
@@ -293,7 +334,7 @@ impl FigureGraph {
     ///
     /// # 坐标语义
     ///
-    /// - bounds 是绝对坐标（相对于最近坐标根），不是相对于父节点的偏移
+    /// - bounds 是相对最近坐标根的绝对值，不是相对于父节点的偏移
     /// - 添加后，子节点的 bounds 保持不变
     /// - 平移操作由 `prim_translate` 负责，会修改 bounds 并传播到子节点
     ///
@@ -306,7 +347,7 @@ impl FigureGraph {
     /// let mut scene = FigureGraph::new();
     /// let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 100.0, 100.0)));
     /// let color = Color::hex("#3498db");
-    /// // 添加子节点，bounds 是绝对坐标 (10, 10, 50, 50)
+    /// // 添加子节点，bounds 是相对最近坐标根的绝对值 (10, 10, 50, 50)
     /// let _child_id = scene.add_child_with_bounds(parent_id, 10.0, 10.0, 50.0, 50.0, color);
     /// ```
     pub fn add_child_with_bounds(
@@ -342,7 +383,7 @@ impl FigureGraph {
         let child_id = self.new_block_with_parent(figure, parent_id);
 
         self.mark_invalid(update_manager, parent_id);
-        self.repaint(update_manager, parent_id, Some(bounds));
+        update_manager.add_dirty_region(child_id, bounds);
         self.mark_invalid(update_manager, child_id);
 
         child_id
@@ -358,6 +399,8 @@ impl FigureGraph {
             figure,
             layout_manager: None,
             is_selected: false,
+            is_hovered: false,
+            is_pressed: false,
             is_visible: true,
             is_enabled: true,
             is_valid: false,
@@ -380,27 +423,29 @@ impl FigureGraph {
 
         let mut changed = false;
 
-        for mutation in mutations
-            .iter()
-            .copied()
-            .filter(|mutation| matches!(mutation, PendingMutation::RemoveChild { .. }))
-        {
+        let mut removes = Vec::new();
+        let mut reparents = Vec::new();
+        let mut adds = Vec::new();
+
+        for mutation in mutations {
+            match mutation {
+                PendingMutation::RemoveChild { .. } => removes.push(mutation),
+                PendingMutation::Reparent { .. } => reparents.push(mutation),
+                PendingMutation::AddChild { .. } | PendingMutation::AddChildFigure { .. } => {
+                    adds.push(mutation)
+                }
+            }
+        }
+
+        for mutation in removes {
             changed |= self.apply_remove_mutation(update_manager, mutation);
         }
 
-        for mutation in mutations
-            .iter()
-            .copied()
-            .filter(|mutation| matches!(mutation, PendingMutation::Reparent { .. }))
-        {
+        for mutation in reparents {
             changed |= self.apply_reparent_mutation(update_manager, mutation);
         }
 
-        for mutation in mutations
-            .iter()
-            .copied()
-            .filter(|mutation| matches!(mutation, PendingMutation::AddChild { .. }))
-        {
+        for mutation in adds {
             changed |= self.apply_add_mutation(update_manager, mutation);
         }
 
@@ -422,6 +467,8 @@ impl FigureGraph {
             figure,
             layout_manager: None,
             is_selected: false,
+            is_hovered: false,
+            is_pressed: false,
             is_visible: true,
             is_enabled: true,
             is_valid: false,
@@ -537,8 +584,12 @@ impl FigureGraph {
         update_manager: &mut dyn UpdateManager,
         mutation: PendingMutation,
     ) -> bool {
-        let PendingMutation::AddChild { parent, child } = mutation else {
-            return false;
+        let (parent, child) = match mutation {
+            PendingMutation::AddChild { parent, child } => (parent, child),
+            PendingMutation::AddChildFigure { parent, figure } => {
+                (parent, self.allocate_block(figure))
+            }
+            _ => return false,
         };
         let Some(bounds) = self.blocks.get(child).map(|block| block.figure_bounds()) else {
             return false;
@@ -584,7 +635,7 @@ impl FigureGraph {
     /// # Arguments
     ///
     /// * `block_id` - 需要重绘的块 ID
-    /// * `rect` - 脏区域（局部坐标），如果为 None 则使用块的 bounds
+    /// * `rect` - 脏区域（与该 block 的 bounds 同域），如果为 None 则使用块的 bounds
     pub fn repaint(
         &mut self,
         update_manager: &mut dyn UpdateManager,
@@ -789,11 +840,17 @@ impl FigureGraph {
     /// 命中测试
     ///
     /// 检测指定点是否命中任意图形，返回从根到目标的路径。
-    /// 使用深度优先遍历（从后往前，确保先命中最上层的图形）。
+    /// 使用深度优先遍历（逆序子节点，确保先命中最上层的图形）。
+    ///
+    /// # 坐标语义
+    ///
+    /// `point` 必须处于入口节点的坐标域中。
+    /// 遍历子树时，若遇到 `use_local_coordinates() == true` 的父节点，
+    /// 需要按 `translateFromParent` 协议切换到子节点所在坐标域。
     ///
     /// # 参数
     ///
-    /// - `point`: 待检测的坐标（屏幕坐标）
+    /// - `point`: 待检测的坐标（与入口节点同域）
     ///
     /// # 返回
     ///
@@ -813,18 +870,7 @@ impl FigureGraph {
     }
 
     pub fn find_mouse_event_target_at(&self, x: f64, y: f64) -> Option<BlockId> {
-        tracing::info!(
-            "[FigureGraph] find_mouse_event_target_at: coords=({:.1}, {:.1}), contents={:?}",
-            x,
-            y,
-            self.contents
-        );
-        let result = self.find_mouse_event_target_from(self.contents.unwrap_or(self.root), (x, y));
-        tracing::info!(
-            "[FigureGraph] find_mouse_event_target_at: result={:?}",
-            result
-        );
-        result
+        self.find_mouse_event_target_from(self.contents.unwrap_or(self.root), (x, y))
     }
 
     /// 渲染场景图
@@ -1039,6 +1085,39 @@ impl FigureGraph {
         self.mouse_target = id;
     }
 
+    pub fn is_hovered(&self, id: BlockId) -> bool {
+        self.blocks
+            .get(id)
+            .map(|block| block.is_hovered)
+            .unwrap_or(false)
+    }
+
+    pub fn set_hovered(&mut self, id: BlockId, hovered: bool) {
+        if let Some(block) = self.blocks.get_mut(id) {
+            block.is_hovered = hovered;
+        }
+    }
+
+    pub fn is_pressed(&self, id: BlockId) -> bool {
+        self.blocks
+            .get(id)
+            .map(|block| block.is_pressed)
+            .unwrap_or(false)
+    }
+
+    pub fn set_pressed(&mut self, id: BlockId, pressed: bool) {
+        if let Some(block) = self.blocks.get_mut(id) {
+            block.is_pressed = pressed;
+        }
+    }
+
+    pub fn is_selected(&self, id: BlockId) -> bool {
+        self.blocks
+            .get(id)
+            .map(|block| block.is_selected)
+            .unwrap_or(false)
+    }
+
     pub fn focus_owner(&self) -> Option<BlockId> {
         self.focus_owner
     }
@@ -1085,14 +1164,14 @@ impl FigureGraph {
     /// # 关键特性
     ///
     /// - 使用**显式栈**迭代实现，避免递归栈溢出
-    /// - 所有 bounds 都是**绝对坐标**（相对于坐标根）
+    /// - 每个 bounds 都是**相对于最近坐标根的绝对值**
     /// - `use_local_coordinates()` 为 true 时，当前节点是坐标根，不传播到子节点
     ///
     /// # 坐标语义说明
     ///
-    /// - 子节点的 bounds 也是绝对坐标，所以平移时会同时修改父子节点的 bounds
-    /// - 这种设计确保所有 bounds 始终相对于坐标根
-    /// - 当 `use_local_coordinates()` 为 true 时，坐标根的 bounds 变化会触发事件通知
+    /// - 若当前节点不是坐标根，子孙节点与它处于同一坐标域，因此需要同步平移
+    /// - 若当前节点是坐标根，子节点属于新的坐标域，不传播位置偏移
+    /// - 当 `use_local_coordinates()` 为 true 时，当前节点的 bounds 变化会触发坐标系统变更通知
     ///
     /// # 与 draw2d 的一致性
     ///
@@ -1203,13 +1282,16 @@ impl FigureGraph {
         }
     }
 
-    /// 将局部坐标转换为绝对坐标
+    /// 坐标转换：沿父链应用 translateToParent 协议
     ///
     /// 对应 draw2d: translateToAbsolute(Translatable)
     ///
+    /// 对未设 `use_local_coordinates` 的祖先节点，此方法是恒等变换；
+    /// 遇到坐标根时才会把局部值提升到父坐标域。
+    ///
     /// # 算法
     ///
-    /// 对应 draw2d:
+    /// draw2d 语义：
     ///
     /// ```java
     /// if (getParent() != null) {
@@ -1218,13 +1300,8 @@ impl FigureGraph {
     /// }
     /// ```
     ///
-    /// 也就是说，绝对坐标不是“手动累加所有坐标根 bounds”，
-    /// 而是沿父链递归执行父节点的 `translateToParent` 协议。
-    ///
-    /// # 注意
-    ///
-    /// 绝对坐标是相对于场景根的坐标。
-    /// 此方法将对象从“当前节点的局部坐标系”转换为场景绝对坐标。
+    /// `translate_to_parent` 只在 `use_local_coordinates` 为 true 时
+    /// 才执行 offset 翻译（bounds.x + left, bounds.y + top）。
     #[allow(clippy::collapsible_if)]
     pub fn translate_to_absolute_mut<T: Translatable>(&self, block_id: BlockId, t: &mut T) {
         let mut current = self.blocks.get(block_id).and_then(|block| block.parent);
@@ -1247,21 +1324,12 @@ impl FigureGraph {
         }
     }
 
-    /// 将本地坐标转换为父节点坐标
+    /// 坐标转换：子到父（只在坐标根时生效）
     ///
     /// 对应 draw2d: translateToParent(Translatable)
     ///
-    /// # 算法
-    ///
-    /// 当当前节点使用本地坐标（`useLocalCoordinates() = true`）时：
-    /// - 本地坐标需要累加当前节点的 `bounds.x/y + insets.left/top`
-    /// - 因为当前节点的局部坐标原点映射到父坐标中的内容区起点
-    ///
-    /// # 示例
-    ///
-    /// 假设：
-    /// - 当前节点 bounds = (20, 30, 100, 100)，left/top insets = 5
-    /// - 当前节点本地坐标 (10, 20) 转换为父坐标 (35, 55)
+    /// 只有在 `use_local_coordinates() = true` 时才执行 offset 翻译。
+    /// 该偏移表示“当前坐标根到其父坐标域”的变换。
     #[allow(clippy::collapsible_if, clippy::needless_return)]
     pub fn translate_to_parent<T: Translatable>(&self, block_id: BlockId, t: &mut T) {
         if let Some(block) = self.blocks.get(block_id) {
@@ -1274,15 +1342,11 @@ impl FigureGraph {
         }
     }
 
-    /// 将父节点坐标转换为本地坐标
+    /// 坐标转换：父到子（只在坐标根时生效）
     ///
     /// 对应 draw2d: translateFromParent(Translatable)
     ///
-    /// # 算法
-    ///
-    /// 当当前节点使用本地坐标时：
-    /// - 父坐标需要减去当前节点的 `bounds.x/y + insets.left/top` 才能得到本地坐标
-    /// - 因为父坐标中的内容区起点对应当前节点本地 (0, 0)
+    /// 只有在 `use_local_coordinates() = true` 时才执行 offset 翻译。
     #[allow(clippy::collapsible_if, clippy::needless_return)]
     pub fn translate_from_parent<T: Translatable>(&self, block_id: BlockId, t: &mut T) {
         if let Some(block) = self.blocks.get(block_id) {
@@ -1295,20 +1359,12 @@ impl FigureGraph {
         }
     }
 
-    /// 将绝对坐标转换为本地坐标
+    /// 坐标转换：沿父链应用 translateFromParent 协议
     ///
     /// 对应 draw2d: translateToRelative(Translatable)
     ///
-    /// # 算法
-    ///
-    /// 绝对坐标是相对于场景根的坐标。
-    /// 递归向父节点遍历：
-    /// 1. 先将绝对坐标转换到父节点的局部坐标
-    /// 2. 再使用当前节点的 `translate_from_parent` 转换为当前节点的局部坐标
-    ///
-    /// # 注意
-    ///
-    /// 此方法将绝对坐标（相对于场景根）转换为本地坐标（相对于最近坐标根）。
+    /// 对未设 `use_local_coordinates` 的节点，此方法是恒等变换；
+    /// 只有遇到坐标根时才执行 offset 翻译。
     #[allow(clippy::collapsible_if, clippy::needless_return)]
     pub fn translate_to_relative<T: Translatable>(&self, block_id: BlockId, t: &mut T) {
         if let Some(block) = self.blocks.get(block_id) {
@@ -1353,9 +1409,11 @@ impl FigureGraph {
         }
 
         path.push(block_id);
+        let mut child_point = point;
+        self.translate_from_parent(block_id, &mut child_point);
 
         for &child_id in block.children.iter().rev() {
-            if let Some(hit) = self.hit_test_from(child_id, point, path) {
+            if let Some(hit) = self.hit_test_from(child_id, child_point, path) {
                 return Some(hit);
             }
         }
@@ -1372,46 +1430,23 @@ impl FigureGraph {
     ) -> Option<BlockId> {
         let block = self.blocks.get(block_id)?;
         if !block.is_visible || !block.is_enabled {
-            tracing::info!(
-                "[FigureGraph] find_mouse_event_target_from: block_id={:?} skipped (invisible/disabled)",
-                block_id
-            );
             return None;
         }
 
         let contains = block.figure.contains_point(point.0, point.1);
-        tracing::trace!(
-            "[FigureGraph] find_mouse_event_target_from: block_id={:?}, bounds={:?}, contains_point=({}, {})={}",
-            block_id,
-            block.figure.bounds(),
-            point.0,
-            point.1,
-            contains
-        );
-
         if !contains {
             return None;
         }
 
+        let mut child_point = point;
+        self.translate_from_parent(block_id, &mut child_point);
         for &child_id in block.children.iter().rev() {
-            if let Some(target) = self.find_mouse_event_target_from(child_id, point) {
+            if let Some(target) = self.find_mouse_event_target_from(child_id, child_point) {
                 return Some(target);
             }
         }
 
-        if block.figure.wants_mouse_events() {
-            tracing::trace!(
-                "[FigureGraph] find_mouse_event_target_from: block_id={:?} wants_mouse_events=true, returning",
-                block_id
-            );
-            Some(block_id)
-        } else {
-            tracing::trace!(
-                "[FigureGraph] find_mouse_event_target_from: block_id={:?} wants_mouse_events=false, skipping",
-                block_id
-            );
-            None
-        }
+        block.figure.wants_mouse_events().then_some(block_id)
     }
 
     fn clear_interaction_state_for_subtree(&mut self, subtree_root: BlockId) {
@@ -1432,6 +1467,17 @@ impl FigureGraph {
             .is_some_and(|id| self.is_in_subtree(id, subtree_root))
         {
             self.focus_owner = None;
+        }
+        let descendants: Vec<BlockId> = self
+            .blocks
+            .keys()
+            .filter(|&id| self.is_in_subtree(id, subtree_root))
+            .collect();
+        for id in descendants {
+            if let Some(block) = self.blocks.get_mut(id) {
+                block.is_hovered = false;
+                block.is_pressed = false;
+            }
         }
     }
 
@@ -1481,16 +1527,14 @@ impl super::layout::LayoutContext for FigureGraph {
     }
 
     fn set_child_bounds(&mut self, child_id: BlockId, bounds: Rectangle) {
-        if let Some(block) = self.blocks.get_mut(child_id) {
-            block
-                .figure
-                .set_bounds(bounds.x, bounds.y, bounds.width, bounds.height);
+        if self.blocks.get(child_id).is_some() {
+            self.set_bounds(child_id, bounds.x, bounds.y, bounds.width, bounds.height);
         }
     }
 
     fn get_container_bounds(&self, container_id: BlockId) -> Rectangle {
         if let Some(block) = self.blocks.get(container_id) {
-            block.figure_bounds()
+            block.figure.client_area()
         } else {
             Rectangle::new(0.0, 0.0, 0.0, 0.0)
         }
@@ -1956,6 +2000,49 @@ mod tests {
             scene.find_mouse_event_target_at(35.0, 35.0),
             Some(interactive_child)
         );
+    }
+
+    #[test]
+    fn test_hit_test_translates_through_coordinate_root() {
+        let mut scene = FigureGraph::new();
+        let contents_id =
+            scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 300.0, 300.0)));
+        let coordinate_root_id = scene.add_child_to(
+            contents_id,
+            Box::new(TestCoordinateRootFigure::new(100.0, 50.0, 120.0, 120.0)),
+        );
+        let child_id = scene.add_child_to(
+            coordinate_root_id,
+            Box::new(RectangleFigure::new(20.0, 30.0, 40.0, 40.0)),
+        );
+
+        assert_eq!(scene.hit_test_simple((130.0, 90.0)), Some(child_id));
+        assert_eq!(
+            scene.hit_test_simple((115.0, 65.0)),
+            Some(coordinate_root_id)
+        );
+        assert_eq!(scene.hit_test_simple((50.0, 50.0)), Some(contents_id));
+    }
+
+    #[test]
+    fn test_find_mouse_event_target_at_translates_through_coordinate_root() {
+        let mut scene = FigureGraph::new();
+        let contents_id =
+            scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 300.0, 300.0)));
+        let coordinate_root_id = scene.add_child_to(
+            contents_id,
+            Box::new(TestCoordinateRootFigure::new(100.0, 50.0, 120.0, 120.0)),
+        );
+        let interactive_child = scene.add_child_to(
+            coordinate_root_id,
+            Box::new(TestInteractiveFigure::new(20.0, 30.0, 40.0, 40.0)),
+        );
+
+        assert_eq!(
+            scene.find_mouse_event_target_at(130.0, 90.0),
+            Some(interactive_child)
+        );
+        assert_eq!(scene.find_mouse_event_target_at(115.0, 65.0), None);
     }
 
     // ========== 坐标变换测试 ==========

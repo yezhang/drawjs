@@ -31,9 +31,11 @@ pub trait LayoutContext: Send + Sync {
     fn get_preferred_size(&self, block_id: BlockId) -> (f64, f64);
 
     /// 设置子元素的边界
+    ///
+    /// `bounds` 必须处于该子元素所属的坐标域中。
     fn set_child_bounds(&mut self, child_id: BlockId, bounds: Rectangle);
 
-    /// 获取容器的 bounds（用于计算 client area）
+    /// 获取容器 client area 在子节点坐标域中的矩形。
     fn get_container_bounds(&self, container_id: BlockId) -> Rectangle;
 }
 

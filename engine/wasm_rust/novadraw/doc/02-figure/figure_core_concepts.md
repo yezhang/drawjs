@@ -420,7 +420,7 @@ public void revalidate() {
 ### 7.2 关键点
 
 1. **逆序遍历**：`getChildrenRevIterable()` 确保后添加的节点（视觉上层）先被检测
-2. **坐标转换**：使用 `translateFromParent()` 将全局坐标转换为本地坐标
+2. **坐标转换**：使用 `translateFromParent()` 在父子坐标域之间切换
 3. **剪枝**：`!getClientArea().contains(point)` 跳过不在父节点内的整个子树
 4. **递归**：找到最深层的命中节点即返回
 
@@ -475,7 +475,7 @@ public interface FigureListener {
                                        │
                     ┌──────────────────▼──────────────────┐
                     │          Bounds System              │
-                    │    (bounds = 绝对坐标)              │
+                    │ (bounds = 相对最近坐标根的绝对值)   │
                     │    • setBounds()                    │
                     │    • erase/repaint                  │
                     └──────────────────┬──────────────────┘

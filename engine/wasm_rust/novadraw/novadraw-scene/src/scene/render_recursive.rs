@@ -107,6 +107,7 @@ impl<'a> FigureRenderer<'a> {
             _ => return,
         };
         block.figure.paint_border(self.gc);
+        super::paint_selection_overlay(block, self.gc);
 
         // 7. 恢复初始状态 → 直接调用 gc
         debug_render!("[RECUR] #{:02}   pop_state", id);
@@ -122,7 +123,7 @@ impl<'a> FigureRenderer<'a> {
     ///     translate(x + left, y + top);
     ///     clipRect(0, 0, w - left - right, h - top - bottom);
     ///   } else {
-    ///     clipRect(x, y, w, h);
+    ///     clipRect(clientArea);
     ///   }
     ///   paintChildren(graphics);
     /// ```
@@ -155,20 +156,20 @@ impl<'a> FigureRenderer<'a> {
                 bounds.height - top - bottom,
             );
         } else {
-            let bounds = block.figure.bounds();
+            let client_area = block.figure.client_area();
             debug_render!(
                 "[RECUR] #{:02} paintClientArea use_local=false, clip({},{},{},{})",
                 id,
-                bounds.x,
-                bounds.y,
-                bounds.width,
-                bounds.height
+                client_area.x,
+                client_area.y,
+                client_area.width,
+                client_area.height
             );
             self.gc.clip_rect(
-                block.figure.bounds().x,
-                block.figure.bounds().y,
-                block.figure.bounds().width,
-                block.figure.bounds().height,
+                client_area.x,
+                client_area.y,
+                client_area.width,
+                client_area.height,
             );
         }
 

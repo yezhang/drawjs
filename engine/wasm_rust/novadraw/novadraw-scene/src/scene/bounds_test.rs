@@ -1,12 +1,12 @@
 //! Bounds 坐标系统验证测试
 //!
-//! 验证 bounds 是绝对坐标，且 RenderCommand 使用 bounds 绝对值。
+//! 验证 bounds 表示相对最近坐标根的绝对值，且 RenderCommand 使用其所属坐标域中的值。
 
 use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use crate::figure::{Bounded, Figure, RectangleFigure, Shape, Updatable};
+use crate::figure::{Bounded, RectangleFigure, Shape, Updatable};
 use crate::scene::FigureGraph;
 
 // ========== 测试用 Figure 类型 ==========
@@ -15,12 +15,21 @@ use crate::scene::FigureGraph;
 #[derive(Clone, Copy)]
 struct TestCoordRootFigure {
     bounds: Rectangle,
+    insets: (f64, f64, f64, f64),
 }
 
 impl TestCoordRootFigure {
     fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
         Self {
             bounds: Rectangle::new(x, y, width, height),
+            insets: (0.0, 0.0, 0.0, 0.0),
+        }
+    }
+
+    fn with_insets(x: f64, y: f64, width: f64, height: f64, insets: (f64, f64, f64, f64)) -> Self {
+        Self {
+            bounds: Rectangle::new(x, y, width, height),
+            insets,
         }
     }
 }
@@ -38,9 +47,86 @@ impl Bounded for TestCoordRootFigure {
         true
     }
 
+    fn insets(&self) -> (f64, f64, f64, f64) {
+        self.insets
+    }
+
     fn name(&self) -> &'static str {
         "TestCoordRootFigure"
     }
+}
+
+/// 带 insets 的非坐标根 Figure。
+#[derive(Clone, Copy)]
+struct TestInsetFigure {
+    bounds: Rectangle,
+    insets: (f64, f64, f64, f64),
+}
+
+impl TestInsetFigure {
+    fn new(x: f64, y: f64, width: f64, height: f64, insets: (f64, f64, f64, f64)) -> Self {
+        Self {
+            bounds: Rectangle::new(x, y, width, height),
+            insets,
+        }
+    }
+}
+
+impl Bounded for TestInsetFigure {
+    fn bounds(&self) -> Rectangle {
+        self.bounds
+    }
+
+    fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        self.bounds = Rectangle::new(x, y, width, height);
+    }
+
+    fn insets(&self) -> (f64, f64, f64, f64) {
+        self.insets
+    }
+
+    fn name(&self) -> &'static str {
+        "TestInsetFigure"
+    }
+}
+
+impl Updatable for TestInsetFigure {
+    fn validate(&mut self) {}
+    fn invalidate(&mut self) {}
+}
+
+impl Shape for TestInsetFigure {
+    fn stroke_color(&self) -> Option<novadraw_core::Color> {
+        None
+    }
+
+    fn stroke_width(&self) -> f64 {
+        0.0
+    }
+
+    fn fill_color(&self) -> Option<novadraw_core::Color> {
+        None
+    }
+
+    fn line_cap(&self) -> novadraw_render::command::LineCap {
+        novadraw_render::command::LineCap::default()
+    }
+
+    fn line_join(&self) -> novadraw_render::command::LineJoin {
+        novadraw_render::command::LineJoin::default()
+    }
+
+    fn fill_enabled(&self) -> bool {
+        false
+    }
+
+    fn outline_enabled(&self) -> bool {
+        false
+    }
+
+    fn fill_shape(&self, _gc: &mut NdCanvas) {}
+
+    fn outline_shape(&self, _gc: &mut NdCanvas) {}
 }
 
 impl Updatable for TestCoordRootFigure {
@@ -104,10 +190,16 @@ fn collect_clip_rects(gc: &novadraw_render::NdCanvas) -> Vec<[glam::DVec2; 2]> {
         .collect()
 }
 
-/// 测试：bounds 是绝对坐标
+fn has_clip_rect(clip_rects: &[[glam::DVec2; 2]], x: f64, y: f64, width: f64, height: f64) -> bool {
+    clip_rects.iter().any(|rect| {
+        rect[0].x == x && rect[0].y == y && rect[1].x == x + width && rect[1].y == y + height
+    })
+}
+
+/// 测试：bounds 表示相对最近坐标根的绝对值
 ///
 /// 场景：父子节点分别设置 bounds
-/// 期望：所有 RenderCommand 使用 bounds 的绝对值
+/// 期望：所有 RenderCommand 使用 bounds 在所属坐标域中的值
 #[test]
 fn test_bounds_absolute_coordinates() {
     let mut scene = FigureGraph::new();
@@ -124,8 +216,8 @@ fn test_bounds_absolute_coordinates() {
     let fill_rects = collect_fill_rects(&gc);
 
     // 期望有两个 FillRect: parent 和 child
-    // 注意：由于使用绝对坐标模式，fill_rect 使用 (0, 0, width, height)
-    // 实际的绝对位置由 translate 状态决定
+    // fill_rect 使用图元在当前绘制坐标域中的矩形，
+    // 实际绘制位置由 transform / translate 状态决定
 
     // parent FillRect: (0, 0, 100, 100)
     // child FillRect: (0, 0, 50, 50)
@@ -160,7 +252,7 @@ fn test_render_commands_coords() {
 
     eprintln!("ClipRects: {:?}", clip_rects);
 
-    // 在绝对坐标模式下（默认），每个 Figure 的 clip_rect 使用其 bounds
+    // 在默认共享坐标域模式下，每个 Figure 的 clip_rect 使用其 bounds
     // parent clip = (0, 0, 100, 100)
     // child clip = (10, 10, 50, 50)
     assert!(
@@ -204,8 +296,8 @@ fn test_nested_structure_render_order() {
     let fill_rects = collect_fill_rects(&gc);
     eprintln!("Nested FillRects: {:?}", fill_rects);
 
-    // 在绝对坐标模式下，fill_rect 使用 (0, 0, width, height)
-    // 实际的绝对位置由 translate 状态管理
+    // fill_rect 使用当前绘制坐标域中的矩形，
+    // 实际位置由 translate 状态管理
     // 这验证了：RenderCommand 只存储 bounds 值，translate 状态由独立栈管理
 }
 
@@ -259,7 +351,7 @@ fn test_prim_translate_propagates() {
     // 平移 parent (5, 10)
     scene.prim_translate(parent_id, 5.0, 10.0);
 
-    // 验证平移后 bounds（绝对坐标）
+    // 验证平移后 bounds（仍是相对最近坐标根的绝对值）
     let parent_bounds = scene.blocks.get(parent_id).unwrap().figure_bounds();
     assert_eq!(parent_bounds.x, 5.0, "父节点 x 应为 5");
     assert_eq!(parent_bounds.y, 10.0, "父节点 y 应为 10");
@@ -304,10 +396,10 @@ fn test_prim_translate_nested_propagation() {
     assert_eq!(child_bounds.y, 15.0, "子节点 y 应为 15 (10 + 5)");
 }
 
-/// 测试：RenderCommand 在平移后使用新的绝对坐标
+/// 测试：RenderCommand 在平移后使用更新后的 bounds
 ///
 /// 场景：创建场景后平移父节点
-/// 期望：RenderCommand 使用平移后的 bounds 绝对值
+/// 期望：RenderCommand 使用平移后的 bounds 值
 #[test]
 fn test_render_commands_after_translate() {
     let mut scene = FigureGraph::new();
@@ -364,12 +456,51 @@ fn test_local_coordinates_mode() {
 
     // 本地坐标模式下：
     // - 坐标根：translate(10, 10)，clip(0, 0, 100, 100)
-    // - 子节点：使用全局坐标 (30, 40)，clip(30, 40, 50, 50)
+    // - 子节点：其 bounds 位于当前坐标域，clip(30, 40, 50, 50)
 
     // clip_rects 应该包含：
     // 1. 坐标根的 clip: (0, 0, 100, 100) - 在 translate 之后
-    // 2. 子节点的 clip: (30, 40, 50, 50) - 全局坐标
+    // 2. 子节点的 clip: (30, 40, 50, 50) - 子节点所属坐标域中的值
     assert!(!clip_rects.is_empty(), "应有 ClipRect 命令");
+}
+
+#[test]
+fn test_client_area_resets_origin_for_coordinate_root() {
+    let figure = TestCoordRootFigure::with_insets(10.0, 20.0, 100.0, 80.0, (5.0, 7.0, 11.0, 13.0));
+
+    assert_eq!(figure.client_area(), Rectangle::new(0.0, 0.0, 80.0, 64.0));
+}
+
+#[test]
+fn test_render_clips_non_local_coordinate_figure_to_client_area() {
+    let mut scene = FigureGraph::new();
+    let root_id = scene.set_contents(Box::new(TestInsetFigure::new(
+        10.0,
+        20.0,
+        100.0,
+        80.0,
+        (5.0, 7.0, 11.0, 13.0),
+    )));
+    scene.add_child_to(
+        root_id,
+        Box::new(RectangleFigure::new(10.0, 20.0, 30.0, 30.0)),
+    );
+
+    let recursive_gc = scene.render();
+    let recursive_clips = collect_clip_rects(&recursive_gc);
+    assert!(
+        has_clip_rect(&recursive_clips, 17.0, 25.0, 80.0, 64.0),
+        "recursive renderer should clip non-local figure children to client area: {:?}",
+        recursive_clips
+    );
+
+    let iterative_gc = scene.render_iterative();
+    let iterative_clips = collect_clip_rects(&iterative_gc);
+    assert!(
+        has_clip_rect(&iterative_clips, 17.0, 25.0, 80.0, 64.0),
+        "iterative renderer should clip non-local figure children to client area: {:?}",
+        iterative_clips
+    );
 }
 
 /// 测试：场景结构验证 bounds 完整性

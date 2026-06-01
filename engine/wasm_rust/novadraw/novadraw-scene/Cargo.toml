@@ -16,4 +16,5 @@ tracing.workspace = true
 
 [features]
 default = []
+debug_render = []
 vello = ["novadraw-render/vello"]

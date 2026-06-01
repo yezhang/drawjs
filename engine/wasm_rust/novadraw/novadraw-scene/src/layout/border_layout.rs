@@ -329,11 +329,13 @@ mod tests {
 }
 
 /// Mock LayoutContext for testing
+#[cfg(test)]
 struct MockLayoutContext {
     children: Vec<(BlockId, Rectangle)>,
     container_bounds: Rectangle,
 }
 
+#[cfg(test)]
 impl MockLayoutContext {
     fn new() -> Self {
         Self {
@@ -341,15 +343,9 @@ impl MockLayoutContext {
             container_bounds: Rectangle::new(0.0, 0.0, 800.0, 600.0),
         }
     }
-
-    fn with_children(children: Vec<(BlockId, Rectangle)>) -> Self {
-        Self {
-            children,
-            container_bounds: Rectangle::new(0.0, 0.0, 800.0, 600.0),
-        }
-    }
 }
 
+#[cfg(test)]
 impl super::LayoutContext for MockLayoutContext {
     fn get_children(&self, _parent_id: BlockId) -> Vec<(BlockId, Rectangle)> {
         self.children.clone()

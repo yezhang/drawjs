@@ -84,13 +84,8 @@ impl LayoutManager for FillLayout {
 
         // 获取第一个子元素
         if let Some((first_child_id, _)) = children.first() {
-            // 获取容器的 bounds
-            // FillLayout：第一个子元素填充容器
-            // 需要获取容器的 bounds，这需要从场景图中获取
-            // 简化实现：假设容器占据所有可用空间
-            // 实际应该从 ctx 获取容器的 bounds
-            let (width, height) = ctx.get_preferred_size(container);
-            let bounds = Rectangle::new(0.0, 0.0, width, height);
+            // FillLayout：第一个子元素填充容器的 client area
+            let bounds = ctx.get_container_bounds(container);
             debug!("FillLayout: first child bounds={:?}", bounds);
             ctx.set_child_bounds(*first_child_id, bounds);
         }

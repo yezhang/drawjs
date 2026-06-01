@@ -15,24 +15,31 @@ UserInput: {
   label: "用户输入\n(winit 事件)"
 }
 
-# WinitEventDispatcher
-WinitEventDispatcher: {
+# 平台输入适配
+PlatformInputAdapter: {
   shape: rect
-  label: "WinitEventDispatcher"
+  label: "apps 输入适配\nphysical / scale_factor"
 }
 
-WinitEventDispatcher.step1: "1. find_figure_at(x, y)"
-WinitEventDispatcher.step2: "2. 创建 MouseEvent"
-WinitEventDispatcher.step3: "3. route_event(target_id, event)"
-
-# NovadrawContext
-NovadrawContext: {
+# 引擎分发上下文
+SceneDispatchContext: {
   shape: rect
-  label: "NovadrawContext"
+  label: "SceneDispatchContext\n(引擎层)"
 }
 
-NovadrawContext.step1: "route_event()"
-NovadrawContext.step2: "调用 Graph.route_event()"
+SceneDispatchContext.step1: "1. find_mouse_event_target_at(entry_x, entry_y)"
+SceneDispatchContext.step2: "2. MouseEvent::new(entry point)"
+SceneDispatchContext.step3: "3. translate_to_relative(target_id)"
+SceneDispatchContext.step4: "4. dispatch_to_target(target_id, event)"
+
+# Figure 回调上下文
+SceneNovadrawContext: {
+  shape: rect
+  label: "SceneNovadrawContext\n(引擎层)"
+}
+
+SceneNovadrawContext.step1: "target_id()"
+SceneNovadrawContext.step2: "repaint() / invalidate()"
 
 # FigureGraph
 FigureGraph: {
@@ -40,7 +47,7 @@ FigureGraph: {
   label: "FigureGraph"
 }
 
-FigureGraph.step1: "route_event(target, event, ctx)"
+FigureGraph.step1: "dispatch_to_target(target, event, ctx)"
 FigureGraph.step2: "block(target).handle_event()"
 FigureGraph.step3: "冒泡到父节点（如未处理）"
 
@@ -60,14 +67,16 @@ dynFigure: {
 }
 
 dynFigure.step1: "on_mouse_pressed(event, ctx)"
-dynFigure.step2: "ctx.repaint() / ctx.translate()"
+dynFigure.step2: "ctx.repaint() / invalidate()"
 
 # 连接
-UserInput -> WinitEventDispatcher
-WinitEventDispatcher.step1 -> WinitEventDispatcher.step2
-WinitEventDispatcher.step2 -> WinitEventDispatcher.step3
-WinitEventDispatcher -> NovadrawContext: "route_event()"
-NovadrawContext -> FigureGraph: "route_event()"
+UserInput -> PlatformInputAdapter
+PlatformInputAdapter -> SceneDispatchContext: "entry-domain point"
+SceneDispatchContext.step1 -> SceneDispatchContext.step2
+SceneDispatchContext.step2 -> SceneDispatchContext.step3
+SceneDispatchContext.step3 -> SceneDispatchContext.step4
+SceneDispatchContext -> FigureGraph: "target-domain MouseEvent"
+SceneDispatchContext -> SceneNovadrawContext: "create figure ctx"
 FigureGraph -> FigureBlock: "handle_event()"
 FigureBlock -> dynFigure: "on_mouse_pressed()"
 
@@ -83,6 +92,7 @@ direction: left-right
 MouseEvent: {
   x: f64
   y: f64
+  entry_point: Point
   button: MouseButton
   click_count: u32
   modifiers: Modifiers
@@ -200,37 +210,37 @@ SendToCaptured -> ReleaseCapture
 ```d2
 direction: left-right
 
-WinitEventDispatcher.dispatch_mouse_pressed: {
-  "let target_id = ctx.graph().find_figure_at(x, y)"
-  "ctx.route_event(target_id, &event)"
-  "ctx.graph().set_captured(target_id)"
+BasicEventDispatcher.dispatch_mouse_pressed: {
+  "self.receive(ctx, entry_x, entry_y)"
+  "let event = MouseEvent::new(Pressed, entry_x, entry_y, button)"
+  "ctx.dispatch_to_target(target_id, &event)"
 }
 
-WinitEventDispatcher.dispatch_mouse_moved: {
+BasicEventDispatcher.dispatch_mouse_moved: {
   shape: code_block
   label: "dispatch_mouse_moved"
 }
 
 dispatch_mouse_moved.code: |
-  if let Some(captured_id) = ctx.graph().captured() {
-      ctx.route_event(Some(captured_id), &event)
+  if let Some(captured_id) = ctx.captured() {
+      ctx.dispatch_to_target(Some(captured_id), &event)
   } else {
-      let target_id = ctx.graph().find_figure_at(x, y)
-      ctx.route_event(target_id, &event)
+      let target_id = ctx.mouse_target()
+      ctx.dispatch_to_target(target_id, &event)
   }
 
-WinitEventDispatcher.dispatch_mouse_released: {
+BasicEventDispatcher.dispatch_mouse_released: {
   shape: code_block
   label: "dispatch_mouse_released"
 }
 
 dispatch_mouse_released.code: |
-  if let Some(captured_id) = ctx.graph().captured() {
-      ctx.route_event(Some(captured_id), &event)
-      ctx.graph().set_captured(None)
+  if let Some(captured_id) = ctx.captured() {
+      ctx.dispatch_to_target(Some(captured_id), &event)
+      ctx.set_captured(None)
   } else {
-      let target_id = ctx.graph().find_figure_at(x, y)
-      ctx.route_event(target_id, &event)
+      let target_id = ctx.mouse_target()
+      ctx.dispatch_to_target(target_id, &event)
   }
 ```
 
@@ -485,7 +495,7 @@ ParentCoord: {
 
 AbsoluteCoord: {
   shape: hexagon
-  label: "绝对坐标\n(场景根)"
+  label: "绝对值\n(最近坐标根)"
 }
 
 # 转换方法

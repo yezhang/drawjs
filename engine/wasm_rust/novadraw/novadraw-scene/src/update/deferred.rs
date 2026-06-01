@@ -20,7 +20,7 @@ use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
 use crate::scene::BlockId;
-use crate::update::listener::{NotificationEffect, NotificationQueue, UpdateEvent};
+use crate::update::listener::{NotificationEffect, NotificationQueue, UpdateEvent, UpdateListener};
 use crate::update::repair::{compute_damage_union, execute_repair_phase, merge_dirty_region};
 
 /// Scene Update Manager
@@ -40,7 +40,6 @@ use crate::update::repair::{compute_damage_union, execute_repair_phase, merge_di
 /// draw2d 的 DeferredUpdateManager 直接持有 root Figure 引用并直接调用其方法。
 /// 本实现将数据管理（UM）和业务逻辑（FigureGraph）分离，
 /// 通过 `UpdateManagerSource` trait 定义回调接口，保持解耦。
-#[derive(Default)]
 pub struct SceneUpdateManager {
     /// 脏区域映射：block_id -> 脏区域
     pub(crate) dirty_regions: std::collections::HashMap<BlockId, Rectangle>,
@@ -50,6 +49,13 @@ pub struct SceneUpdateManager {
     pub(crate) update_queued: bool,
     pub(crate) updating: bool,
     notification_effects: NotificationQueue,
+    listeners: Vec<Box<dyn UpdateListener>>,
+}
+
+impl Default for SceneUpdateManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SceneUpdateManager {
@@ -61,7 +67,46 @@ impl SceneUpdateManager {
             update_queued: false,
             updating: false,
             notification_effects: NotificationQueue::new(),
+            listeners: Vec::new(),
         }
+    }
+
+    /// 注册更新监听器
+    pub fn add_listener(&mut self, listener: Box<dyn UpdateListener>) {
+        self.listeners.push(listener);
+    }
+
+    /// 向所有监听器分发 effect 队列中的事件
+    fn dispatch_effects(&self, effects: &[NotificationEffect]) {
+        for effect in effects {
+            match effect {
+                NotificationEffect::Notify { block_id } => {
+                    for listener in &self.listeners {
+                        listener.on_notify(*block_id);
+                    }
+                }
+                NotificationEffect::EmitFigure(event) => {
+                    for listener in &self.listeners {
+                        listener.on_figure_event(event.clone());
+                    }
+                }
+                NotificationEffect::EmitUpdate(event) => {
+                    for listener in &self.listeners {
+                        listener.on_update_event(event.clone());
+                    }
+                }
+            }
+        }
+    }
+
+    /// 统一 flush：收集 FigureGraph 和 SceneUpdateManager 两边的 effect，
+    /// 在事务边界统一分发到所有注册的 listener。
+    pub fn flush_notifications(&mut self, graph: &mut crate::scene::FigureGraph) {
+        let um_effects = self.notification_effects.drain();
+        self.dispatch_effects(&um_effects);
+
+        let graph_effects = graph.drain_notification_effects();
+        self.dispatch_effects(&graph_effects);
     }
 
     /// 添加脏区域
@@ -71,7 +116,7 @@ impl SceneUpdateManager {
     /// # Arguments
     ///
     /// * `block_id` - 需要重绘的块 ID
-    /// * `rect` - 脏区域（局部坐标）
+    /// * `rect` - 脏区域（与该 block 的 bounds 同域）
     pub fn add_dirty_region(&mut self, block_id: BlockId, rect: Rectangle) {
         if merge_dirty_region(&mut self.dirty_regions, block_id, rect) {
             self.update_queued = true;
@@ -208,6 +253,7 @@ impl crate::update::UpdateManager for SceneUpdateManager {
             .emit_update(UpdateEvent::Painted { damage });
 
         self.clear_dirty_and_flag();
+        self.flush_notifications(graph);
         self.updating = false;
     }
 
@@ -227,7 +273,7 @@ impl crate::update::UpdateManager for SceneUpdateManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{FigureGraph, RectangleFigure, scene::BlockId, update::UpdateManager};
+    use crate::{FigureEvent, FigureGraph, RectangleFigure, scene::BlockId, update::UpdateManager};
     use novadraw_core::Color;
     use slotmap::KeyData;
 
@@ -404,12 +450,32 @@ mod tests {
         )));
         manager.add_dirty_region(root_id, Rectangle::new(10.0, 20.0, 30.0, 40.0));
 
+        let effects = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        {
+            struct CaptureUpdate {
+                effects: std::sync::Arc<std::sync::Mutex<Vec<NotificationEffect>>>,
+            }
+            impl UpdateListener for CaptureUpdate {
+                fn on_update_event(&self, event: UpdateEvent) {
+                    self.effects
+                        .lock()
+                        .unwrap()
+                        .push(NotificationEffect::EmitUpdate(event));
+                }
+                fn on_figure_event(&self, _event: FigureEvent) {}
+                fn on_notify(&self, _block_id: BlockId) {}
+            }
+            manager.add_listener(Box::new(CaptureUpdate {
+                effects: effects.clone(),
+            }));
+        }
+
         let mut canvas = NdCanvas::new();
         manager.perform_update(&mut graph, &mut canvas);
-        let effects = manager.drain_notification_effects();
 
+        let captured = effects.lock().unwrap().clone();
         assert_eq!(
-            effects,
+            captured,
             vec![
                 NotificationEffect::EmitUpdate(UpdateEvent::Validating),
                 NotificationEffect::EmitUpdate(UpdateEvent::Validated),

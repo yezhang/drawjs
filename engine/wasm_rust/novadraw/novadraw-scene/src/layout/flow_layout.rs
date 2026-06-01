@@ -123,7 +123,6 @@ impl FlowLayout {
         let mut x: f64 = cx;
         let mut y: f64 = cy;
         let mut row_height: f64 = 0.0;
-        let mut max_row_width: f64 = 0.0;
 
         for (child_id, child_bounds) in children {
             let child_w = child_bounds.width;
@@ -135,7 +134,6 @@ impl FlowLayout {
                 y += row_height + self.row_spacing;
                 x = cx;
                 row_height = 0.0;
-                max_row_width = max_row_width.max(x - cx);
             }
 
             // 设置子元素位置
@@ -146,16 +144,13 @@ impl FlowLayout {
             x += child_w + self.spacing;
             row_height = row_height.max(child_h);
         }
-
-        // 更新最后一行宽度
-        max_row_width = max_row_width.max(x - cx - self.spacing);
     }
 
     fn layout_vertical(
         &self,
         cx: f64,
         cy: f64,
-        cw: f64,
+        _cw: f64,
         ch: f64,
         children: &[(BlockId, Rectangle)],
         ctx: &mut dyn LayoutContext,
@@ -163,7 +158,6 @@ impl FlowLayout {
         let mut x: f64 = cx;
         let mut y: f64 = cy;
         let mut col_width: f64 = 0.0;
-        let mut max_col_height: f64 = 0.0;
 
         for (child_id, child_bounds) in children {
             let child_w = child_bounds.width;
@@ -175,7 +169,6 @@ impl FlowLayout {
                 x += col_width + self.row_spacing;
                 y = cy;
                 col_width = 0.0;
-                max_col_height = 0.0;
             }
 
             // 设置子元素位置
@@ -185,7 +178,6 @@ impl FlowLayout {
             // 更新位置和列宽
             y += child_h + self.spacing;
             col_width = col_width.max(child_w);
-            max_col_height = max_col_height.max(y - cy - self.spacing);
         }
     }
 }
@@ -279,11 +271,13 @@ mod tests {
 }
 
 /// Mock LayoutContext for testing
+#[cfg(test)]
 struct MockLayoutContext {
     children: Vec<(BlockId, Rectangle)>,
     container_bounds: Rectangle,
 }
 
+#[cfg(test)]
 impl MockLayoutContext {
     fn new() -> Self {
         Self {
@@ -293,6 +287,7 @@ impl MockLayoutContext {
     }
 }
 
+#[cfg(test)]
 impl super::LayoutContext for MockLayoutContext {
     fn get_children(&self, _parent_id: BlockId) -> Vec<(BlockId, Rectangle)> {
         self.children.clone()

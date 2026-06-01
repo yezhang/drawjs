@@ -15,7 +15,7 @@
 //! | root Figure | FigureGraph.root |
 //! | UpdateManager | NovadrawSystem.update_manager |
 //! | EventDispatcher | EventDispatcher trait |
-//! | Canvas | WinitEventDispatcher |
+//! | Canvas / paint entry | SceneHost + RenderBackend |
 //!
 //! SceneHost 只对应 LightweightSystem 的：
 //! - 渲染入口：execute_update()
@@ -28,7 +28,7 @@
 //! 本实现将调度策略抽象为 trait，不同平台提供不同实现：
 //!
 //! - **WinitSceneHost**: `request_update()` → `window.request_redraw()`，
-//!   利用 winit 的 `about_to_wait` + `request_redraw` 实现帧合并
+//!   利用 winit 的 redraw 请求实现 request-driven 帧合并
 //! - **WebSceneHost** (未来): `requestAnimationFrame` 调度
 //!
 //! # 更新流程
@@ -36,8 +36,8 @@
 //! ```text
 //! FigureGraph.mark_invalid() / repaint()
 //!         │
-//!         ▼ (内部调用 notify_update_requested)
-//! SceneHost.notify_update_requested()
+//!         ▼ (组合根检测到 UpdateManager 队列从空变为非空)
+//! SceneHost.request_update()
 //!         │
 //!         ▼ (平台调度)
 //! WinitSceneHost:  window.request_redraw()
@@ -56,7 +56,7 @@
 //! - **SceneHost**: 渲染入口协调。不持有任何核心对象（FigureGraph、UpdateManager 等）。
 //! - **FigureGraph**: 块树管理 + 布局计算。平台无关。
 //! - **EventDispatcher**: 事件分发 trait。交互状态在 FigureGraph 中。
-//! - **WinitEventDispatcher**: winit 平台实现，持有 Window。
+//! - **平台事件循环**: 负责把 winit redraw/input 事件转交给组合根。
 
 use novadraw_render::{NdCanvas, RenderBackend};
 
@@ -69,9 +69,9 @@ use crate::{FigureGraph, UpdateManager};
 /// # 实现说明
 ///
 /// 典型实现（WinitSceneHost）：
-/// 1. `notify_update_requested()` 设置 `update_queued = true`
+/// 1. `request_update()` 设置 host 侧 `update_queued = true`
 /// 2. 平台事件循环收到 `RedrawRequested` → 调用 `execute_update()`
-/// 3. `execute_update()` 执行两阶段更新后设置 `update_queued = false`
+/// 3. `execute_update()` 执行两阶段更新后，用 UpdateManager 队列状态同步 host 标记
 ///
 /// 不同平台可提供不同的调度策略（如 requestAnimationFrame、节流等）。
 pub trait SceneHost: Send + Sync {

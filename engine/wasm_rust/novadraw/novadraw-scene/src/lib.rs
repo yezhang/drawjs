@@ -26,7 +26,7 @@ pub mod update;
 pub mod viewport;
 
 pub use border::{Border, LineBorder, MarginBorder, RectangleBorder};
-pub use context::NovadrawContext;
+pub use context::{NovadrawContext, SceneDispatchContext, SceneNovadrawContext};
 pub use event::{
     BasicEventDispatcher, DispatchContext, Event, EventDispatcher, MouseButton, MouseEvent,
     MouseEventKind,

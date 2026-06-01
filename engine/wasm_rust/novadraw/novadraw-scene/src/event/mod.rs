@@ -1,5 +1,6 @@
+use novadraw_geometry::Point;
+
 use crate::BlockId;
-use tracing::info;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseButton {
@@ -21,9 +22,41 @@ pub enum MouseEventKind {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MouseEvent {
     pub kind: MouseEventKind,
+    /// 鼠标点在当前 target/source Figure 坐标域中的 x 值。
     pub x: f64,
+    /// 鼠标点在当前 target/source Figure 坐标域中的 y 值。
     pub y: f64,
     pub button: MouseButton,
+    entry_point: Point,
+}
+
+impl MouseEvent {
+    /// 创建一个入口域鼠标事件。
+    ///
+    /// 此时 `x/y` 与 `entry_point()` 相同；引擎在投递给 target 前会调用
+    /// `with_target_point()` 生成 target/source Figure 坐标域中的事件点。
+    pub fn new(kind: MouseEventKind, x: f64, y: f64, button: MouseButton) -> Self {
+        Self {
+            kind,
+            x,
+            y,
+            button,
+            entry_point: Point::new(x, y),
+        }
+    }
+
+    /// 返回平台输入归一化后的入口节点坐标域点。
+    ///
+    /// 该点只读保留，用于调试、录制回放或跨 target 手势分析；Figure 的常规业务逻辑
+    /// 应优先使用 `x/y`，它们已在引擎层转换到当前 target/source Figure 坐标域。
+    pub fn entry_point(&self) -> Point {
+        self.entry_point
+    }
+
+    /// 返回一个保留 entry point、但使用 target/source 坐标域点的新事件。
+    pub fn with_target_point(self, x: f64, y: f64) -> Self {
+        Self { x, y, ..self }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -35,6 +68,8 @@ pub trait DispatchContext {
     fn find_mouse_event_target_at(&self, x: f64, y: f64) -> Option<BlockId>;
     fn mouse_target(&self) -> Option<BlockId>;
     fn set_mouse_target(&mut self, id: Option<BlockId>);
+    fn set_hovered(&mut self, id: BlockId, hovered: bool);
+    fn set_pressed(&mut self, id: BlockId, pressed: bool);
     fn focus_owner(&self) -> Option<BlockId>;
     fn set_focus_owner(&mut self, id: Option<BlockId>);
     fn captured(&self) -> Option<BlockId>;
@@ -42,6 +77,10 @@ pub trait DispatchContext {
     fn wants_key_events(&self, _target_id: BlockId) -> bool {
         false
     }
+    /// 将事件投递给 target。
+    ///
+    /// 传入的 `Event` 使用入口节点坐标域；具体实现负责在投递前把鼠标点转换到
+    /// target Figure 的坐标域，以对齐 draw2d 的 `source.translateToRelative()` 语义。
     fn dispatch_to_target(&mut self, target_id: Option<BlockId>, event: &Event) -> bool;
 }
 
@@ -74,45 +113,35 @@ impl BasicEventDispatcher {
         let next_target = captured.or(hit_target);
         let previous_target = ctx.mouse_target();
 
-        tracing::info!(
-            "[EventDispatcher] refresh_mouse_target: captured={:?}, hit_target={:?}, next={:?}, prev={:?}, coords=({:.1}, {:.1})",
-            captured,
-            hit_target,
-            next_target,
-            previous_target,
-            x,
-            y
-        );
-
         if previous_target == next_target {
-            tracing::debug!("[EventDispatcher] mouse_target unchanged, no events dispatched");
             return;
         }
 
-        info!(
-            "mouse_target changed: previous={:?}, next={:?}, x={}, y={}",
-            previous_target, next_target, x, y
-        );
-
         if previous_target.is_some() {
-            let exited = Event::Mouse(MouseEvent {
-                kind: MouseEventKind::Exited,
+            if let Some(previous_target) = previous_target {
+                ctx.set_hovered(previous_target, false);
+            }
+            let exited = Event::Mouse(MouseEvent::new(
+                MouseEventKind::Exited,
                 x,
                 y,
-                button: MouseButton::None,
-            });
+                MouseButton::None,
+            ));
             let _ = ctx.dispatch_to_target(previous_target, &exited);
         }
 
         ctx.set_mouse_target(next_target);
 
         if next_target.is_some() {
-            let entered = Event::Mouse(MouseEvent {
-                kind: MouseEventKind::Entered,
+            if let Some(next_target) = next_target {
+                ctx.set_hovered(next_target, true);
+            }
+            let entered = Event::Mouse(MouseEvent::new(
+                MouseEventKind::Entered,
                 x,
                 y,
-                button: MouseButton::None,
-            });
+                MouseButton::None,
+            ));
             let _ = ctx.dispatch_to_target(next_target, &entered);
         }
     }
@@ -126,7 +155,7 @@ impl BasicEventDispatcher {
         button: MouseButton,
     ) {
         self.refresh_mouse_target(ctx, x, y);
-        let event = Event::Mouse(MouseEvent { kind, x, y, button });
+        let event = Event::Mouse(MouseEvent::new(kind, x, y, button));
         let _ = ctx.dispatch_to_target(ctx.mouse_target(), &event);
     }
 }
@@ -145,15 +174,13 @@ impl EventDispatcher for BasicEventDispatcher {
     ) {
         self.refresh_mouse_target(ctx, x, y);
         let target = ctx.mouse_target();
-        let event = Event::Mouse(MouseEvent {
-            kind: MouseEventKind::Pressed,
-            x,
-            y,
-            button,
-        });
+        let event = Event::Mouse(MouseEvent::new(MouseEventKind::Pressed, x, y, button));
         let handled = ctx.dispatch_to_target(target, &event);
         if handled {
             ctx.set_captured(target);
+            if let Some(target) = target {
+                ctx.set_pressed(target, true);
+            }
         }
     }
 
@@ -166,14 +193,10 @@ impl EventDispatcher for BasicEventDispatcher {
     ) {
         self.refresh_mouse_target(ctx, x, y);
         let target = ctx.mouse_target();
-        let event = Event::Mouse(MouseEvent {
-            kind: MouseEventKind::Released,
-            x,
-            y,
-            button,
-        });
+        let event = Event::Mouse(MouseEvent::new(MouseEventKind::Released, x, y, button));
         let _ = ctx.dispatch_to_target(target, &event);
-        if ctx.captured().is_some() {
+        if let Some(captured) = ctx.captured() {
+            ctx.set_pressed(captured, false);
             ctx.set_captured(None);
             self.refresh_mouse_target(ctx, x, y);
         }
@@ -224,6 +247,10 @@ mod tests {
             self.mouse_target = id;
         }
 
+        fn set_hovered(&mut self, _id: BlockId, _hovered: bool) {}
+
+        fn set_pressed(&mut self, _id: BlockId, _pressed: bool) {}
+
         fn focus_owner(&self) -> Option<BlockId> {
             self.focus_owner
         }
@@ -261,12 +288,12 @@ mod tests {
         assert_eq!(ctx.dispatched[0].0, Some(target));
         assert_eq!(
             ctx.dispatched[0].1,
-            Event::Mouse(MouseEvent {
-                kind: MouseEventKind::Entered,
-                x: 10.0,
-                y: 20.0,
-                button: MouseButton::None,
-            })
+            Event::Mouse(MouseEvent::new(
+                MouseEventKind::Entered,
+                10.0,
+                20.0,
+                MouseButton::None,
+            ))
         );
     }
 
@@ -320,21 +347,21 @@ mod tests {
         assert_eq!(ctx.dispatched[0].0, Some(target));
         assert_eq!(
             ctx.dispatched[0].1,
-            Event::Mouse(MouseEvent {
-                kind: MouseEventKind::Released,
-                x: 40.0,
-                y: 40.0,
-                button: MouseButton::Left,
-            })
+            Event::Mouse(MouseEvent::new(
+                MouseEventKind::Released,
+                40.0,
+                40.0,
+                MouseButton::Left,
+            ))
         );
         assert_eq!(
             ctx.dispatched.last().unwrap().1,
-            Event::Mouse(MouseEvent {
-                kind: MouseEventKind::Exited,
-                x: 40.0,
-                y: 40.0,
-                button: MouseButton::None,
-            })
+            Event::Mouse(MouseEvent::new(
+                MouseEventKind::Exited,
+                40.0,
+                40.0,
+                MouseButton::None,
+            ))
         );
     }
 }
