@@ -10,14 +10,16 @@ members = [
   "novadraw-apps",
 
   "apps/editor",
-  "apps/vello-demo",
+  "apps/vello-app",
   "apps/shape-app",
-  "apps/ndcanvas-test",
+  "apps/style-app",
+  "apps/ndcanvas-app",
   "apps/transform-app",
   "apps/clip-app",
   "apps/layout-app",
   "apps/event-app",
   "apps/border-app",
+  "apps/update-app",
 ]
 
 [workspace.package]

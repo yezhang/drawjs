@@ -232,7 +232,7 @@ fn create_scene_8_rotate_animation() -> novadraw::FigureGraph {
     scene
 }
 
-fn create_scene_9_screen_to_world() -> novadraw::FigureGraph {
+fn create_scene_9_viewport_to_content() -> novadraw::FigureGraph {
     let mut scene = novadraw::FigureGraph::new();
     let container = novadraw::RectangleFigure::new(0.0, 0.0, WINDOW_WIDTH, WINDOW_HEIGHT);
     let container_id = scene.set_contents(Box::new(container));
@@ -276,8 +276,8 @@ fn main() {
                 Box::new(|| create_scene_8_rotate_animation()),
             ),
             (
-                "screen_to_world",
-                Box::new(|| create_scene_9_screen_to_world()),
+                "viewport_to_content",
+                Box::new(|| create_scene_9_viewport_to_content()),
             ),
         ],
     )

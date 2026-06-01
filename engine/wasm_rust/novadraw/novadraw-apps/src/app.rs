@@ -5,7 +5,10 @@
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub use novadraw::{FigureGraph, RenderBackend, WindowProxy};
+pub use novadraw::{
+    BlockId, FigureEvent, FigureGraph, NotificationEffect, RenderBackend, SceneUpdateManager,
+    UpdateEvent, UpdateListener, UpdateManager, WindowProxy,
+};
 pub use novadraw_render::backend::vello::{VelloRenderer, WinitWindowProxy};
 pub use winit::dpi::{LogicalSize, PhysicalSize};
 pub use winit::event::WindowEvent;
@@ -27,29 +30,36 @@ use tracing::{error, info, warn};
 // 场景创建函数类型
 type SceneCreator = Box<dyn FnMut() -> FigureGraph>;
 
+struct DemoUpdateListener;
+
+impl UpdateListener for DemoUpdateListener {
+    fn on_update_event(&self, event: UpdateEvent) {
+        tracing::debug!("[DemoApp] update event: {:?}", event);
+    }
+
+    fn on_figure_event(&self, event: FigureEvent) {
+        tracing::debug!("[DemoApp] figure event: {:?}", event);
+    }
+
+    fn on_notify(&self, block_id: BlockId) {
+        tracing::debug!("[DemoApp] notify: {:?}", block_id);
+    }
+}
+
 pub struct DemoApp {
-    /// 场景名称列表
     #[allow(clippy::type_complexity)]
     scenes: Vec<(&'static str, SceneCreator)>,
-    /// 当前场景索引
     current_scene_idx: usize,
-    /// 场景图
     scene_graph: Option<FigureGraph>,
-    /// 渲染器
+    update_manager: Option<SceneUpdateManager>,
     renderer: Option<VelloRenderer>,
-    /// 窗口
     window: Option<Arc<winit::window::Window>>,
-    /// 窗口标题
     title: String,
-    /// 应用名称（用于截图目录）
     app_name: String,
-    /// 窗口宽度
     width: f64,
-    /// 窗口高度
     height: f64,
-    /// 渲染模式
     use_iterative_render: bool,
-    /// 截图模式
+    use_update_manager: bool,
     screenshot_mode: Option<usize>,
 }
 
@@ -64,12 +74,12 @@ impl DemoApp {
         app_name: &str,
         screenshot_mode: Option<usize>,
     ) -> Self {
-        // 如果有截图模式，默认显示第一个场景
         let default_scene = if screenshot_mode.is_some() { 0 } else { 4 };
         Self {
             scenes,
             current_scene_idx: default_scene,
             scene_graph: None,
+            update_manager: None,
             renderer: None,
             window: None,
             title: title.to_string(),
@@ -77,6 +87,7 @@ impl DemoApp {
             width,
             height,
             use_iterative_render: false,
+            use_update_manager: true,
             screenshot_mode,
         }
     }
@@ -87,6 +98,9 @@ impl DemoApp {
             self.current_scene_idx = idx;
             let creator = &mut self.scenes[idx].1;
             self.scene_graph = Some(creator());
+            let mut um = SceneUpdateManager::new();
+            um.add_listener(Box::new(DemoUpdateListener));
+            self.update_manager = Some(um);
             eprintln!("切换到场景: {}", self.scenes[idx].0);
 
             // 更新窗口标题显示当前场景（只显示场景名称）
@@ -117,9 +131,18 @@ impl DemoApp {
         let Some(renderer) = &mut self.renderer else {
             return;
         };
-        let Some(scene) = &self.scene_graph else {
+        let Some(scene) = &mut self.scene_graph else {
             return;
         };
+
+        if self.use_update_manager {
+            if let Some(um) = &mut self.update_manager {
+                let canvas = scene.perform_update(um);
+                let submission = canvas.to_submission();
+                renderer.render(&submission);
+                return;
+            }
+        }
 
         let render_ctx = if self.use_iterative_render {
             scene.render_iterative()
@@ -331,7 +354,6 @@ impl ApplicationHandler<()> for DemoApp {
                         event_loop.exit();
                     }
                     PhysicalKey::Code(KeyCode::KeyI) => {
-                        // 切换渲染模式
                         self.use_iterative_render = !self.use_iterative_render;
                         info!(
                             "渲染模式: {}",
@@ -339,6 +361,18 @@ impl ApplicationHandler<()> for DemoApp {
                                 "迭代渲染"
                             } else {
                                 "递归渲染"
+                            }
+                        );
+                        self.window.as_ref().unwrap().request_redraw();
+                    }
+                    PhysicalKey::Code(KeyCode::KeyU) => {
+                        self.use_update_manager = !self.use_update_manager;
+                        info!(
+                            "更新管理器: {}",
+                            if self.use_update_manager {
+                                "启用 (两阶段更新 + 通知)"
+                            } else {
+                                "禁用 (直接渲染)"
                             }
                         );
                         self.window.as_ref().unwrap().request_redraw();

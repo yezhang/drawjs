@@ -52,17 +52,6 @@ impl VelloDemo {
         self.surface = Some(surface);
     }
 
-    fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
-        println!("Resized to: {}x{}", new_size.width, new_size.height);
-
-        if let Some(render_context) = self.render_context.as_mut() {
-            if let Some(surface) = self.surface.as_mut() {
-                // Only resize the internal targets, not the wgpu surface
-                render_context.resize_surface(surface, new_size.width, new_size.height);
-            }
-        }
-    }
-
     fn render(&mut self) {
         let (Some(_window), Some(render_context), Some(renderer), Some(surface)) = (
             &self.window,

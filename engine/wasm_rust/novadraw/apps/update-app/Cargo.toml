@@ -1,5 +1,5 @@
 [package]
-name = "ndcanvas-test"
+name = "update-app"
 version.workspace = true
 edition.workspace = true
 

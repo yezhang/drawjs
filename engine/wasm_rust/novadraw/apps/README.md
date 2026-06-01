@@ -2,63 +2,78 @@
 
 ## 概述
 
-本目录包含 Novadraw 图形引擎的各个功能验证 App，每个 App 专注于验证一个特定功能模块。
+本目录包含 Novadraw 图形引擎的各个功能验证 App，每个 App 专注于验证一个特定功能模块，不重叠。
 
 ## App 列表
 
-| App | 功能 | 场景数 | 运行命令 |
+| App | 主题 | 场景数 | 运行命令 |
 |-----|------|--------|----------|
-| **shape-app** | 形状展示 | 3 | `cargo run -p shape-app` |
-| **transform-app** | 坐标变换 | 10 | `cargo run -p transform-app` |
+| **shape-app** | 图形类型 | 8 | `cargo run -p shape-app` |
+| **style-app** | 视觉属性 | 7 | `cargo run -p style-app` |
+| **transform-app** | 坐标变换 + 坐标域 | 10 | `cargo run -p transform-app` |
 | **clip-app** | 裁剪机制 | 10 | `cargo run -p clip-app` |
-| **layout-app** | 布局管理 | 10 | `cargo run -p layout-app` |
-| **event-app** | 事件处理 | 10 | `cargo run -p event-app` |
-| **border-app** | Border 装饰器 | 10 | `cargo run -p border-app` |
-| **editor** | 综合编辑器 | - | `cargo run -p editor` |
+| **layout-app** | 布局管理 | 8 | `cargo run -p layout-app` |
+| **event-app** | 输入事件 | 10 | `cargo run -p event-app` |
+| **border-app** | Border 装饰器 | 5 | `cargo run -p border-app` |
+| **update-app** | 更新生命周期 + 通知 | 7 | `cargo run -p update-app` |
+| **editor** | 集成编辑器 | - | `cargo run -p editor` |
+| **ndcanvas-app** | NdCanvas 底层 API | 8 | `cargo run -p ndcanvas-app` |
+| **vello-app** | Vello 原始 API | 1 | `cargo run -p vello-app` |
+
+## 主题划分原则
+
+每个 App 验证一个引擎核心概念，不重叠：
+
+| 概念 | App | 验证内容 |
+|------|-----|----------|
+| 图形类型 | shape-app | Rectangle, Ellipse, RoundedRect, Polyline, Triangle, Z-Order, Parent-Child |
+| 视觉属性 | style-app | Fill color, Stroke (width/color/cap/join), Alpha, LineJoin, Stroke vs Border |
+| 坐标变换 | transform-app | translate, scale, rotate, 传播, local_coords, 动态 prim_translate |
+| 裁剪 | clip-app | basic, nested, multi_layer, circle, path, transparent, animation |
+| 布局 | layout-app | XYLayout, FillLayout, FlowLayout, BorderLayout, 嵌套, 约束更新 |
+| 输入事件 | event-app | Mouse, Keyboard, Focus, 事件传播 |
+| Border 装饰器 | border-app | RectangleBorder, LineBorder, MarginBorder, Border+insets |
+| 更新生命周期 | update-app | prim_translate, repaint, revalidate, notification effect, damage repair |
+| 底层 API | ndcanvas-app | NdCanvas 直接调用: fill_rect, stroke_rect, ellipse, line, polyline |
+| 渲染后端 | vello-app | Vello 原始 API 验证（不使用 novadraw） |
 
 ## 通用操作
 
-所有 App 共享相同的操作方式：
+所有 DemoApp 共享相同的操作方式：
 
-```sh
-- 按数字键 `0`-`9` 切换场景
+- 按方向键 / 鼠标滚轮切换场景
+- 按 `I` 切换迭代/递归渲染
+- 按 `U` 切换 UpdateManager 开关
 - 按 `ESC` 退出程序
-- 部分场景支持鼠标交互
-```
-
-## 优先级说明
-
-| 优先级 | App | 说明 |
-|--------|-----|------|
-| P0 | transform-app, clip-app | 变换和裁剪是渲染核心 |
-| P1 | layout-app, event-app | 布局和事件是交互基础 |
-| P2 | border-app, shape-app | 可渐进式扩展 |
 
 ## 架构设计
 
-```sh
+```
 novadraw/ (workspace)
-├── novadraw-math/      ← 数学运算
-├── novadraw-core/      ← 核心数据类型
-├── novadraw-render/    ← 渲染后端
-├── novadraw-scene/     ← 场景图、Figure 接口
+├── novadraw-math/        ← 数学运算
+├── novadraw-geometry/    ← 几何运算
+├── novadraw-core/        ← 核心数据类型
+├── novadraw-render/      ← 渲染后端
+├── novadraw-scene/       ← 场景图、Figure 接口、UpdateManager
+├── novadraw-apps/        ← 共享 DemoApp 框架
 └── apps/
-    ├── shape-app/      ← 形状验证
-    ├── transform-app/   ← 变换验证
-    ├── clip-app/        ← 裁剪验证
-    ├── layout-app/      ← 布局验证
-    ├── event-app/       ← 事件验证
-    ├── border-app/      ← Border 验证
-    └── editor/         ← 综合编辑器
+    ├── shape-app/        ← 图形类型验证
+    ├── style-app/        ← 视觉属性验证
+    ├── transform-app/    ← 坐标变换验证
+    ├── clip-app/         ← 裁剪验证
+    ├── layout-app/       ← 布局验证
+    ├── event-app/        ← 事件验证
+    ├── border-app/       ← Border 装饰器验证
+    ├── update-app/       ← 更新生命周期验证
+    ├── editor/           ← 集成编辑器
+    ├── ndcanvas-app/     ← NdCanvas 底层 API 验证
+    └── vello-app/        ← Vello 原始 API 验证
 ```
 
 ## 运行所有测试
 
 ```sh
-# 检查所有包
 cargo check --workspace
-
-# 运行测试
 cargo test --workspace
 ```
 

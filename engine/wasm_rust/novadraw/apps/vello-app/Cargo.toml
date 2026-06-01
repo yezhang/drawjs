@@ -1,5 +1,5 @@
 [package]
-name = "vello-demo"
+name = "vello-app"
 version.workspace = true
 edition.workspace = true
 

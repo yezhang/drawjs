@@ -7,6 +7,8 @@ pub use crate::{
     run_demo_app_with_screenshot,
 };
 pub use novadraw::{
-    Color, EllipseFigure, Figure, FigureGraph, PolylineFigure, Rectangle, RectangleFigure,
+    BlockId, Color, EllipseFigure, Figure, FigureEvent, FigureGraph, NotificationEffect,
+    PolylineFigure, Rectangle, RectangleFigure, SceneUpdateManager, UpdateEvent, UpdateListener,
+    UpdateManager,
 };
 pub use winit::event::ElementState;
