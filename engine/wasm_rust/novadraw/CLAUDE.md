@@ -38,6 +38,11 @@ apps/editor/       - 编辑器示例
 cargo fmt --check && cargo check && cargo clippy -- -D warnings && cargo test
 ```
 
+## Git 提交规范
+
+- 提交信息摘要必须使用中文。
+- 提交应按主题拆分，保持原子化，避免把无关改动混入同一提交。
+
 ## Skills 与文档
 
 ### 可用 Skills
