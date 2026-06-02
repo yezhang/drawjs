@@ -99,7 +99,7 @@ candidate_items:
     contract: "event dispatch、hit-test、render 等高频路径默认不打印运行时日志"
     evolution_kind: architecture
     priority: medium
-    status: candidate
+    status: promoted
     evidence:
       - apps/editor/src/system.rs
       - apps/editor/src/app_window.rs
@@ -111,6 +111,7 @@ candidate_items:
       - 这些日志已被 debug feature 或测试专用路径隔离
     notes:
       - "Completion audit 发现 editor 层 mouse move / raw pointer / enter / exit 路径仍有 `tracing::info!`"
+      - "REVIEW 结论：问题真实存在，且不重复 AD-008；AD-008 清理 engine event/hit-test，本项处理 editor 默认交互路径日志"
 
   - id: CAD-004
     title: Composition root residual public read surface audit
@@ -581,3 +582,24 @@ items:
       - "保留必要的只读查询能力，或改由 FigureGraph 提供命名 query API"
       - "不改变 Draw2D 坐标语义、render traversal 顺序、event dispatch 语义或 PendingMutation apply 时机"
       - "cargo fmt、cargo check、cargo test -p novadraw-scene、cargo test -p editor 通过"
+
+  - id: AD-013
+    title: Editor interaction hot-path logging cleanup
+    contract: "event dispatch、hit-test、render 等高频路径默认不打印运行时日志"
+    evolution_kind: architecture
+    priority: medium
+    status: proposed
+    parent_id: CAD-003
+    evidence:
+      - apps/editor/src/system.rs
+      - apps/editor/src/app_window.rs
+      - apps/editor/src/scene_manager/interactive_figure.rs
+    progress_notes:
+      - "从 CAD-003 REVIEW 提升：editor 默认交互路径仍在 mouse move、raw pointer dispatch、Winit CursorMoved、interactive enter/exit 中打印 info 级日志"
+      - "本项不重复 AD-008：AD-008 已清理 engine event dispatch / hit-test 热路径，本项只处理 editor 层平台输入与示例 Figure 回调的残留日志"
+      - "TraceUpdateListener 通知日志属于相邻调试输出；本轮若处理，需确保不扩大为通知体系重构"
+    done_when:
+      - "editor 鼠标移动、raw pointer、entered/exited 默认路径不再打印 info/debug/trace 日志"
+      - "不改变事件 target 选择、坐标转换、InteractionTrace 内容、selection/hover/pressed 状态写入或 PendingMutation apply 时机"
+      - "保留测试/手动脚本所需的 trace 返回值；如需日志，只能通过显式 debug feature 或非默认调试入口隔离"
+      - "cargo fmt --check、cargo check、cargo test -p editor 通过"

@@ -8,11 +8,11 @@
 
 ## Current Delta
 
-- AD-012
+- AD-013
 
 ## Current Status
 
-- verified（AD-012 已完成，等待下一轮 REVIEW）
+- review-complete（CAD-003 已提升为 AD-013，等待执行）
 
 ## What Was Done
 
@@ -157,6 +157,13 @@
 - **Coverage Decision**：C-02 提升为 aligned；C-09 仍 partially_aligned，继续由 CAD-004 / CAD-005 追踪组合根只读面和理想文档旧表述。
 - **验证**：cargo fmt --check ✅，cargo check ✅，cargo test -p novadraw-scene 139/139 + 3 doctests ✅，cargo test -p editor 6/6 ✅。
 
+### CAD-003 REVIEW（本轮）
+- **Review Scope**：评估 `Editor interaction hot-path logging cleanup`，未改运行时代码。
+- **Root Cause**：editor 默认交互路径仍在鼠标移动、raw pointer dispatch、Winit CursorMoved、interactive entered/exited 中打印 info 级日志；这些路径位于平台输入、事件分发入口或 Figure 回调热路径。
+- **Duplicate Check**：不重复 AD-008；AD-008 已清理 engine `BasicEventDispatcher` 与 `FigureGraph` hit-test 热路径，本项只处理 editor 层残留日志。
+- **Promote Decision**：`CAD-003` 提升为 `AD-013 Editor interaction hot-path logging cleanup`。
+- **Split Decision**：AD-013 先移除或隔离 editor interaction 默认热路径日志；不处理 CAD-004 的组合根只读面，也不重构通知体系。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
@@ -177,11 +184,12 @@
 - ⚠️ `focus_owner` 只有基础 owner 字段，完整 focus gained/lost/key state machine 仍需后续 delta。
 - ⚠️ Contract coverage 当前不再全部 aligned：C-05 / C-07 / C-08 / C-09 为 partially_aligned。
 - ✅ `AD-011 FigureGraph storage encapsulation audit` 已 verified；`FigureGraph.blocks` / `uuid_map` 不再是 crate 外 public mutation surface。
-- ⚠️ Backlog 仍有 CAD-003 / CAD-004 / CAD-005 / CAD-006 candidates，需要后续 REVIEW。
+- ⚠️ `AD-013 Editor interaction hot-path logging cleanup` 已 proposed，应作为下一轮最小 delta 执行。
+- ⚠️ Backlog 仍有 CAD-004 / CAD-005 / CAD-006 candidates，需要后续 REVIEW。
 
 ## Next Small Step
 
-- 下一轮进入 REVIEW，优先评估 `CAD-003 editor interaction hot-path logging cleanup`；若范围过大，再选择 CAD-004 / CAD-005 / CAD-006 中职责边界更小的一项。
+- 下一轮进入 EXECUTE，执行 `AD-013 Editor interaction hot-path logging cleanup`。只移除或隔离 editor 鼠标移动、raw pointer、Winit CursorMoved、interactive enter/exit 默认热路径日志；不要混入 CAD-004/CAD-005/CAD-006。
 - Viewport/ScrollPane 的真实 Figure-tree 集成仍应作为后续独立 delta，不与 SceneHost 边界混在一起。
 
 ## Blockers
@@ -199,5 +207,5 @@
 ## Resume Prompt
 
 ```text
-请按 agent/workflow-continuous.md 从 REVIEW 继续。AD-012 FigureBlock public mutation surface audit 已 verified：`FigureBlock` 字段已收窄为 crate 内可见，未使用 public mutator 已删除，`novadraw-scene` 与 `novadraw` facade 不再 re-export `FigureBlock`，C-02 已回到 aligned。下一步优先 REVIEW `CAD-003 editor interaction hot-path logging cleanup`；不要把 CAD-004/CAD-005/CAD-006 混入同一轮。
+请按 agent/workflow-continuous.md 从 EXECUTE 继续，当前 delta 为 AD-013 Editor interaction hot-path logging cleanup。CAD-003 REVIEW 已完成并提升为 AD-013：editor 默认交互路径仍在鼠标移动、raw pointer dispatch、Winit CursorMoved、interactive entered/exited 中打印 info 级日志。执行时只移除或隔离这些默认热路径日志，保持事件 target 选择、坐标转换、InteractionTrace、selection/hover/pressed 状态写入和 PendingMutation apply 时机不变；不要混入 CAD-004/CAD-005/CAD-006。
 ```

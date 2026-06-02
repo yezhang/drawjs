@@ -17,7 +17,7 @@
 | C-02 | FigureBlock 是节点运行时状态容器 | aligned | `AD-009` verified; `AD-011` verified; `AD-012` verified | FigureBlock 已移除 selection overlay 绘制行为；AD-012 已收窄字段、删除 public mutator，并移除 facade re-export；crate 外不能通过 FigureBlock 绕过 FigureGraph 图级不变量 |
 | C-03 | FigureGraph 持有树关系、交互状态和命中测试图级信息 | aligned | `AD-005` verified; `AD-011` verified | 交互状态归属已收敛；`FigureGraph.blocks` / `uuid_map` 已收窄为私有存储，crate 外不能再绕过图级方法直接修改 SlotMap / UUID 映射 |
 | C-04 | UpdateManager 只负责两阶段更新编排 | aligned | `AD-001` done | validation / repair / scheduling 三个子边界均已收敛；UpdateManager 管理队列与阶段，FigureGraph/组合根/SceneHost 分别承载图语义与平台调度 |
-| C-05 | EventDispatcher 只负责事件分发 | partially_aligned | `AD-005` verified; `CAD-003` candidate | BasicEventDispatcher 本身仍只分发；completion audit 发现 editor interaction 路径仍有热路径日志残留，需确认是否违反事件高频路径边界 |
+| C-05 | EventDispatcher 只负责事件分发 | partially_aligned | `AD-005` verified; `AD-013` proposed | BasicEventDispatcher 本身仍只分发；CAD-003 REVIEW 确认 editor interaction 默认路径仍有 info 级热路径日志残留，已提升为 AD-013 |
 | C-06 | SceneHost 是极薄平台调度层 | aligned | `AD-002` verified | `WinitSceneHost` 仅保留 window proxy 与 redraw pending；editor/render 策略状态位于组合根 |
 | C-07 | NovadrawSystem 是组合根 | partially_aligned | `AD-004` verified; `CAD-004` candidate | 可变 escape hatch 已移除；completion audit 发现 app_window 仍通过只读 scene_manager/query 和 EditorInteractionCore 静态方法触达内部结构，需审计是否职责泄漏 |
 | C-08 | 结构性变更必须通过 PendingMutation 延迟应用 | partially_aligned | `AD-003` verified; `CAD-006` candidate | 主路径已在顶层分发后 apply；completion audit 发现 PendingMutations 生产阶段和 AddChild 既有节点能力仍需类型层面审计 |

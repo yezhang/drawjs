@@ -130,6 +130,16 @@
 - Coverage Update: C-02 从 partially_aligned 提升为 aligned；C-09 仍 partially_aligned，由 CAD-004 / CAD-005 继续追踪组合根只读面与理想文档旧表述
 - Next Step: 下一轮从 REVIEW 开始，优先评估 `CAD-003 editor interaction hot-path logging cleanup`
 
+## 2026-06-01 / CAD-003 REVIEW
+
+- Goal: 评估 `Editor interaction hot-path logging cleanup` 是否应提升为正式 delta，只做 REVIEW，不改运行时代码
+- Evidence Checked: `apps/editor/src/system.rs`, `apps/editor/src/app_window.rs`, `apps/editor/src/scene_manager/interactive_figure.rs`, `apps/editor/Cargo.toml`
+- Root Cause: editor 默认交互路径仍在 mouse move、raw pointer dispatch、Winit CursorMoved、interactive entered/exited 中打印 info 级日志；这些路径位于平台输入、事件分发入口或 Figure 回调热路径，违反“高频路径默认不打印运行时日志”约束
+- Duplicate Check: 不重复 AD-008；AD-008 处理的是 engine `BasicEventDispatcher` 与 `FigureGraph` hit-test 热路径，本项只处理 editor 层残留日志
+- Promote Decision: CAD-003 提升为 `AD-013 Editor interaction hot-path logging cleanup`
+- Split Decision: AD-013 只移除或隔离 editor interaction 默认热路径日志；不处理 CAD-004 的组合根只读面，不重构通知体系，也不改变 InteractionTrace 返回值
+- Next Step: 从 EXECUTE 开始执行 AD-013，保持事件 target 选择、坐标转换、selection/hover/pressed 状态写入和 PendingMutation apply 时机不变
+
 
 ## 2026-05-27 / AD-008
 
