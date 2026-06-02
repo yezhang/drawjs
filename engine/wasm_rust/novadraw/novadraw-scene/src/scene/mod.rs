@@ -74,62 +74,46 @@ pub(crate) fn paint_selection_overlay(block: &FigureBlock, gc: &mut NdCanvas) {
 /// - 一个 `FigureBlock` 持有 `Box<dyn Figure>` 来实现具体的图形类型
 pub struct FigureBlock {
     /// 块 ID
-    pub id: BlockId,
+    pub(crate) id: BlockId,
     /// UUID
-    pub uuid: Uuid,
+    pub(crate) uuid: Uuid,
     /// 子块列表
-    pub children: Vec<BlockId>,
+    pub(crate) children: Vec<BlockId>,
     /// 父块
-    pub parent: Option<BlockId>,
+    pub(crate) parent: Option<BlockId>,
     /// 图形
-    pub figure: Box<dyn super::Figure>,
+    pub(crate) figure: Box<dyn super::Figure>,
     /// 布局管理器（可选），只有需要布局的容器才设置
-    pub layout_manager: Option<Arc<dyn super::layout::LayoutManager>>,
+    pub(crate) layout_manager: Option<Arc<dyn super::layout::LayoutManager>>,
     /// 是否选中
-    pub is_selected: bool,
+    pub(crate) is_selected: bool,
     /// 鼠标是否悬停在该节点上
-    pub is_hovered: bool,
+    pub(crate) is_hovered: bool,
     /// 鼠标是否按压在该节点上
-    pub is_pressed: bool,
+    pub(crate) is_pressed: bool,
     /// 是否可见
-    pub is_visible: bool,
+    pub(crate) is_visible: bool,
     /// 是否启用
-    pub is_enabled: bool,
+    pub(crate) is_enabled: bool,
     /// 是否已验证
-    pub is_valid: bool,
+    pub(crate) is_valid: bool,
     /// 首选尺寸 (宽, 高)，None 表示使用 Figure 的 bounds
-    pub preferred_size: Option<(f64, f64)>,
+    pub(crate) preferred_size: Option<(f64, f64)>,
     /// 最小尺寸 (宽, 高)
-    pub minimum_size: Option<(f64, f64)>,
+    pub(crate) minimum_size: Option<(f64, f64)>,
     /// 最大尺寸 (宽, 高)
-    pub maximum_size: Option<(f64, f64)>,
+    pub(crate) maximum_size: Option<(f64, f64)>,
 }
 
 impl FigureBlock {
-    /// 创建新运行时块
-    pub fn new(id: BlockId, uuid: Uuid, figure: Box<dyn super::Figure>) -> Self {
-        Self {
-            id,
-            uuid,
-            children: Vec::new(),
-            parent: None,
-            figure,
-            layout_manager: None,
-            is_selected: false,
-            is_hovered: false,
-            is_pressed: false,
-            is_visible: true,
-            is_enabled: true,
-            is_valid: true,
-            preferred_size: None,
-            minimum_size: None,
-            maximum_size: None,
-        }
+    /// 获取块 ID
+    pub fn id(&self) -> BlockId {
+        self.id
     }
 
-    /// 添加子块（类似 Draw2d 的 figure.addChild()）
-    pub fn add_child(&mut self, child_id: BlockId) {
-        self.children.push(child_id);
+    /// 获取块 UUID
+    pub fn uuid(&self) -> Uuid {
+        self.uuid
     }
 
     /// 获取子块数量
@@ -165,43 +149,6 @@ impl FigureBlock {
             return size;
         }
         (f64::INFINITY, f64::INFINITY)
-    }
-
-    /// 设置首选尺寸
-    pub fn set_preferred_size(&mut self, width: f64, height: f64) {
-        self.preferred_size = Some((width, height));
-    }
-
-    /// 设置最小尺寸
-    pub fn set_minimum_size(&mut self, width: f64, height: f64) {
-        self.minimum_size = Some((width, height));
-    }
-
-    /// 设置最大尺寸
-    pub fn set_maximum_size(&mut self, width: f64, height: f64) {
-        self.maximum_size = Some((width, height));
-    }
-
-    /// 设置可见性
-    pub fn set_visible(&mut self, visible: bool) {
-        self.is_visible = visible;
-    }
-
-    /// 设置启用状态
-    pub fn set_enabled(&mut self, enabled: bool) {
-        self.is_enabled = enabled;
-    }
-
-    pub fn set_figure(&mut self, figure: Box<dyn super::Figure>) {
-        self.figure = figure;
-    }
-
-    /// 设置图形边界（仅自身，不传播）
-    ///
-    /// 注意：此方法只更新自身的 bounds，不传播到子节点。
-    /// 需要传播到子节点的操作应在 FigureGraph 级别使用迭代实现。
-    pub fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
-        self.figure.set_bounds(x, y, width, height);
     }
 }
 

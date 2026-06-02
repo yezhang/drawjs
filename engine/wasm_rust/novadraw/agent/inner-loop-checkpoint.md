@@ -12,7 +12,7 @@
 
 ## Current Status
 
-- review-complete（CAD-007 已提升为 AD-012，等待执行）
+- verified（AD-012 已完成，等待下一轮 REVIEW）
 
 ## What Was Done
 
@@ -147,6 +147,16 @@
 - **Promote Decision**：`CAD-007` 提升为 `AD-012 FigureBlock public mutation surface audit`。
 - **Split Decision**：AD-012 先处理 crate 外公开可变面与 facade 导出面；内部 render/event/layout 所需读取能力通过 crate 内 helper 或只读 query 保留，不在本轮改写全部内部遍历。
 
+### AD-012 FigureBlock public mutation surface audit（本轮，verified）
+- **根因分析**：`FigureBlock` 是节点运行时状态容器，但其字段和 mutator 曾对 crate 外公开，且通过 `novadraw-scene` / `novadraw` facade re-export，允许外部绕过 `FigureGraph` 修改 parent/children、figure bounds、selection/hover/pressed、visibility/enabled/validity 与 layout 状态。
+- **最小修复**：
+  - `FigureBlock` 字段收窄为 `pub(crate)`，内部 render/event/layout 可继续读取，不扩展本轮重构范围。
+  - 删除未使用的 `FigureBlock` public mutator：`new()` / `add_child()` / size setters / `set_visible()` / `set_enabled()` / `set_figure()` / `set_bounds()`。
+  - 保留必要只读 query：`id()` / `uuid()` / `children_count()` / `figure_bounds()` / size getters。
+  - `novadraw-scene` 与 `novadraw` facade 不再 re-export `FigureBlock`。
+- **Coverage Decision**：C-02 提升为 aligned；C-09 仍 partially_aligned，继续由 CAD-004 / CAD-005 追踪组合根只读面和理想文档旧表述。
+- **验证**：cargo fmt --check ✅，cargo check ✅，cargo test -p novadraw-scene 139/139 + 3 doctests ✅，cargo test -p editor 6/6 ✅。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
@@ -158,20 +168,20 @@
 - ✅ AD-004 已完成：平台事件层只做输入映射，子系统协作由 `WinitNovadrawSystem` 组合根承载。
 - ✅ AD-005 已完成：hovered / pressed / mouse_target / focus_owner / captured 等通用交互状态归属 `FigureGraph`。
 - ✅ AD-008 已完成：event / hit-test 热路径不再打印运行时日志，默认路径符合“热路径禁止日志”约束。
-- ✅ AD-009 已完成：Figure 只保留内在能力；AD-011 已封装 FigureGraph 存储面，C-03 回到 aligned；FigureBlock 字段/方法公开面已提升为 AD-012。
+- ✅ AD-009 已完成：Figure 只保留内在能力；AD-011 已封装 FigureGraph 存储面，C-03 回到 aligned。
+- ✅ AD-012 已完成：FigureBlock 字段与 mutator 不再形成 crate 外 public mutation surface，C-02 回到 aligned。
 - ✅ AD-001 已收敛：AD-001A validation、AD-001B repair、AD-001C scheduling 均 verified，父项已 done；C-04 已 aligned。
 - ✅ AD-010 已完成：公开接口逃生口与默认 panic 能力边界已收敛；C-09 已 aligned。
 - ✅ C-10 已收敛：架构改动说明“为何更接近理想架构”已成为持续工作流强制项，并有多轮真实 delta 证据。
 - ⚠️ 文档中仍可能存在历史图示或 WinitEventDispatcher 旧命名，需要后续全量清扫。
 - ⚠️ `focus_owner` 只有基础 owner 字段，完整 focus gained/lost/key state machine 仍需后续 delta。
-- ⚠️ Contract coverage 当前不再全部 aligned：C-02 / C-05 / C-07 / C-08 / C-09 为 partially_aligned。
+- ⚠️ Contract coverage 当前不再全部 aligned：C-05 / C-07 / C-08 / C-09 为 partially_aligned。
 - ✅ `AD-011 FigureGraph storage encapsulation audit` 已 verified；`FigureGraph.blocks` / `uuid_map` 不再是 crate 外 public mutation surface。
-- ⚠️ `AD-012 FigureBlock public mutation surface audit` 已 proposed，应作为下一轮最小 delta 执行。
 - ⚠️ Backlog 仍有 CAD-003 / CAD-004 / CAD-005 / CAD-006 candidates，需要后续 REVIEW。
 
 ## Next Small Step
 
-- 下一轮进入 EXECUTE，执行 `AD-012 FigureBlock public mutation surface audit`。先设计 `FigureBlock` 只读/内部访问边界，再收窄 public 字段、public mutator 和 facade re-export；不要同时重构 render/event/layout 内部遍历。
+- 下一轮进入 REVIEW，优先评估 `CAD-003 editor interaction hot-path logging cleanup`；若范围过大，再选择 CAD-004 / CAD-005 / CAD-006 中职责边界更小的一项。
 - Viewport/ScrollPane 的真实 Figure-tree 集成仍应作为后续独立 delta，不与 SceneHost 边界混在一起。
 
 ## Blockers
@@ -181,14 +191,13 @@
 
 ## Verification State
 
-- cargo fmt: passed ✅
+- cargo fmt --check: passed ✅
 - cargo check: passed ✅
-- cargo check -p editor -p update-app: passed ✅
 - cargo test -p novadraw-scene: 139/139 + 3 doctests passed ✅
 - cargo test -p editor: 6/6 passed ✅
 
 ## Resume Prompt
 
 ```text
-请按 agent/workflow-continuous.md 从 EXECUTE 继续，当前 delta 为 AD-012 FigureBlock public mutation surface audit。CAD-007 REVIEW 已完成并提升为 AD-012：根因是 `FigureBlock` 作为 public 类型和 facade re-export 仍暴露 parent/children/figure/selection/visibility/validity/layout 等可变面，外部可绕过 FigureGraph 图级不变量。执行时先设计只读/内部访问边界，再收窄 public 字段、public mutator 和 facade re-export；不要同时重构 render/event/layout 内部遍历。
+请按 agent/workflow-continuous.md 从 REVIEW 继续。AD-012 FigureBlock public mutation surface audit 已 verified：`FigureBlock` 字段已收窄为 crate 内可见，未使用 public mutator 已删除，`novadraw-scene` 与 `novadraw` facade 不再 re-export `FigureBlock`，C-02 已回到 aligned。下一步优先 REVIEW `CAD-003 editor interaction hot-path logging cleanup`；不要把 CAD-004/CAD-005/CAD-006 混入同一轮。
 ```

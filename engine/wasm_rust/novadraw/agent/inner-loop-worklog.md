@@ -120,6 +120,16 @@
 - Split Decision: AD-012 先处理 crate 外公开可变面与 facade 导出面；内部 render/event/layout 所需读取能力应通过 crate 内 helper 或只读 query 保留，不在本轮改写全部内部遍历
 - Next Step: 从 EXECUTE 开始执行 AD-012，先设计 `FigureBlock` 的只读/内部访问边界，再收窄 public 字段、public mutator 和 facade re-export
 
+## 2026-06-01 / AD-012
+
+- Goal: 收窄 `FigureBlock` 对 crate 外的 public mutation surface，确保节点运行时状态只能通过 `FigureGraph` 图级协议修改
+- Root Cause: `FigureBlock` 字段和 mutator 曾对 crate 外公开，并通过 `novadraw-scene` / `novadraw` facade re-export；外部调用方可直接修改 parent/children、figure bounds、selection/hover/pressed、visibility/enabled/validity 与 layout 状态，绕过 `FigureGraph` 的树不变量、dirty/update、notification 和坐标传播协议
+- Minimal Fix: 将 `FigureBlock` 字段收窄为 `pub(crate)`；删除未使用的 public mutator；保留 `id()` / `uuid()` / `children_count()` / `figure_bounds()` / size getters 等只读 query；从 `novadraw-scene` 与 `novadraw` facade re-export 中移除 `FigureBlock`
+- Split Decision: 不重构 render/event/layout 内部遍历；这些模块仍作为 crate 内实现细节读取 `FigureBlock` 字段。后续若要进一步收窄 crate 内可变面，应另建 delta，避免扩大本轮范围
+- Verification: cargo fmt --check passed; cargo check passed; cargo test -p novadraw-scene passed 139/139 + 3 doctests; cargo test -p editor passed 6/6
+- Coverage Update: C-02 从 partially_aligned 提升为 aligned；C-09 仍 partially_aligned，由 CAD-004 / CAD-005 继续追踪组合根只读面与理想文档旧表述
+- Next Step: 下一轮从 REVIEW 开始，优先评估 `CAD-003 editor interaction hot-path logging cleanup`
+
 
 ## 2026-05-27 / AD-008
 

@@ -558,7 +558,7 @@ items:
     contract: "FigureBlock 是节点运行时状态容器；公开接口不能绕过 FigureGraph 图级不变量"
     evolution_kind: architecture
     priority: high
-    status: proposed
+    status: verified
     parent_id: CAD-007
     evidence:
       - novadraw-scene/src/scene/mod.rs
@@ -572,6 +572,9 @@ items:
       - "`FigureBlock::add_child()` 只追加 children，不维护 child parent 或 update/dirty/notification 协议"
       - "`FigureBlock::set_bounds()` / `set_visible()` / `set_enabled()` / `set_figure()` 可绕过 FigureGraph 的坐标传播、dirty/update、selection/interaction 与 notification 规则"
       - "本项只处理 FigureBlock 对 crate 外的公开可变面；render/event/layout 等 crate 内部遍历仍可通过 crate 内 helper 读取必要状态"
+      - "EXECUTE 完成：`FigureBlock` 字段收窄为 `pub(crate)`；删除未使用的 public mutator；保留 `id()` / `uuid()` / size/bounds/count 只读 query"
+      - "EXECUTE 完成：`novadraw-scene` 与 `novadraw` facade 不再 re-export `FigureBlock`"
+      - "验证通过：cargo fmt --check、cargo check、cargo test -p novadraw-scene、cargo test -p editor"
     done_when:
       - "`FigureBlock` 不再从 crate facade 暴露为可直接构造或可直接改字段的 public mutation surface"
       - "外部调用方不能通过 FigureBlock 直接修改 parent/children、figure bounds、selection/hover/pressed、visibility/enabled/validity 或 layout manager"

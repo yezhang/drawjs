@@ -40,7 +40,7 @@ pub use layout::{
 };
 pub use mutation::{MutationContext, PendingMutation, PendingMutations};
 pub use novadraw_geometry::{Point, Rectangle};
-pub use scene::{BlockId, FigureBlock, FigureGraph, FigureRenderer};
+pub use scene::{BlockId, FigureGraph, FigureRenderer};
 pub use scene_host::SceneHost;
 pub use system::NovadrawSystem;
 pub use update::{
