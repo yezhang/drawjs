@@ -110,6 +110,16 @@
 - New Candidate Deltas: `CAD-007 FigureBlock public mutation surface audit`
 - Next Step: 下一轮从 REVIEW 开始，优先评估 `CAD-007` 是否应提升为 `AD-012`；若不提升，再回到 CAD-003/CAD-004/CAD-005/CAD-006
 
+## 2026-06-01 / CAD-007 REVIEW
+
+- Goal: 评估 `FigureBlock public mutation surface audit` 是否应提升为正式 delta，只做 REVIEW，不改运行时代码
+- Evidence Checked: `novadraw-scene/src/scene/mod.rs`, `novadraw-scene/src/lib.rs`, `novadraw/src/lib.rs`, `novadraw-scene/src/update/repair.rs`, `novadraw-scene/src/scene/render_recursive.rs`, `novadraw-scene/src/scene/render_iterative.rs`
+- Root Cause: `FigureBlock` 是节点运行时状态容器，但当前作为 public 类型从 `novadraw-scene` 和 `novadraw` facade 导出，且 parent/children/figure/selection/visibility/validity/layout 等字段均为 public；外部可直接修改节点状态而不经过 `FigureGraph` 的图级不变量、dirty/update、notification 和坐标传播协议
+- Scope Finding: 该问题与 AD-011 不重复；AD-011 封装的是 `FigureGraph` 存储，CAD-007 关注的是取得 `FigureBlock` 后仍可直接改节点状态。问题也不应与 render/event/layout 内部遍历重构混在一起
+- Promote Decision: CAD-007 提升为 `AD-012 FigureBlock public mutation surface audit`
+- Split Decision: AD-012 先处理 crate 外公开可变面与 facade 导出面；内部 render/event/layout 所需读取能力应通过 crate 内 helper 或只读 query 保留，不在本轮改写全部内部遍历
+- Next Step: 从 EXECUTE 开始执行 AD-012，先设计 `FigureBlock` 的只读/内部访问边界，再收窄 public 字段、public mutator 和 facade re-export
+
 
 ## 2026-05-27 / AD-008
 
