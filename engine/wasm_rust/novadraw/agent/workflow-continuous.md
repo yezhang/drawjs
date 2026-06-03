@@ -76,7 +76,7 @@
 
 7. `VERIFY`
    - 运行 delta verification。
-   - 对代码类 delta，按 `agent/architecture-review-agent.md` 执行架构 Review。
+   - 对代码类 delta，按 `agent/architecture-review-agent.md` 直接比对理想架构、契约和代码实现；该 Review 不审查 checkpoint/backlog/worklog 状态。
    - 需要时运行 baseline verification。
    - 失败必须分类为本轮回归或既有基线债务。
 
