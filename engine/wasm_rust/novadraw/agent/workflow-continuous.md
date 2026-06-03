@@ -19,6 +19,7 @@
 5. 当前基线债务已关闭，或已被显式接受且不影响理想架构语义。
 6. `cargo check`、相关 crate 测试与当前定义的 baseline verification 通过，或失败项均有基线债务记录。
 7. `doc/理想架构设计.md`、`agent/governance-architecture-contracts.md`、`agent/governance-contract-coverage.md` 与代码现状互相一致。
+8. 最近一次代码类 delta 已通过 `agent/architecture-review-agent.md` 定义的架构 Review，且无未处理 Blocker / High finding。
 
 ## Controller States
 
@@ -75,6 +76,7 @@
 
 7. `VERIFY`
    - 运行 delta verification。
+   - 对代码类 delta，按 `agent/architecture-review-agent.md` 执行架构 Review。
    - 需要时运行 baseline verification。
    - 失败必须分类为本轮回归或既有基线债务。
 

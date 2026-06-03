@@ -76,6 +76,7 @@ title: Solo Coder Architecture Workflow
 
 ### Quality
 
+- `agent/architecture-review-agent.md`: 架构 Review Agent 规范，用于按项目契约审查 diff / commit 是否引入架构漂移
 - `agent/quality-checkpoint-schema.md`: checkpoint 的稳定结构定义与兼容规则
 - `agent/quality-workflow-readiness.md`: 当前工作流稳定性等级与 go/no-go 检查
 - `agent/quality-discover-smoke-test.md`: discover 能力自测用例
@@ -199,10 +200,12 @@ title: Solo Coder Architecture Workflow
 
 - `delta_verification`: 当前 delta 相关的最小验证，必须通过
 - `baseline_verification`: 全仓校验，若失败但属于既有问题，必须登记为基线债务
+- `architecture_review`: 代码类 delta 在进入 `verified` 前，必须按 `agent/architecture-review-agent.md` 做架构审查
 
 规则：
 
 - `delta_verification` 未通过，delta 不得进入 `verified`
+- `architecture_review` 发现 Blocker 或 High finding 时，delta 不得进入 `verified`
 - `baseline_verification` 未通过且属于仓库既有问题时，允许继续推进，但必须写入 `outer-loop-delta-backlog.yaml`、`inner-loop-checkpoint.md` 和 `inner-loop-worklog.md`
 - 任何口头说明都不能替代基线债务记录
 
