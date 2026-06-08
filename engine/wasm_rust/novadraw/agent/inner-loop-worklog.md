@@ -22,6 +22,19 @@
 
 ## Entries
 
+## 2026-06-01 / AD-013
+
+- Goal: 清理 editor interaction 默认热路径日志，保证平台输入、事件入口和示例 Figure 高频回调默认不打印运行时日志。
+- Root Cause: `apps/editor/src/system.rs` 的 mouse/raw pointer dispatch、`apps/editor/src/app_window.rs` 的 `WindowEvent::CursorMoved`、`apps/editor/src/scene_manager/interactive_figure.rs` 的 entered/exited 回调仍使用 info 级日志；这些路径属于默认交互热路径。
+- Files: `apps/editor/src/system.rs`, `apps/editor/src/app_window.rs`, `apps/editor/src/scene_manager/interactive_figure.rs`, `agent/outer-loop-delta-backlog.yaml`, `agent/governance-contract-coverage.md`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: cargo fmt --check ✅, cargo check ✅, cargo test -p editor 6/6 ✅, `rg "\[(MouseEvent|RawPointer|Winit)\]|interactive_rect (entered|exited)" apps/editor/src` 无匹配 ✅
+- Baseline Verification: 未运行全仓 `cargo test`；本轮只执行 delta scope 验证。
+- Decision: 只删除默认交互热路径日志调用，不改变事件 target 选择、坐标转换、InteractionTrace、selection/hover/pressed 状态写入或 PendingMutation apply 时机。
+- Split Decision: 不处理 CAD-004/CAD-005/CAD-006；保留 DPI 测试场景探针日志与 TraceUpdateListener 通知日志，避免把本轮扩大为通知/调试体系重构。
+- Post-Execution Reflection: 本轮减少了应用层默认热路径对运行时日志的依赖，让 C-05 从“dispatcher 主干已对齐但 editor 残留热路径日志”收敛为 aligned。
+- New Candidate Deltas: 无。
+- Next Step: 进入 REVIEW，优先评估 `CAD-004 Composition root residual public read surface audit`。
+
 ## 2026-05-28 / Continuous Workflow Cycle 1
 
 - Goal: 运行 `workflow-continuous` 的 BOOTSTRAP / ASSESS / REVIEW / EXECUTE / VERIFY / RECORD，推进当前最高价值架构收敛项

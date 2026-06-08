@@ -8,11 +8,11 @@
 
 ## Current Delta
 
-- AD-013
+- CAD-004
 
 ## Current Status
 
-- review-complete（CAD-003 已提升为 AD-013，等待执行）
+- assess-ready（AD-013 已 verified，下一步进入 REVIEW，优先评估 CAD-004）
 
 ## What Was Done
 
@@ -164,6 +164,16 @@
 - **Promote Decision**：`CAD-003` 提升为 `AD-013 Editor interaction hot-path logging cleanup`。
 - **Split Decision**：AD-013 先移除或隔离 editor interaction 默认热路径日志；不处理 CAD-004 的组合根只读面，也不重构通知体系。
 
+### AD-013 Editor interaction hot-path logging cleanup（本轮，verified）
+- **根因分析**：editor 默认交互路径仍在 mouse move / press / release、raw pointer dispatch、Winit CursorMoved、interactive entered/exited 中打印 info 级日志；这些路径属于平台输入、事件入口或 Figure 高频回调。
+- **最小修复**：
+  - 移除 `EditorInteractionCore` mouse/raw pointer 默认日志。
+  - 移除 `WindowEvent::CursorMoved` 默认日志。
+  - 移除 `InteractiveRectFigure::on_mouse_entered/exited` 默认日志和无用 import。
+  - 保留 DPI 测试场景探针日志与 UpdateListener 通知日志，不扩大为通知体系或调试能力重构。
+- **Coverage Decision**：C-05 提升为 aligned；EventDispatcher 本身仍只负责分发，editor 默认交互热路径不再打印运行时日志。
+- **验证**：cargo fmt --check ✅，cargo check ✅，cargo test -p editor 6/6 ✅，目标日志标识 rg 检查无匹配 ✅。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
@@ -182,14 +192,14 @@
 - ✅ C-10 已收敛：架构改动说明“为何更接近理想架构”已成为持续工作流强制项，并有多轮真实 delta 证据。
 - ⚠️ 文档中仍可能存在历史图示或 WinitEventDispatcher 旧命名，需要后续全量清扫。
 - ⚠️ `focus_owner` 只有基础 owner 字段，完整 focus gained/lost/key state machine 仍需后续 delta。
-- ⚠️ Contract coverage 当前不再全部 aligned：C-05 / C-07 / C-08 / C-09 为 partially_aligned。
+- ⚠️ Contract coverage 当前不再全部 aligned：C-07 / C-08 / C-09 为 partially_aligned。
 - ✅ `AD-011 FigureGraph storage encapsulation audit` 已 verified；`FigureGraph.blocks` / `uuid_map` 不再是 crate 外 public mutation surface。
-- ⚠️ `AD-013 Editor interaction hot-path logging cleanup` 已 proposed，应作为下一轮最小 delta 执行。
+- ✅ `AD-013 Editor interaction hot-path logging cleanup` 已 verified；editor 默认交互热路径日志已清理。
 - ⚠️ Backlog 仍有 CAD-004 / CAD-005 / CAD-006 candidates，需要后续 REVIEW。
 
 ## Next Small Step
 
-- 下一轮进入 EXECUTE，执行 `AD-013 Editor interaction hot-path logging cleanup`。只移除或隔离 editor 鼠标移动、raw pointer、Winit CursorMoved、interactive enter/exit 默认热路径日志；不要混入 CAD-004/CAD-005/CAD-006。
+- 下一轮进入 REVIEW，优先评估 `CAD-004 Composition root residual public read surface audit`。不要混入 CAD-005/CAD-006，也不要重新打开 AD-013。
 - Viewport/ScrollPane 的真实 Figure-tree 集成仍应作为后续独立 delta，不与 SceneHost 边界混在一起。
 
 ## Blockers
@@ -203,9 +213,10 @@
 - cargo check: passed ✅
 - cargo test -p novadraw-scene: 139/139 + 3 doctests passed ✅
 - cargo test -p editor: 6/6 passed ✅
+- AD-013 log target grep: passed ✅
 
 ## Resume Prompt
 
 ```text
-请按 agent/workflow-continuous.md 从 EXECUTE 继续，当前 delta 为 AD-013 Editor interaction hot-path logging cleanup。CAD-003 REVIEW 已完成并提升为 AD-013：editor 默认交互路径仍在鼠标移动、raw pointer dispatch、Winit CursorMoved、interactive entered/exited 中打印 info 级日志。执行时只移除或隔离这些默认热路径日志，保持事件 target 选择、坐标转换、InteractionTrace、selection/hover/pressed 状态写入和 PendingMutation apply 时机不变；不要混入 CAD-004/CAD-005/CAD-006。
+请按 agent/workflow-continuous.md 从 REVIEW 继续，当前优先候选为 CAD-004 Composition root residual public read surface audit。AD-013 已 verified：editor mouse/raw pointer/Winit CursorMoved/interactive entered-exited 默认热路径日志已清理，C-05 已 aligned。下一步只评估 CAD-004 是否提升为新的最小 delta；不要混入 CAD-005/CAD-006，也不要重新打开 AD-013。
 ```

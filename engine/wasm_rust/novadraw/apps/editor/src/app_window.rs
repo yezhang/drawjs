@@ -173,15 +173,6 @@ impl ApplicationHandler<()> for GraphicsApp {
                 let logical_position = EditorInteractionCore::logical_from_raw(raw);
                 self.cursor_position = Some((position.x, position.y));
 
-                tracing::info!(
-                    "[Winit] CursorMoved: physical=({:.1}, {:.1}), scale_factor={:.2}, logical=({:.1}, {:.1})",
-                    position.x,
-                    position.y,
-                    scale_factor,
-                    logical_position.x,
-                    logical_position.y
-                );
-
                 self.log_dpi_probe_cursor(
                     position.x,
                     position.y,

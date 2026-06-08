@@ -3,7 +3,6 @@ use novadraw::{
     Bounded, Color, MouseButton, MouseEvent, NovadrawContext, Rectangle, Shape, Updatable,
     command::{LineCap, LineJoin},
 };
-use tracing::info;
 
 pub struct InteractiveRectFigure {
     bounds: Rectangle,
@@ -117,21 +116,11 @@ impl Shape for InteractiveRectFigure {
     }
 
     fn on_mouse_entered(&self, _event: &MouseEvent, ctx: &mut dyn NovadrawContext) -> bool {
-        info!(
-            "interactive_rect entered: target={:?}, bounds={:?}",
-            ctx.target_id(),
-            self.bounds
-        );
         ctx.repaint(None);
         true
     }
 
     fn on_mouse_exited(&self, _event: &MouseEvent, ctx: &mut dyn NovadrawContext) -> bool {
-        info!(
-            "interactive_rect exited: target={:?}, bounds={:?}",
-            ctx.target_id(),
-            self.bounds
-        );
         ctx.repaint(None);
         true
     }

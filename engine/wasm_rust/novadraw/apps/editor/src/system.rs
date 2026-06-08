@@ -151,7 +151,6 @@ impl EditorInteractionCore {
     }
 
     pub fn dispatch_mouse_moved(&mut self, x: f64, y: f64) {
-        tracing::info!("[MouseEvent] Moved - entry_coords=({:.1}, {:.1})", x, y);
         let mut ctx = SceneDispatchContext::new(
             &mut self.scene_manager.scene,
             &mut self.update_manager,
@@ -162,12 +161,6 @@ impl EditorInteractionCore {
     }
 
     pub fn dispatch_mouse_pressed(&mut self, x: f64, y: f64, button: MouseButton) {
-        tracing::info!(
-            "[MouseEvent] Pressed - entry_coords=({:.1}, {:.1}), button={:?}",
-            x,
-            y,
-            button
-        );
         let mut ctx = SceneDispatchContext::new(
             &mut self.scene_manager.scene,
             &mut self.update_manager,
@@ -179,12 +172,6 @@ impl EditorInteractionCore {
     }
 
     pub fn dispatch_mouse_released(&mut self, x: f64, y: f64, button: MouseButton) {
-        tracing::info!(
-            "[MouseEvent] Released - entry_coords=({:.1}, {:.1}), button={:?}",
-            x,
-            y,
-            button
-        );
         let mut ctx = SceneDispatchContext::new(
             &mut self.scene_manager.scene,
             &mut self.update_manager,
@@ -197,14 +184,6 @@ impl EditorInteractionCore {
 
     pub fn dispatch_raw_mouse_moved(&mut self, input: RawPointerInput) -> InteractionTrace {
         let logical = Self::logical_from_raw(input);
-        tracing::info!(
-            "[RawPointer] move physical=({:.1}, {:.1}) scale_factor={:.2} logical=({:.1}, {:.1})",
-            input.physical_x,
-            input.physical_y,
-            input.scale_factor,
-            logical.x,
-            logical.y
-        );
         let mut trace = self.build_trace("move", Some(input), logical, None);
         self.dispatch_mouse_moved(logical.x, logical.y);
         self.finish_trace(&mut trace);
@@ -217,15 +196,6 @@ impl EditorInteractionCore {
         button: MouseButton,
     ) -> InteractionTrace {
         let logical = Self::logical_from_raw(input);
-        tracing::info!(
-            "[RawPointer] press physical=({:.1}, {:.1}) scale_factor={:.2} logical=({:.1}, {:.1}) button={:?}",
-            input.physical_x,
-            input.physical_y,
-            input.scale_factor,
-            logical.x,
-            logical.y,
-            button
-        );
         let mut trace = self.build_trace("press", Some(input), logical, Some(button));
         self.dispatch_mouse_pressed(logical.x, logical.y, button);
         self.finish_trace(&mut trace);
@@ -238,15 +208,6 @@ impl EditorInteractionCore {
         button: MouseButton,
     ) -> InteractionTrace {
         let logical = Self::logical_from_raw(input);
-        tracing::info!(
-            "[RawPointer] release physical=({:.1}, {:.1}) scale_factor={:.2} logical=({:.1}, {:.1}) button={:?}",
-            input.physical_x,
-            input.physical_y,
-            input.scale_factor,
-            logical.x,
-            logical.y,
-            button
-        );
         let mut trace = self.build_trace("release", Some(input), logical, Some(button));
         self.dispatch_mouse_released(logical.x, logical.y, button);
         self.finish_trace(&mut trace);

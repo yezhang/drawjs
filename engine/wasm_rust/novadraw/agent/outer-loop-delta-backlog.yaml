@@ -588,7 +588,7 @@ items:
     contract: "event dispatch、hit-test、render 等高频路径默认不打印运行时日志"
     evolution_kind: architecture
     priority: medium
-    status: proposed
+    status: verified
     parent_id: CAD-003
     evidence:
       - apps/editor/src/system.rs
@@ -598,6 +598,8 @@ items:
       - "从 CAD-003 REVIEW 提升：editor 默认交互路径仍在 mouse move、raw pointer dispatch、Winit CursorMoved、interactive enter/exit 中打印 info 级日志"
       - "本项不重复 AD-008：AD-008 已清理 engine event dispatch / hit-test 热路径，本项只处理 editor 层平台输入与示例 Figure 回调的残留日志"
       - "TraceUpdateListener 通知日志属于相邻调试输出；本轮若处理，需确保不扩大为通知体系重构"
+      - "EXECUTE 完成：移除 editor mouse move/press/release、raw pointer move/press/release、Winit CursorMoved、interactive entered/exited 默认 info 日志；保留 InteractionTrace、状态写入、坐标转换和 PendingMutation apply 时机"
+      - "验证通过：cargo fmt --check、cargo check、cargo test -p editor；目标日志标识 rg 检查无匹配"
     done_when:
       - "editor 鼠标移动、raw pointer、entered/exited 默认路径不再打印 info/debug/trace 日志"
       - "不改变事件 target 选择、坐标转换、InteractionTrace 内容、selection/hover/pressed 状态写入或 PendingMutation apply 时机"
