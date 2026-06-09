@@ -38,7 +38,7 @@ pub use figure::{
 pub use layout::{
     BorderLayout, BorderRegion, FillLayout, FlowDirection, FlowLayout, LayoutManager, XYLayout,
 };
-pub use mutation::{MutationContext, PendingMutation, PendingMutations};
+pub use mutation::{PendingMutationBatch, PendingMutations};
 pub use novadraw_geometry::{Point, Rectangle};
 pub use scene::{BlockId, FigureGraph, FigureRenderer};
 pub use scene_host::SceneHost;

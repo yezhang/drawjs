@@ -3,7 +3,10 @@ use std::sync::Arc;
 use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 
-use crate::{FigureGraph, PendingMutation, RectangleFigure, SceneUpdateManager, XYLayout};
+use crate::{
+    FigureGraph, PendingMutations, RectangleFigure, SceneUpdateManager, XYLayout,
+    mutation::PendingMutation,
+};
 
 fn new_scene() -> (FigureGraph, SceneUpdateManager) {
     (FigureGraph::new(), SceneUpdateManager::new())
@@ -399,29 +402,18 @@ fn test_interaction_state_accessors() {
 }
 
 #[test]
-fn test_apply_pending_add_child_attaches_detached_block() {
+fn test_apply_pending_add_child_figure_allocates_and_attaches_child() {
     let (mut scene, mut update_manager) = new_scene();
     let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
-    let child_id = scene.allocate_block(Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)));
-
-    assert_eq!(scene.get_block(child_id).unwrap().parent, None);
-
-    assert!(scene.apply_pending_mutations(
-        &mut update_manager,
-        vec![PendingMutation::AddChild {
-            parent: parent_id,
-            child: child_id,
-        }],
+    let mut pending_mutations = PendingMutations::new();
+    pending_mutations.enqueue(PendingMutation::add_child_figure(
+        parent_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
     ));
 
-    assert_eq!(scene.get_block(child_id).unwrap().parent, Some(parent_id));
-    assert!(
-        scene
-            .get_block(parent_id)
-            .unwrap()
-            .children
-            .contains(&child_id)
-    );
+    assert!(scene.apply_pending_mutations(&mut update_manager, pending_mutations.drain(),));
+
+    assert_eq!(scene.get_block(parent_id).unwrap().children_count(), 1);
     assert!(update_manager.has_pending_layout());
     assert!(update_manager.has_pending_repaint());
 }
@@ -438,13 +430,9 @@ fn test_apply_pending_remove_child_clears_interaction_state() {
     scene.set_focus_owner(Some(child_id));
     scene.set_captured(Some(child_id));
 
-    assert!(scene.apply_pending_mutations(
-        &mut update_manager,
-        vec![PendingMutation::RemoveChild {
-            parent: parent_id,
-            child: child_id,
-        }],
-    ));
+    let mut pending_mutations = PendingMutations::new();
+    pending_mutations.enqueue(PendingMutation::remove_child(parent_id, child_id));
+    assert!(scene.apply_pending_mutations(&mut update_manager, pending_mutations.drain()));
 
     assert_eq!(scene.get_block(child_id).unwrap().parent, None);
     assert!(
@@ -476,13 +464,9 @@ fn test_apply_pending_reparent_moves_child_between_containers() {
         Box::new(RectangleFigure::new(10.0, 10.0, 20.0, 20.0)),
     );
 
-    assert!(scene.apply_pending_mutations(
-        &mut update_manager,
-        vec![PendingMutation::Reparent {
-            child: child_id,
-            new_parent: right_id,
-        }],
-    ));
+    let mut pending_mutations = PendingMutations::new();
+    pending_mutations.enqueue(PendingMutation::reparent(child_id, right_id));
+    assert!(scene.apply_pending_mutations(&mut update_manager, pending_mutations.drain()));
 
     assert_eq!(scene.get_block(child_id).unwrap().parent, Some(right_id));
     assert!(

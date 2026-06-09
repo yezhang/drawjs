@@ -1,8 +1,9 @@
 use novadraw_geometry::Point;
 
 use crate::{
-    BlockId, DispatchContext, Event, Figure, FigureGraph, MouseEventKind, MutationContext,
-    PendingMutation, PendingMutations, Rectangle, UpdateManager,
+    BlockId, DispatchContext, Event, Figure, FigureGraph, MouseEventKind, PendingMutations,
+    Rectangle, UpdateManager,
+    mutation::{MutationContext, PendingMutation},
 };
 
 pub trait NovadrawContext {

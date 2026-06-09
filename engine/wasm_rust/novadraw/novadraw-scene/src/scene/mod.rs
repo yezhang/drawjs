@@ -16,7 +16,7 @@ use uuid::Uuid;
 use super::figure::Updatable;
 use super::layout::LayoutManager;
 use super::update::{FigureEvent, NotificationEffect, NotificationQueue, UpdateManager};
-use crate::PendingMutation;
+use crate::{PendingMutationBatch, mutation::PendingMutationKind};
 
 // 渲染模块
 pub mod render_iterative;
@@ -336,7 +336,7 @@ impl FigureGraph {
         child_id
     }
 
-    pub fn allocate_block(&mut self, figure: Box<dyn super::Figure>) -> BlockId {
+    pub(crate) fn allocate_block(&mut self, figure: Box<dyn super::Figure>) -> BlockId {
         let uuid = Uuid::new_v4();
         let id = self.blocks.insert_with_key(|key| FigureBlock {
             id: key,
@@ -362,7 +362,7 @@ impl FigureGraph {
     pub fn apply_pending_mutations(
         &mut self,
         update_manager: &mut dyn UpdateManager,
-        mutations: Vec<PendingMutation>,
+        mutations: PendingMutationBatch,
     ) -> bool {
         if mutations.is_empty() {
             return false;
@@ -374,13 +374,11 @@ impl FigureGraph {
         let mut reparents = Vec::new();
         let mut adds = Vec::new();
 
-        for mutation in mutations {
-            match mutation {
-                PendingMutation::RemoveChild { .. } => removes.push(mutation),
-                PendingMutation::Reparent { .. } => reparents.push(mutation),
-                PendingMutation::AddChild { .. } | PendingMutation::AddChildFigure { .. } => {
-                    adds.push(mutation)
-                }
+        for mutation in mutations.into_vec() {
+            match mutation.into_kind() {
+                kind @ PendingMutationKind::RemoveChild { .. } => removes.push(kind),
+                kind @ PendingMutationKind::Reparent { .. } => reparents.push(kind),
+                kind @ PendingMutationKind::AddChildFigure { .. } => adds.push(kind),
             }
         }
 
@@ -469,9 +467,9 @@ impl FigureGraph {
     fn apply_remove_mutation(
         &mut self,
         update_manager: &mut dyn UpdateManager,
-        mutation: PendingMutation,
+        mutation: PendingMutationKind,
     ) -> bool {
-        let PendingMutation::RemoveChild { parent, child } = mutation else {
+        let PendingMutationKind::RemoveChild { parent, child } = mutation else {
             return false;
         };
         let Some(bounds) = self.blocks.get(child).map(|block| block.figure_bounds()) else {
@@ -496,12 +494,15 @@ impl FigureGraph {
     fn apply_reparent_mutation(
         &mut self,
         update_manager: &mut dyn UpdateManager,
-        mutation: PendingMutation,
+        mutation: PendingMutationKind,
     ) -> bool {
-        let PendingMutation::Reparent { child, new_parent } = mutation else {
+        let PendingMutationKind::Reparent { child, new_parent } = mutation else {
             return false;
         };
         let old_parent = self.blocks.get(child).and_then(|block| block.parent);
+        if old_parent.is_none() {
+            return false;
+        }
         if old_parent == Some(new_parent) {
             return false;
         }
@@ -529,15 +530,12 @@ impl FigureGraph {
     fn apply_add_mutation(
         &mut self,
         update_manager: &mut dyn UpdateManager,
-        mutation: PendingMutation,
+        mutation: PendingMutationKind,
     ) -> bool {
-        let (parent, child) = match mutation {
-            PendingMutation::AddChild { parent, child } => (parent, child),
-            PendingMutation::AddChildFigure { parent, figure } => {
-                (parent, self.allocate_block(figure))
-            }
-            _ => return false,
+        let PendingMutationKind::AddChildFigure { parent, figure } = mutation else {
+            return false;
         };
+        let child = self.allocate_block(figure);
         let Some(bounds) = self.blocks.get(child).map(|block| block.figure_bounds()) else {
             return false;
         };
