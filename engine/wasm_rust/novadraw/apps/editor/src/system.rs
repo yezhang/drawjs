@@ -23,6 +23,19 @@ impl RawPointerInput {
             scale_factor,
         }
     }
+
+    pub fn logical_position(self) -> LogicalPointerPosition {
+        let scale_factor = if self.scale_factor > 0.0 {
+            self.scale_factor
+        } else {
+            1.0
+        };
+        // Winit 输入是窗口物理像素；分发到场景前统一转换到入口节点坐标域使用的逻辑坐标。
+        LogicalPointerPosition {
+            x: self.physical_x / scale_factor,
+            y: self.physical_y / scale_factor,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -100,25 +113,8 @@ impl EditorInteractionCore {
         }
     }
 
-    pub fn scene_manager(&self) -> &SceneManager {
-        &self.scene_manager
-    }
-
     pub fn scene_manager_mut(&mut self) -> &mut SceneManager {
         &mut self.scene_manager
-    }
-
-    pub fn logical_from_raw(input: RawPointerInput) -> LogicalPointerPosition {
-        let scale_factor = if input.scale_factor > 0.0 {
-            input.scale_factor
-        } else {
-            1.0
-        };
-        // Winit 输入是窗口物理像素；分发到场景前统一转换到入口节点坐标域使用的逻辑坐标。
-        LogicalPointerPosition {
-            x: input.physical_x / scale_factor,
-            y: input.physical_y / scale_factor,
-        }
     }
 
     fn build_trace(
@@ -183,7 +179,7 @@ impl EditorInteractionCore {
     }
 
     pub fn dispatch_raw_mouse_moved(&mut self, input: RawPointerInput) -> InteractionTrace {
-        let logical = Self::logical_from_raw(input);
+        let logical = input.logical_position();
         let mut trace = self.build_trace("move", Some(input), logical, None);
         self.dispatch_mouse_moved(logical.x, logical.y);
         self.finish_trace(&mut trace);
@@ -195,7 +191,7 @@ impl EditorInteractionCore {
         input: RawPointerInput,
         button: MouseButton,
     ) -> InteractionTrace {
-        let logical = Self::logical_from_raw(input);
+        let logical = input.logical_position();
         let mut trace = self.build_trace("press", Some(input), logical, Some(button));
         self.dispatch_mouse_pressed(logical.x, logical.y, button);
         self.finish_trace(&mut trace);
@@ -207,7 +203,7 @@ impl EditorInteractionCore {
         input: RawPointerInput,
         button: MouseButton,
     ) -> InteractionTrace {
-        let logical = Self::logical_from_raw(input);
+        let logical = input.logical_position();
         let mut trace = self.build_trace("release", Some(input), logical, Some(button));
         self.dispatch_mouse_released(logical.x, logical.y, button);
         self.finish_trace(&mut trace);
@@ -274,13 +270,25 @@ impl WinitNovadrawSystem {
         }
     }
 
-    pub fn scene_manager(&self) -> &SceneManager {
-        self.core.scene_manager()
+    pub fn is_scene(&self, scene_type: crate::scene_manager::SceneType) -> bool {
+        self.core.scene_manager.current_scene == scene_type
     }
 
     pub fn switch_scene(&mut self, scene_type: crate::scene_manager::SceneType) {
         self.core.scene_manager_mut().switch_scene(scene_type);
         self.scene_host.request_update();
+    }
+
+    pub fn translate_contents_if_scene(
+        &mut self,
+        scene_type: crate::scene_manager::SceneType,
+        dx: f64,
+        dy: f64,
+    ) -> bool {
+        if !self.is_scene(scene_type) {
+            return false;
+        }
+        self.translate_contents(dx, dy)
     }
 
     pub fn translate_contents(&mut self, dx: f64, dy: f64) -> bool {
@@ -547,8 +555,7 @@ mod tests {
 
     #[test]
     fn test_raw_pointer_conversion() {
-        let logical =
-            EditorInteractionCore::logical_from_raw(RawPointerInput::new(300.0, 200.0, 2.0));
+        let logical = RawPointerInput::new(300.0, 200.0, 2.0).logical_position();
         assert_eq!(logical, LogicalPointerPosition { x: 150.0, y: 100.0 });
     }
 

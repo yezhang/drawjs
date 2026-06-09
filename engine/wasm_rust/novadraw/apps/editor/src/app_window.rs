@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::scene_manager::{DPI_TEST_PROBE_BOUNDS, SceneType};
-use crate::system::{EditorInteractionCore, RawPointerInput, WinitNovadrawSystem};
+use crate::system::{RawPointerInput, WinitNovadrawSystem};
 use novadraw::backend::vello::{VelloRenderer, WinitWindowProxy};
 use novadraw::traits::WindowProxy;
 use novadraw::{NovadrawSystem, RenderBackend};
@@ -57,7 +57,7 @@ impl GraphicsApp {
         let Some(system) = &self.system else {
             return;
         };
-        if system.scene_manager().current_scene != SceneType::DpiTest {
+        if !system.is_scene(SceneType::DpiTest) {
             return;
         }
 
@@ -170,7 +170,7 @@ impl ApplicationHandler<()> for GraphicsApp {
                     .map(|renderer| renderer.window().scale_factor())
                     .unwrap_or(1.0);
                 let raw = RawPointerInput::new(position.x, position.y, scale_factor);
-                let logical_position = EditorInteractionCore::logical_from_raw(raw);
+                let logical_position = raw.logical_position();
                 self.cursor_position = Some((position.x, position.y));
 
                 self.log_dpi_probe_cursor(
@@ -271,9 +271,11 @@ impl ApplicationHandler<()> for GraphicsApp {
                     }
                     PhysicalKey::Code(KeyCode::KeyT) => {
                         if let Some(system) = &mut self.system {
-                            if system.scene_manager().current_scene == SceneType::BoundsTranslate {
-                                system.translate_contents(10.0, 10.0);
-                            }
+                            system.translate_contents_if_scene(
+                                SceneType::BoundsTranslate,
+                                10.0,
+                                10.0,
+                            );
                         }
                     }
                     PhysicalKey::Code(KeyCode::KeyI) => {
