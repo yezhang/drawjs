@@ -13,6 +13,7 @@
 ## Current Status
 
 - complete-ready（AD-016 已 verified；C-01 到 C-10 均 aligned；completion baseline verification 已通过）
+  - Review follow-up 已完成：PendingMutation invalid parent/new_parent 失败路径不再产生结构副作用
 
 ## What Was Done
 
@@ -238,6 +239,7 @@
 - ✅ AD-014 已完成：editor 组合根残余只读面已收敛，C-07 已 aligned。
 - ✅ AD-015 已完成：理想架构文档组合根旧表述已清理，C-09 已 aligned。
 - ✅ Completion baseline verification 已通过：backlog 无 open/candidate，coverage 无 partially_aligned/unassessed/drifting，`cargo test` 全量通过。
+- ✅ AD-016 Review follow-up 已完成：invalid add/reparent mutation 不再污染图结构。
 
 ## Next Small Step
 
@@ -264,9 +266,10 @@
 - AD-016 architecture diff review: Go ✅
 - completion state consistency grep: passed ✅
 - cargo test: passed ✅
+- AD-016 follow-up cargo test -p novadraw-scene: 141/141 + 3 doctests passed ✅
 
 ## Resume Prompt
 
 ```text
-当前架构循环已到 complete-ready。AD-014/AD-015/AD-016 均 verified；C-01 到 C-10 均 aligned；backlog 无 open/candidate；completion baseline verification 已通过（cargo fmt --check、cargo check、cargo test、状态一致性 grep）。下一步优先整理并按主题提交当前未提交改动，或开启新的 architecture delta discovery；不要重新打开 AD-014/AD-015/AD-016。
+当前架构循环已到 complete-ready。AD-014/AD-015/AD-016 均 verified；C-01 到 C-10 均 aligned；backlog 无 open/candidate；completion baseline verification 已通过（cargo fmt --check、cargo check、cargo test、状态一致性 grep）。AD-016 Review follow-up 已修复 invalid PendingMutation 失败路径结构副作用，并通过 cargo test -p novadraw-scene。下一步优先提交 follow-up 修复，或在提交后开启新的 architecture delta discovery；不要重新打开 AD-014/AD-015/AD-016。
 ```

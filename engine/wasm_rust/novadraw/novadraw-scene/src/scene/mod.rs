@@ -510,12 +510,16 @@ impl FigureGraph {
         let Some(bounds) = self.blocks.get(child).map(|block| block.figure_bounds()) else {
             return false;
         };
-
-        if let Some(old_parent) = old_parent {
-            self.detach_child(old_parent, child);
-            self.mark_invalid(update_manager, old_parent);
-            self.repaint(update_manager, old_parent, None);
+        let Some(old_parent) = old_parent else {
+            return false;
+        };
+        if !self.blocks.contains_key(old_parent) || !self.blocks.contains_key(new_parent) {
+            return false;
         }
+
+        self.detach_child(old_parent, child);
+        self.mark_invalid(update_manager, old_parent);
+        self.repaint(update_manager, old_parent, None);
 
         if !self.attach_child(new_parent, child) {
             return false;
@@ -535,6 +539,9 @@ impl FigureGraph {
         let PendingMutationKind::AddChildFigure { parent, figure } = mutation else {
             return false;
         };
+        if !self.blocks.contains_key(parent) {
+            return false;
+        }
         let child = self.allocate_block(figure);
         let Some(bounds) = self.blocks.get(child).map(|block| block.figure_bounds()) else {
             return false;

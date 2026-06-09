@@ -682,6 +682,8 @@ items:
       - "`FigureGraph::allocate_block()` 收窄为 `pub(crate)`，避免 crate 外制造 detached block 再寻找低层 attach 路径"
       - "Architecture Review：Go。结构性变更仍只在顶层分发后 apply；本轮减少公开构造面，没有把业务逻辑放入 dispatcher 或 UpdateManager"
       - "验证通过：cargo fmt --check、cargo check、cargo test -p novadraw-scene、cargo test -p editor、API 残留 rg 检查"
+      - "Review follow-up：修复 apply_add/apply_reparent 在校验目标 parent 前产生副作用的问题；invalid parent/new_parent 现在不会 allocate detached block 或 detach 原 child"
+      - "Follow-up 验证通过：cargo fmt --check、cargo check、cargo test -p novadraw-scene"
     done_when:
       - "crate 外不能构造具体 PendingMutation 或直接 enqueue mutation"
       - "crate 外不能通过 `PendingMutation::AddChild { child: BlockId }` 把既有 detached block 附加到图结构"

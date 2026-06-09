@@ -22,6 +22,15 @@
 
 ## Entries
 
+## 2026-06-09 / AD-016 Review Follow-up
+
+- Goal: 修复提交级 Review 发现的 PendingMutation apply 失败路径副作用问题。
+- Root Cause: `apply_reparent_mutation()` 在确认 `new_parent` 存在前先 detach 原 child；`apply_add_mutation()` 在确认 `parent` 存在前先 allocate block。自定义 Figure 可通过公开 `NovadrawContext` 传入无效 `BlockId`，导致失败路径仍污染图结构。
+- Minimal Fix: `reparent` 在 detach 前确认 child、old_parent、new_parent 都存在；`add child` 在 allocate 前确认 parent 存在。
+- Tests: 新增 invalid parent add-child 无副作用测试，确认 blocks/uuid_map 不增长；新增 invalid new_parent reparent 无副作用测试，确认 child 仍挂在原 parent 下。
+- Verification: cargo fmt --check ✅, cargo check ✅, cargo test -p novadraw-scene 141/141 + 3 doctests ✅
+- Result: Review finding closed；AD-016 的 PendingMutation 事务边界仍为 verified。
+
 ## 2026-06-09 / Completion Baseline
 
 - Goal: 在 AD-016 后执行完成基线验证，确认当前架构循环可以进入 complete-ready。

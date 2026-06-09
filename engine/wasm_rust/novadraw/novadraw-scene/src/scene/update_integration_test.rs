@@ -2,9 +2,10 @@ use std::sync::Arc;
 
 use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
+use slotmap::Key;
 
 use crate::{
-    FigureGraph, PendingMutations, RectangleFigure, SceneUpdateManager, XYLayout,
+    BlockId, FigureGraph, PendingMutations, RectangleFigure, SceneUpdateManager, XYLayout,
     mutation::PendingMutation,
 };
 
@@ -419,6 +420,25 @@ fn test_apply_pending_add_child_figure_allocates_and_attaches_child() {
 }
 
 #[test]
+fn test_apply_pending_add_child_with_invalid_parent_has_no_side_effect() {
+    let (mut scene, mut update_manager) = new_scene();
+    let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
+    let block_count = scene.blocks.len();
+    let uuid_count = scene.uuid_map.len();
+    let mut pending_mutations = PendingMutations::new();
+    pending_mutations.enqueue(PendingMutation::add_child_figure(
+        BlockId::null(),
+        Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+    ));
+
+    assert!(!scene.apply_pending_mutations(&mut update_manager, pending_mutations.drain()));
+
+    assert_eq!(scene.get_block(parent_id).unwrap().children_count(), 0);
+    assert_eq!(scene.blocks.len(), block_count);
+    assert_eq!(scene.uuid_map.len(), uuid_count);
+}
+
+#[test]
 fn test_apply_pending_remove_child_clears_interaction_state() {
     let (mut scene, mut update_manager) = new_scene();
     let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
@@ -479,6 +499,33 @@ fn test_apply_pending_reparent_moves_child_between_containers() {
     assert!(
         scene
             .get_block(right_id)
+            .unwrap()
+            .children
+            .contains(&child_id)
+    );
+}
+
+#[test]
+fn test_apply_pending_reparent_to_invalid_parent_keeps_original_tree() {
+    let (mut scene, mut update_manager) = new_scene();
+    let root_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 400.0, 400.0)));
+    let left_id = scene.add_child_to(
+        root_id,
+        Box::new(RectangleFigure::new(0.0, 0.0, 100.0, 100.0)),
+    );
+    let child_id = scene.add_child_to(
+        left_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 20.0, 20.0)),
+    );
+    let mut pending_mutations = PendingMutations::new();
+    pending_mutations.enqueue(PendingMutation::reparent(child_id, BlockId::null()));
+
+    assert!(!scene.apply_pending_mutations(&mut update_manager, pending_mutations.drain()));
+
+    assert_eq!(scene.get_block(child_id).unwrap().parent, Some(left_id));
+    assert!(
+        scene
+            .get_block(left_id)
             .unwrap()
             .children
             .contains(&child_id)
