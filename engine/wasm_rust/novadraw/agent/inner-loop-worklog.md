@@ -22,6 +22,64 @@
 
 ## Entries
 
+## 2026-06-09 / Completion Baseline
+
+- Goal: 在 AD-016 后执行完成基线验证，确认当前架构循环可以进入 complete-ready。
+- Checks: backlog YAML 解析 ✅, git diff --check ✅, backlog 无 `status: open` / `status: candidate` ✅, coverage 无 `partially_aligned` / `unassessed` / `drifting` ✅, cargo fmt --check ✅, cargo check ✅, cargo test ✅
+- Result: C-01 到 C-10 均为 aligned；BASELINE-001 已通过本轮 `cargo fmt` 收敛；当前架构循环状态推进到 complete-ready。
+- Next Step: 整理并按主题提交当前未提交改动，或开启新的 architecture delta discovery。
+
+## 2026-06-09 / AD-016
+
+- Goal: 收敛 PendingMutation 生产阶段类型边界，确保结构性变更只能通过受控上下文 enqueue，并在顶层分发后以 batch 应用。
+- Root Cause: `PendingMutation` / `PendingMutations::enqueue` / `MutationContext` 曾作为公开构造与 enqueue 面暴露，`FigureGraph::apply_pending_mutations()` 接收任意 `Vec<PendingMutation>`；同时 `PendingMutation::AddChild { child: BlockId }` 允许携带既有节点 ID 附加到底层图结构，类型层面保留了低层 attach 能力。
+- Minimal Fix: `PendingMutation` / `PendingMutationKind` / `MutationContext` / `PendingMutations::enqueue` 收窄为 crate 内部；删除既有节点 `AddChild` 变体；新增 child 仅通过 `AddChildFigure` 携带 `Box<dyn Figure>` 并在 apply 阶段内部 allocate；`PendingMutations::drain()` 返回 `PendingMutationBatch`，`FigureGraph::apply_pending_mutations()` 只接受 batch；`FigureGraph::allocate_block()` 收窄为 `pub(crate)`。
+- Files: `novadraw-scene/src/mutation/mod.rs`, `novadraw-scene/src/scene/mod.rs`, `novadraw-scene/src/context/mod.rs`, `novadraw-scene/src/lib.rs`, `novadraw/src/lib.rs`, `novadraw-scene/src/scene/update_integration_test.rs`
+- Delta Verification: cargo fmt --check ✅, cargo check ✅, cargo test -p novadraw-scene 139/139 + 3 doctests ✅, cargo test -p editor 6/6 ✅, API residual grep ✅
+- Architecture Review: Go. 本轮没有改变 dispatch 后 apply 的运行时事务顺序，只把 mutation 生产能力收回引擎上下文，消除了公开类型伪造和既有节点 AddChild attach 面。
+- Coverage Update: C-08 从 partially_aligned 提升为 aligned；当前 C-01 到 C-10 均为 aligned。
+- Split Decision: 不处理 Viewport/ScrollPane 真实 Figure-tree 集成，不重新打开 AD-014/AD-015。
+- Post-Execution Reflection: 本轮更接近理想架构，因为结构性变更现在由 `NovadrawContext`/`SceneDispatchContext` 产生，`FigureGraph` 只在稳定事务边界消费不可外部伪造的 batch，类型系统更直接地表达了 PendingMutation 契约。
+- New Candidate Deltas: 无。
+- Next Step: 进入 completion baseline verification；若 `cargo test` 全量通过，可将当前架构循环标记为 complete-ready。
+
+## 2026-06-09 / AD-015
+
+- Goal: 清理理想架构文档中的组合根旧表述，使文档与 AD-010 / AD-014 后的公开接口边界一致。
+- Root Cause: `doc/理想架构设计.md` 仍把 `NovadrawSystem (trait)` 描述为持有 `scene/update_manager/dispatcher/scene_host`，并保留 `NovadrawSystem.update_manager` / `NovadrawSystem.dispatcher` 与 `WinitEventDispatcher` 旧平台入口表述；这会把已移除的公开逃生口重新写成理想架构。
+- Minimal Fix: 将相关段落统一改为“NovadrawSystem 平台实现内部装配 FigureGraph / UpdateManager / EventDispatcher / SceneHost；公开 trait 只暴露 render / viewport_size / request_update”；将组合根/事件流中的旧 `WinitEventDispatcher` 入口改为 `app_window` 平台输入适配 + `BasicEventDispatcher` 引擎无状态分发。
+- Files: `doc/理想架构设计.md`, `agent/outer-loop-delta-backlog.yaml`, `agent/governance-contract-coverage.md`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: `rg "WinitEventDispatcher|NovadrawSystem\\.update_manager|NovadrawSystem\\.dispatcher|dispatcher: Arc|update_manager: Arc|scene_host: Arc|FigureGraph 持有树结构和 UpdateManager|NovadrawSystem \\(trait\\)|全局组合根，持有 UpdateManager" doc/理想架构设计.md` 无匹配 ✅, git diff --check ✅
+- Coverage Update: C-09 从 partially_aligned 提升为 aligned；C-08 仍 partially_aligned，由 CAD-006 追踪。
+- Split Decision: 不处理 CAD-006 PendingMutation 生产阶段边界；不进行运行时代码修改。
+- Post-Execution Reflection: 本轮更接近理想架构，因为文档不再把已删除的公开 manager 逃生口描述为目标形态，后续实现将以“公开 trait 稳定入口 + 平台实现内部装配 + 组合根命名动作”为准。
+- New Candidate Deltas: 无。
+- Next Step: 回到 REVIEW，优先评估 `CAD-006 PendingMutation production boundary audit`。
+
+## 2026-06-09 / AD-014
+
+- Goal: 收敛 editor 组合根残余只读面，让 `app_window` 只通过组合根命名 query/action 或平台输入适配 API 与系统交互。
+- Root Cause: `WinitNovadrawSystem::scene_manager()` 暴露整个 `SceneManager` 只读引用，`app_window` 借此读取 `current_scene`；同时 `app_window` 直接调用 `EditorInteractionCore::logical_from_raw`，把 editor 输入核心内部 helper 暴露给平台窗口层。
+- Minimal Fix: 删除 `EditorInteractionCore::scene_manager()` 与 `WinitNovadrawSystem::scene_manager()`；新增 `WinitNovadrawSystem::is_scene()` 和 `translate_contents_if_scene()`；将 raw pointer 坐标换算改为 `RawPointerInput::logical_position()`；`app_window` 改用这些命名 API。
+- Files: `apps/editor/src/system.rs`, `apps/editor/src/app_window.rs`, `agent/outer-loop-delta-backlog.yaml`, `agent/governance-contract-coverage.md`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: cargo fmt --check ✅, cargo check ✅, cargo test -p editor 6/6 ✅, `rg "scene_manager\\(|EditorInteractionCore::logical_from_raw|logical_from_raw" apps/editor/src` 无匹配 ✅
+- Architecture Review: Diff review 结论 Go；`app_window` 不再触达组合根内部 `SceneManager`，`RawPointerInput::logical_position()` 属于平台输入适配数据的命名能力，没有引入新的 manager escape hatch。
+- Coverage Update: C-07 从 partially_aligned 提升为 aligned；C-09 仍 partially_aligned，由 CAD-005 理想架构旧表述继续追踪。
+- Split Decision: 不处理 CAD-005 理想架构文档旧表述，不处理 CAD-006 PendingMutation 生产阶段边界，不重构 render strategy wiring。
+- Post-Execution Reflection: 本轮更接近理想架构，因为平台窗口层从“读取组合根内部结构并复用内部 helper”收敛为“调用组合根命名能力与平台输入适配方法”，组合根边界更窄且意图更明确。
+- New Candidate Deltas: 无。
+- Next Step: 回到 REVIEW，优先评估 `CAD-005 Ideal architecture stale composition-root document cleanup`。
+
+## 2026-06-09 / CAD-004 REVIEW
+
+- Goal: 评估 `Composition root residual public read surface audit` 是否应提升为正式 delta，只做 REVIEW，不改运行时代码。
+- Evidence Checked: `apps/editor/src/app_window.rs`, `apps/editor/src/system.rs`, `apps/editor/src/scene_manager/mod.rs`, `agent/outer-loop-delta-backlog.yaml`, `agent/governance-contract-coverage.md`, `agent/inner-loop-checkpoint.md`
+- Root Cause: `WinitNovadrawSystem::scene_manager()` 暴露整个 `SceneManager` 只读引用，`app_window` 通过 `system.scene_manager().current_scene` 判断 DPI 探针和 T 键平移门禁，仍依赖组合根内部结构；`app_window` 还直接调用 `EditorInteractionCore::logical_from_raw`，复用 editor 输入核心内部 helper 来完成 DPI 探针坐标换算。
+- Duplicate Check: 不重复 AD-004/AD-010。AD-004 已把场景切换和平移动作收回组合根，AD-010 移除了公开 trait 可变逃生口；本项处理的是 editor 具体组合根上的残余只读 escape hatch 与平台输入适配边界。
+- Promote Decision: CAD-004 提升为 `AD-014 Composition root residual read surface audit`。
+- Split Decision: AD-014 只处理 `WinitNovadrawSystem::scene_manager()` 暴露面和 `EditorInteractionCore::logical_from_raw` 调用边界；不处理 CAD-005 理想架构文档旧表述，不处理 CAD-006 PendingMutation 生产阶段边界，不重构 render strategy wiring。
+- Next Step: 从 EXECUTE 开始执行 AD-014，最小修复应让 `app_window` 改用组合根命名 query/action 或明确的平台输入适配 API，并验证 editor 行为不变。
+
 ## 2026-06-01 / AD-013
 
 - Goal: 清理 editor interaction 默认热路径日志，保证平台输入、事件入口和示例 Figure 高频回调默认不打印运行时日志。

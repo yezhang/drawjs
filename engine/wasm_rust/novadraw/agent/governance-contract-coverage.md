@@ -19,9 +19,9 @@
 | C-04 | UpdateManager 只负责两阶段更新编排 | aligned | `AD-001` done | validation / repair / scheduling 三个子边界均已收敛；UpdateManager 管理队列与阶段，FigureGraph/组合根/SceneHost 分别承载图语义与平台调度 |
 | C-05 | EventDispatcher 只负责事件分发 | aligned | `AD-005` verified; `AD-013` verified | BasicEventDispatcher 本身仍只分发；editor interaction 默认热路径日志已清理，平台输入和示例 Figure 回调不再默认打印 mouse/raw pointer/entered/exited 日志 |
 | C-06 | SceneHost 是极薄平台调度层 | aligned | `AD-002` verified | `WinitSceneHost` 仅保留 window proxy 与 redraw pending；editor/render 策略状态位于组合根 |
-| C-07 | NovadrawSystem 是组合根 | partially_aligned | `AD-004` verified; `CAD-004` candidate | 可变 escape hatch 已移除；completion audit 发现 app_window 仍通过只读 scene_manager/query 和 EditorInteractionCore 静态方法触达内部结构，需审计是否职责泄漏 |
-| C-08 | 结构性变更必须通过 PendingMutation 延迟应用 | partially_aligned | `AD-003` verified; `CAD-006` candidate | 主路径已在顶层分发后 apply；completion audit 发现 PendingMutations 生产阶段和 AddChild 既有节点能力仍需类型层面审计 |
-| C-09 | 新接口优先表达职责边界，不为兼容现状引入职责回流 | partially_aligned | `AD-010` verified; `AD-011` verified; `AD-012` verified; `CAD-004` / `CAD-005` candidates | 公开可变系统逃生口、FigureGraph 存储逃生口与 FigureBlock 可变面已移除；组合根只读面和理想文档旧表述仍可能引入职责回流 |
+| C-07 | NovadrawSystem 是组合根 | aligned | `AD-004` verified; `AD-010` verified; `AD-014` verified | 可变 escape hatch 与 editor 组合根残余只读面均已收敛；app_window 不再通过 scene_manager/query 触达组合根内部 SceneManager，平台输入层改用组合根命名 query/action |
+| C-08 | 结构性变更必须通过 PendingMutation 延迟应用 | aligned | `AD-003` verified; `AD-016` verified | 主路径仍在顶层分发后 apply；PendingMutation 具体构造、enqueue 与 MutationContext 已收窄为 crate 内部，apply 只接受 PendingMutations drain 出的 batch，既有 BlockId AddChild 能力已移除 |
+| C-09 | 新接口优先表达职责边界，不为兼容现状引入职责回流 | aligned | `AD-010` verified; `AD-011` verified; `AD-012` verified; `AD-014` verified; `AD-015` verified | 公开可变系统逃生口、FigureGraph 存储逃生口、FigureBlock 可变面与 editor 组合根只读面已移除；理想架构文档中的组合根旧表述已同步为公开 trait 稳定入口和平台实现内部装配 |
 | C-10 | 任何架构改动都要说明为何更接近理想架构 | aligned | `agent/inner-loop-worklog.md`, `agent/workflow-continuous.md` | 近几轮 delta 已稳定记录 Root Cause / Minimal Fix / Decision / Split Decision / Reflection / Verification；持续工作流强制每轮判断是否减少架构差距 |
 
 ## 使用规则

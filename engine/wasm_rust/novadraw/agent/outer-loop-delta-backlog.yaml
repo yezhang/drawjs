@@ -1,5 +1,5 @@
 version: 1
-last_updated: "2026-06-01"
+last_updated: "2026-06-09"
 
 selection_rules:
   - 先处理职责边界错误，再处理实现细节
@@ -43,7 +43,7 @@ verification_definitions:
 baseline_debts:
   - id: BASELINE-001
     title: Repository-wide formatting drift
-    status: open
+    status: resolved
     impact: medium
     evidence:
       - ./agent/workflow-verify.sh
@@ -51,6 +51,7 @@ baseline_debts:
     notes:
       - 全仓存在本轮未修改文件的格式化漂移
       - 当前允许 delta_verification 通过后继续推进，但不能忽略该债务
+      - "2026-06-09：本轮执行 `cargo fmt` 后 `cargo fmt --check` 通过，格式化漂移已收敛"
 
 candidate_items:
   - id: CAD-001
@@ -118,7 +119,7 @@ candidate_items:
     contract: "NovadrawSystem 是组合根；app_window 只做平台输入适配"
     evolution_kind: architecture
     priority: medium
-    status: candidate
+    status: promoted
     evidence:
       - apps/editor/src/system.rs
       - apps/editor/src/app_window.rs
@@ -130,13 +131,15 @@ candidate_items:
     notes:
       - "建议评估是否改为 `current_scene()`、`is_scene()` 或独立 platform input adapter"
       - render strategy wiring 也可能属于相邻候选，但应避免与本项混在同一 delta
+      - "REVIEW 结论：问题真实存在。`app_window` 仍通过 `system.scene_manager().current_scene` 依赖组合根内部 `SceneManager`，并直接调用 `EditorInteractionCore::logical_from_raw` 复用内部输入转换 helper"
+      - "提升为 AD-014；本轮只处理组合根只读面和平台输入适配边界，不混入 CAD-005 文档清扫或 CAD-006 PendingMutation 生产边界"
 
   - id: CAD-005
     title: Ideal architecture stale composition-root document cleanup
     contract: "理想架构文档、契约、coverage 与代码现状一致"
     evolution_kind: architecture
     priority: medium
-    status: candidate
+    status: promoted
     evidence:
       - doc/理想架构设计.md
       - agent/governance-contract-coverage.md
@@ -147,13 +150,15 @@ candidate_items:
       - 相关段落已经全部同步为组合根内部装配与命名动作
     notes:
       - Completion audit 发现理想架构文档早期章节仍有旧组合根表述
+      - "REVIEW 结论：问题真实存在。`doc/理想架构设计.md` 仍把 NovadrawSystem trait 描述为持有 `scene/update_manager/dispatcher/scene_host`，并在多处保留 `NovadrawSystem.update_manager` / `NovadrawSystem.dispatcher` 与 `WinitEventDispatcher` 旧平台入口表述"
+      - "提升为 AD-015；本轮只清理理想架构文档中的组合根公开面和平台输入旧命名，不处理 CAD-006 PendingMutation 生产边界"
 
   - id: CAD-006
     title: PendingMutation production boundary audit
     contract: "结构性变更必须通过 PendingMutation 延迟应用，且生产阶段边界清晰"
     evolution_kind: architecture
     priority: medium
-    status: candidate
+    status: promoted
     evidence:
       - novadraw-scene/src/mutation/mod.rs
       - novadraw-scene/src/scene/mod.rs
@@ -165,6 +170,8 @@ candidate_items:
       - 现有 API 被证明只在受控上下文中构造，且公开能力不破坏 C-08 时序
     notes:
       - Completion audit 未发现主路径时序破坏，但发现类型层面仍有可审计空间
+      - "REVIEW 结论：问题真实存在。`PendingMutation` / `PendingMutations::enqueue` / `MutationContext` 曾作为公开构造与 enqueue 面暴露，`apply_pending_mutations` 接收任意 `Vec<PendingMutation>`，且 `PendingMutation::AddChild { child: BlockId }` 允许携带既有节点 ID 附加到底层图结构"
+      - "提升为 AD-016；本轮只收敛 PendingMutation 类型边界，不改变 dispatch 后 apply 的运行时事务顺序"
 
   - id: CAD-007
     title: FigureBlock public mutation surface audit
@@ -605,3 +612,78 @@ items:
       - "不改变事件 target 选择、坐标转换、InteractionTrace 内容、selection/hover/pressed 状态写入或 PendingMutation apply 时机"
       - "保留测试/手动脚本所需的 trace 返回值；如需日志，只能通过显式 debug feature 或非默认调试入口隔离"
       - "cargo fmt --check、cargo check、cargo test -p editor 通过"
+
+  - id: AD-014
+    title: Composition root residual read surface audit
+    contract: "NovadrawSystem 是组合根；app_window 只做平台输入适配"
+    evolution_kind: architecture
+    priority: medium
+    status: verified
+    parent_id: CAD-004
+    evidence:
+      - apps/editor/src/system.rs
+      - apps/editor/src/app_window.rs
+      - apps/editor/src/scene_manager/mod.rs
+    progress_notes:
+      - "从 CAD-004 REVIEW 提升：`WinitNovadrawSystem::scene_manager()` 暴露整个 `SceneManager` 只读引用，`app_window` 可直接读取 `current_scene` 并看见 `scene` 结构边界"
+      - "`app_window` 使用 `system.scene_manager().current_scene` 判断 DPI 探针与 T 键平移门禁，说明平台输入层仍依赖组合根内部结构，而不是调用组合根命名 query/action"
+      - "`app_window` 直接调用 `EditorInteractionCore::logical_from_raw` 只为 DPI 探针取得逻辑坐标；该转换属于 editor 输入核心/组合根适配职责，不应要求平台窗口层了解内部 helper"
+      - "最小修复方向：用 `WinitNovadrawSystem` 命名 query/action 替代 `scene_manager()` 逃生口，例如 `is_scene()` / `current_scene()` / `translate_contents_if_scene()`；DPI 探针坐标转换由组合根或独立平台输入 adapter 提供"
+      - "拆分决定：不处理 CAD-005 理想架构文档旧表述，不处理 CAD-006 PendingMutation 生产阶段边界，不重构 render strategy wiring"
+      - "EXECUTE 完成：删除 `EditorInteractionCore::scene_manager()` 与 `WinitNovadrawSystem::scene_manager()` 只读逃生口；`app_window` 改用 `is_scene()` 与 `translate_contents_if_scene()` 组合根命名 API"
+      - "EXECUTE 完成：将 raw pointer 逻辑坐标换算收敛到 `RawPointerInput::logical_position()`，`app_window` 不再直接引用 `EditorInteractionCore::logical_from_raw`"
+      - "验证通过：cargo fmt --check、cargo check、cargo test -p editor；`rg` 确认 `app_window` / `system` 中无 `scene_manager()` 或旧 logical helper 残留"
+    done_when:
+      - "`app_window` 不再通过 `scene_manager()` 或 `SceneManager.current_scene` 读取组合根内部结构"
+      - "保留场景切换、DPI 探针、T 键平移、I 键渲染模式切换、H/M/C 手动交互脚本语义"
+      - "平台输入层只调用组合根命名 query/action，或调用明确属于平台输入适配的坐标转换 API"
+      - "`WinitNovadrawSystem::scene_manager()` 如无内部测试必要，应删除；如需测试访问，必须限制在测试或更窄的只读 query"
+      - "不改变事件分发、坐标转换结果、PendingMutation apply 时机或 UpdateManager 调度语义"
+      - "cargo fmt --check、cargo check、cargo test -p editor 通过"
+
+  - id: AD-015
+    title: Ideal architecture composition-root document cleanup
+    contract: "理想架构文档、契约、coverage 与代码现状一致"
+    evolution_kind: architecture
+    priority: medium
+    status: verified
+    parent_id: CAD-005
+    evidence:
+      - doc/理想架构设计.md
+      - agent/governance-contract-coverage.md
+    progress_notes:
+      - "从 CAD-005 REVIEW 提升：理想架构文档仍把 `NovadrawSystem (trait)` 描述为持有 `scene/update_manager/dispatcher/scene_host`，与 AD-010 后公开 trait 只暴露 `render` / `viewport_size` / `request_update` 冲突"
+      - "文档中多处 `NovadrawSystem.update_manager` / `NovadrawSystem.dispatcher` 旧表述已改为 NovadrawSystem 平台实现内部服务，不再暗示公开逃生口"
+      - "组合根数据流中的 `WinitEventDispatcher` 旧平台入口已改为 `app_window` 平台输入适配 + `BasicEventDispatcher` 引擎无状态分发"
+      - "验证通过：目标旧组合根关键词 rg 检查无未处理匹配；git diff --check 通过"
+    done_when:
+      - "理想架构文档不再把 `NovadrawSystem trait` 表述为直接持有或暴露 `scene` / `update_manager` / `dispatcher`"
+      - "理想架构文档对 UpdateManager / EventDispatcher 的持有关系表述为组合根平台实现内部装配，而不是公开 trait escape hatch"
+      - "平台输入入口表述与当前 app_window -> WinitNovadrawSystem 命名动作 -> BasicEventDispatcher 的职责分工一致"
+      - "不改变运行时代码，不处理 CAD-006 PendingMutation 生产边界"
+
+  - id: AD-016
+    title: PendingMutation production boundary audit
+    contract: "结构性变更必须通过 PendingMutation 延迟应用，且生产阶段边界清晰"
+    evolution_kind: architecture
+    priority: medium
+    status: verified
+    parent_id: CAD-006
+    evidence:
+      - novadraw-scene/src/mutation/mod.rs
+      - novadraw-scene/src/scene/mod.rs
+      - novadraw-scene/src/context/mod.rs
+      - novadraw-scene/src/scene/update_integration_test.rs
+    progress_notes:
+      - "从 CAD-006 REVIEW 提升：主路径时序正确，但 mutation 类型层面曾允许外部构造 `PendingMutation`、调用 `PendingMutations::enqueue`，并向 `apply_pending_mutations` 传入任意 `Vec<PendingMutation>`"
+      - "删除 `PendingMutation::AddChild { parent, child }` 既有节点附加能力；新增 child 只通过 `AddChildFigure` 携带 `Box<dyn Figure>`，由 apply 阶段内部 allocate block"
+      - "`PendingMutation` / `PendingMutationKind` / `MutationContext` / `PendingMutations::enqueue` 收窄为 crate 内部；公开 facade 不再 re-export `MutationContext` 或 `PendingMutation`"
+      - "`PendingMutations::drain()` 返回不可外部伪造的 `PendingMutationBatch`；`FigureGraph::apply_pending_mutations()` 只接受 batch，不接受任意 Vec"
+      - "`FigureGraph::allocate_block()` 收窄为 `pub(crate)`，避免 crate 外制造 detached block 再寻找低层 attach 路径"
+      - "Architecture Review：Go。结构性变更仍只在顶层分发后 apply；本轮减少公开构造面，没有把业务逻辑放入 dispatcher 或 UpdateManager"
+      - "验证通过：cargo fmt --check、cargo check、cargo test -p novadraw-scene、cargo test -p editor、API 残留 rg 检查"
+    done_when:
+      - "crate 外不能构造具体 PendingMutation 或直接 enqueue mutation"
+      - "crate 外不能通过 `PendingMutation::AddChild { child: BlockId }` 把既有 detached block 附加到图结构"
+      - "`apply_pending_mutations` 不接受外部任意 Vec，而只接受由 PendingMutations drain 出来的 batch"
+      - "dispatch 后 apply 的事务顺序保持不变"

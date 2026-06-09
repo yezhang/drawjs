@@ -3,16 +3,16 @@
 ## Metadata
 
 - schema_version: 1
-- updated_at: 2026-06-01
+- updated_at: 2026-06-09
 - checkpoint_kind: architecture-loop
 
 ## Current Delta
 
-- CAD-004
+- COMPLETE
 
 ## Current Status
 
-- assess-ready（AD-013 已 verified，下一步进入 REVIEW，优先评估 CAD-004）
+- complete-ready（AD-016 已 verified；C-01 到 C-10 均 aligned；completion baseline verification 已通过）
 
 ## What Was Done
 
@@ -174,6 +174,45 @@
 - **Coverage Decision**：C-05 提升为 aligned；EventDispatcher 本身仍只负责分发，editor 默认交互热路径不再打印运行时日志。
 - **验证**：cargo fmt --check ✅，cargo check ✅，cargo test -p editor 6/6 ✅，目标日志标识 rg 检查无匹配 ✅。
 
+### CAD-004 Composition root residual public read surface audit（本轮 REVIEW）
+- **Review Scope**：只评估 editor 组合根残余只读面，未改运行时代码。
+- **Root Cause**：`WinitNovadrawSystem::scene_manager()` 向 `app_window` 暴露整个 `SceneManager` 只读引用；`app_window` 通过 `system.scene_manager().current_scene` 判断 DPI 探针与 T 键平移门禁，仍依赖组合根内部结构。
+- **Additional Evidence**：`app_window` 直接调用 `EditorInteractionCore::logical_from_raw` 为 DPI 探针取得逻辑坐标，说明平台窗口层仍复用 editor 输入核心内部 helper，而不是调用组合根命名能力或独立平台输入适配 API。
+- **Promote Decision**：`CAD-004` 提升为 `AD-014 Composition root residual read surface audit`。
+- **Split Decision**：AD-014 只处理组合根只读 escape hatch 和平台输入适配边界；不混入 CAD-005 理想文档清扫、CAD-006 PendingMutation 生产边界或 render strategy wiring。
+- **Verification**：REVIEW 阶段仅做静态证据审计；未运行 Cargo 验证。
+
+### AD-014 Composition root residual read surface audit（本轮，verified）
+- **根因分析**：`WinitNovadrawSystem::scene_manager()` 暴露整个 `SceneManager` 只读引用，`app_window` 通过它读取 `current_scene`；`app_window` 还直接调用 `EditorInteractionCore::logical_from_raw`，把 editor 输入核心内部 helper 泄漏给平台窗口层。
+- **最小修复**：
+  - 删除 `EditorInteractionCore::scene_manager()` 与 `WinitNovadrawSystem::scene_manager()`。
+  - 新增 `WinitNovadrawSystem::is_scene()` 与 `translate_contents_if_scene()`，让 `app_window` 使用组合根命名 query/action。
+  - 将 raw pointer 坐标换算迁移到 `RawPointerInput::logical_position()`，作为平台输入适配数据自身的命名能力。
+  - `app_window` 不再引用 `EditorInteractionCore`，也不再读取 `SceneManager.current_scene`。
+- **Architecture Review**：Diff review 结论 Go；本轮未引入新的 manager escape hatch，事件分发、坐标换算结果、PendingMutation apply 时机和 UpdateManager 调度语义保持不变。
+- **Coverage Decision**：C-07 提升为 aligned；C-09 仍 partially_aligned，由 CAD-005 理想架构旧表述继续追踪。
+- **验证**：cargo fmt --check ✅，cargo check ✅，cargo test -p editor 6/6 ✅，目标 escape hatch / helper rg 检查无匹配 ✅。
+
+### AD-015 Ideal architecture composition-root document cleanup（本轮，verified）
+- **根因分析**：`doc/理想架构设计.md` 仍把 `NovadrawSystem (trait)` 描述为持有 `scene/update_manager/dispatcher/scene_host`，并保留 `NovadrawSystem.update_manager` / `NovadrawSystem.dispatcher` 与 `WinitEventDispatcher` 旧平台入口表述。
+- **最小修复**：
+  - 将组合根持有关系改为 `NovadrawSystem` 平台实现内部装配 `FigureGraph` / `UpdateManager` / `EventDispatcher` / `SceneHost`。
+  - 明确公开 `NovadrawSystem trait` 只暴露 `render()` / `viewport_size()` / `request_update()`。
+  - 将组合根/事件流中的旧 `WinitEventDispatcher` 入口改为 `app_window` 平台输入适配 + `BasicEventDispatcher` 引擎无状态分发。
+- **Coverage Decision**：C-09 提升为 aligned；C-08 仍 partially_aligned，由 CAD-006 继续追踪。
+- **验证**：目标旧组合根关键词 rg 检查通过；git diff --check ✅。
+
+### AD-016 PendingMutation production boundary audit（本轮，verified）
+- **根因分析**：`PendingMutation` / `PendingMutations::enqueue` / `MutationContext` 曾作为公开构造与 enqueue 面暴露，`FigureGraph::apply_pending_mutations()` 接收任意 `Vec<PendingMutation>`；`PendingMutation::AddChild { child: BlockId }` 还允许把既有节点 ID 附加到底层图结构。
+- **最小修复**：
+  - `PendingMutation` / `PendingMutationKind` / `MutationContext` / `PendingMutations::enqueue` 收窄为 crate 内部。
+  - 删除既有节点 `AddChild` 变体；新增 child 只通过 `AddChildFigure` 携带 `Box<dyn Figure>`，由 apply 阶段内部 allocate block。
+  - `PendingMutations::drain()` 返回不可外部伪造的 `PendingMutationBatch`；`FigureGraph::apply_pending_mutations()` 只接受 batch，不接受任意 Vec。
+  - `FigureGraph::allocate_block()` 收窄为 `pub(crate)`。
+- **Architecture Review**：Go；本轮没有改变 dispatch 后 apply 的运行时事务顺序，只把 mutation 生产能力收回引擎上下文，未把业务逻辑放入 dispatcher 或 UpdateManager。
+- **Coverage Decision**：C-08 提升为 aligned；C-01 到 C-10 当前均 aligned。
+- **验证**：cargo fmt --check ✅，cargo check ✅，cargo test -p novadraw-scene 139/139 + 3 doctests ✅，cargo test -p editor 6/6 ✅，API 残留 rg 检查通过 ✅。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
@@ -188,23 +227,26 @@
 - ✅ AD-009 已完成：Figure 只保留内在能力；AD-011 已封装 FigureGraph 存储面，C-03 回到 aligned。
 - ✅ AD-012 已完成：FigureBlock 字段与 mutator 不再形成 crate 外 public mutation surface，C-02 回到 aligned。
 - ✅ AD-001 已收敛：AD-001A validation、AD-001B repair、AD-001C scheduling 均 verified，父项已 done；C-04 已 aligned。
-- ✅ AD-010 已完成：公开接口逃生口与默认 panic 能力边界已收敛；C-09 已 aligned。
+- ✅ AD-010 已完成：公开可变系统逃生口与默认 panic 能力边界已收敛；C-09 已 aligned。
 - ✅ C-10 已收敛：架构改动说明“为何更接近理想架构”已成为持续工作流强制项，并有多轮真实 delta 证据。
 - ⚠️ 文档中仍可能存在历史图示或 WinitEventDispatcher 旧命名，需要后续全量清扫。
 - ⚠️ `focus_owner` 只有基础 owner 字段，完整 focus gained/lost/key state machine 仍需后续 delta。
-- ⚠️ Contract coverage 当前不再全部 aligned：C-07 / C-08 / C-09 为 partially_aligned。
+- ✅ Contract coverage 当前 C-01 到 C-10 均为 aligned。
 - ✅ `AD-011 FigureGraph storage encapsulation audit` 已 verified；`FigureGraph.blocks` / `uuid_map` 不再是 crate 外 public mutation surface。
 - ✅ `AD-013 Editor interaction hot-path logging cleanup` 已 verified；editor 默认交互热路径日志已清理。
-- ⚠️ Backlog 仍有 CAD-004 / CAD-005 / CAD-006 candidates，需要后续 REVIEW。
+- ✅ CAD-006 已提升并完成为 AD-016。
+- ✅ AD-014 已完成：editor 组合根残余只读面已收敛，C-07 已 aligned。
+- ✅ AD-015 已完成：理想架构文档组合根旧表述已清理，C-09 已 aligned。
+- ✅ Completion baseline verification 已通过：backlog 无 open/candidate，coverage 无 partially_aligned/unassessed/drifting，`cargo test` 全量通过。
 
 ## Next Small Step
 
-- 下一轮进入 REVIEW，优先评估 `CAD-004 Composition root residual public read surface audit`。不要混入 CAD-005/CAD-006，也不要重新打开 AD-013。
+- 当前架构循环已达到 complete-ready。下一轮优先做提交整理或开启新的 architecture delta discovery，不要重新打开 AD-014/AD-015/AD-016。
 - Viewport/ScrollPane 的真实 Figure-tree 集成仍应作为后续独立 delta，不与 SceneHost 边界混在一起。
 
 ## Blockers
 
-- BASELINE-001（历史 cargo fmt drift）仍记录在 backlog；本轮已运行 `cargo fmt`
+- BASELINE-001（历史 cargo fmt drift）已通过本轮 `cargo fmt` / `cargo fmt --check` 收敛
 - 当前无新的硬阻塞
 
 ## Verification State
@@ -214,9 +256,17 @@
 - cargo test -p novadraw-scene: 139/139 + 3 doctests passed ✅
 - cargo test -p editor: 6/6 passed ✅
 - AD-013 log target grep: passed ✅
+- CAD-004 REVIEW: static evidence audit passed ✅
+- AD-014 escape hatch grep: passed ✅
+- AD-014 architecture diff review: Go ✅
+- AD-015 stale composition-root doc grep: passed ✅
+- AD-016 PendingMutation API residual grep: passed ✅
+- AD-016 architecture diff review: Go ✅
+- completion state consistency grep: passed ✅
+- cargo test: passed ✅
 
 ## Resume Prompt
 
 ```text
-请按 agent/workflow-continuous.md 从 REVIEW 继续，当前优先候选为 CAD-004 Composition root residual public read surface audit。AD-013 已 verified：editor mouse/raw pointer/Winit CursorMoved/interactive entered-exited 默认热路径日志已清理，C-05 已 aligned。下一步只评估 CAD-004 是否提升为新的最小 delta；不要混入 CAD-005/CAD-006，也不要重新打开 AD-013。
+当前架构循环已到 complete-ready。AD-014/AD-015/AD-016 均 verified；C-01 到 C-10 均 aligned；backlog 无 open/candidate；completion baseline verification 已通过（cargo fmt --check、cargo check、cargo test、状态一致性 grep）。下一步优先整理并按主题提交当前未提交改动，或开启新的 architecture delta discovery；不要重新打开 AD-014/AD-015/AD-016。
 ```
