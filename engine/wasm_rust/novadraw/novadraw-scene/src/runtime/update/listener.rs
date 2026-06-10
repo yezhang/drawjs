@@ -9,7 +9,7 @@
 
 use novadraw_geometry::Rectangle;
 
-use crate::scene::BlockId;
+use crate::graph::BlockId;
 
 /// Update Event - 更新事件
 #[derive(Debug, Clone, PartialEq)]

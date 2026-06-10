@@ -23,7 +23,7 @@ use std::collections::HashMap;
 use novadraw_geometry::{Rectangle, Translatable};
 use novadraw_render::NdCanvas;
 
-use crate::scene::{BlockId, FigureGraph};
+use crate::graph::{BlockId, FigureGraph};
 
 const DAMAGE_REGION_MERGE_AREA_THRESHOLD: f64 = 9.0;
 const DAMAGE_REGION_MAX_COUNT: usize = 8;

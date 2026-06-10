@@ -46,17 +46,17 @@ pub use listener::{
 pub trait UpdateManager: Send + Sync {
     fn add_dirty_region(
         &mut self,
-        block_id: crate::scene::BlockId,
+        block_id: crate::graph::BlockId,
         rect: novadraw_geometry::Rectangle,
     );
-    fn add_invalid_figure(&mut self, block_id: crate::scene::BlockId);
-    fn drain_invalid_blocks(&mut self) -> Vec<crate::scene::BlockId>;
+    fn add_invalid_figure(&mut self, block_id: crate::graph::BlockId);
+    fn drain_invalid_blocks(&mut self) -> Vec<crate::graph::BlockId>;
     fn perform_update(
         &mut self,
-        graph: &mut crate::scene::FigureGraph,
+        graph: &mut crate::graph::FigureGraph,
         canvas: &mut novadraw_render::NdCanvas,
     );
-    fn perform_validation(&mut self, graph: &mut crate::scene::FigureGraph);
+    fn perform_validation(&mut self, graph: &mut crate::graph::FigureGraph);
     fn is_update_queued(&self) -> bool;
     fn is_updating(&self) -> bool;
 }
@@ -85,7 +85,7 @@ pub trait UpdateManagerSource: Send + Sync {
     /// # Arguments
     ///
     /// * `block_id` - 需要验证的块 ID
-    fn perform_validation(&mut self, block_id: crate::scene::BlockId);
+    fn perform_validation(&mut self, block_id: crate::graph::BlockId);
 
     /// 使用脏区域裁剪渲染场景
     ///

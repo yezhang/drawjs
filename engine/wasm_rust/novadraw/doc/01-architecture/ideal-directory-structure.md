@@ -66,9 +66,9 @@
 - 它们的依赖方向天然不同
 - 后续即使扩展功能，也可以明确知道新增代码应该落在哪一层，而不是继续堆到根目录
 
-## 推荐的短期目录结构
+## 当前短期目录结构
 
-在不立刻拆 crate 的前提下，建议把 `novadraw-scene/src` 逐步调整为如下结构：
+在不立刻拆 crate 的前提下，`novadraw-scene/src` 已通过 AD-019A / AD-019B 调整为如下结构：
 
 ```text
 novadraw-scene/src/
@@ -213,16 +213,16 @@ apps/*
 - **目录先行，crate 后移**
 - 这是为了把“架构稳定”优先级放在“物理拆分漂亮”之前
 
-## 推荐的执行顺序
+## 执行顺序
 
-为了让目录调整服务于长期稳定，而不是制造一次性的大迁移成本，建议按以下顺序推进：
+为了让目录调整服务于长期稳定，而不是制造一次性的大迁移成本，执行顺序如下：
 
-1. **第一步：在 `novadraw-scene/src` 内部做目录重组**
+1. **第一步：在 `novadraw-scene/src` 内部做目录重组（已完成）**
    - `scene -> graph`
    - `event/update/mutation/context/system -> runtime`
    - `scene_host -> host`
    - `viewport -> container`
-2. **第二步：保持 facade crate `novadraw` 不变**
+2. **第二步：保持 facade crate `novadraw` 不变（已完成）**
    - 先不改变外部导出入口，避免同时引入 API 破坏
 3. **第三步：优先实现最小垂直链路**
    - `FigureGraph`
@@ -230,7 +230,7 @@ apps/*
    - `EventDispatcher`
    - `SceneHost`
    - `RenderBackend`
-4. **第四步：等子域边界稳定后，再按目录自然升级为 crate**
+4. **第四步：等子域边界稳定后，再按目录自然升级为 crate（暂缓）**
    - `figure/layout`
    - `graph`
    - `runtime`

@@ -5,47 +5,46 @@
 //! # 模块
 //!
 //! - [`figure`] - Figure 渲染接口和实现
-//! - [`border`] - Border 边框系统
-//! - [`scene`] - 场景图管理
+//! - [`graph`] - FigureGraph、图结构和渲染/命中测试集成
+//! - [`runtime`] - 事件、上下文、更新、延迟结构变更和组合根协议
+//! - [`container`] - Viewport 等 Figure 级容器
 //! - [`host`] - 平台宿主与渲染入口协调
-//! - [`viewport`] - 视口管理
-//! - [`update`] - 更新管理器
 
 #![allow(missing_docs)]
 
-pub mod border;
-pub mod context;
-pub mod event;
+pub mod container;
 pub mod figure;
+pub mod graph;
 pub mod host;
 pub mod layout;
 pub mod log;
-pub mod mutation;
-pub mod scene;
-pub mod system;
-pub mod update;
-pub mod viewport;
+pub mod runtime;
 
-pub use border::{Border, LineBorder, MarginBorder, RectangleBorder};
-pub use context::{NovadrawContext, SceneDispatchContext, SceneNovadrawContext};
-pub use event::{
-    BasicEventDispatcher, DispatchContext, Event, EventDispatcher, MouseButton, MouseEvent,
-    MouseEventKind,
-};
+pub use container::viewport;
+pub use figure::border;
+pub use figure::border::{Border, LineBorder, MarginBorder, RectangleBorder};
 pub use figure::{
     Bounded, ChildTransform, Direction, EllipseFigure, Figure, PolygonFigure, PolylineFigure,
     RectangleFigure, RootFigure, RoundedRectangleFigure, Shape, TriangleFigure, Updatable,
 };
+pub use graph as scene;
+pub use graph::{BlockId, FigureGraph, FigureRenderer};
 pub use host::SceneHost;
 pub use layout::{
     BorderLayout, BorderRegion, FillLayout, FlowDirection, FlowLayout, LayoutManager, XYLayout,
 };
-pub use mutation::{PendingMutationBatch, PendingMutations};
 pub use novadraw_geometry::{Point, Rectangle};
-pub use scene::{BlockId, FigureGraph, FigureRenderer};
-pub use system::NovadrawSystem;
-pub use update::{
+pub use runtime::context::{NovadrawContext, SceneDispatchContext, SceneNovadrawContext};
+pub use runtime::event::{
+    BasicEventDispatcher, DispatchContext, Event, EventDispatcher, MouseButton, MouseEvent,
+    MouseEventKind,
+};
+pub use runtime::mutation::{PendingMutationBatch, PendingMutations};
+pub use runtime::system::NovadrawSystem;
+pub use runtime::update;
+pub use runtime::update::{
     FigureEvent, NotificationEffect, NotificationQueue, SceneUpdateManager, UpdateEvent,
     UpdateListener, UpdateManager,
 };
+pub use runtime::{context, event, mutation, system};
 pub use viewport::{Viewport, ViewportFigure};

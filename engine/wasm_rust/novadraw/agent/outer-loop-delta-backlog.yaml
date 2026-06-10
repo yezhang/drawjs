@@ -830,3 +830,35 @@ items:
       - "不改 `SceneHost` trait 语义，不改 app/editor WinitSceneHost 行为"
       - "不修改 `render_recursive.rs` / `render_iterative.rs` 主循环逻辑"
       - "cargo fmt --check、cargo check -p novadraw-scene、cargo test -p novadraw-scene 通过"
+
+  - id: AD-019B
+    title: novadraw-scene domain directory realignment
+    contract: "novadraw-scene 的物理目录应表达 figure / graph / runtime / host / container 子域边界；crate 拆分必须等待依赖方向稳定"
+    evolution_kind: architecture
+    priority: high
+    status: verified
+    parent_id: CAD-010
+    evidence:
+      - novadraw-scene/src/figure/border/
+      - novadraw-scene/src/graph/
+      - novadraw-scene/src/runtime/
+      - novadraw-scene/src/container/
+      - novadraw-scene/src/lib.rs
+      - doc/01-architecture/ideal-directory-structure.md
+    progress_notes:
+      - "按用户要求一次性调整当前可安全调整的目录边界"
+      - "完成 `scene -> graph`；`context/event/mutation/system/update -> runtime`；`viewport -> container/viewport.rs`；`border -> figure/border`"
+      - "保留 root facade alias：`scene`、`update`、`context`、`event`、`mutation`、`system`、`viewport`、`border` 仍可从 `novadraw_scene` 访问，降低外部调用迁移风险"
+      - "内部模块引用改向新子域路径，避免继续依赖 root re-export facade"
+      - "未创建新 crate：`graph/runtime/context/update/mutation` 仍构成内部协作闭环，提前拆 crate 会制造循环依赖或迫使内部协议公开化"
+      - "未修改 `render_recursive.rs` / `render_iterative.rs` 主循环逻辑；仅随 `graph/` 目录迁移路径"
+      - "验证通过：cargo fmt --check、cargo check --workspace、cargo test -p novadraw-scene"
+    done_when:
+      - "`novadraw-scene/src` 根层收敛为 `figure / graph / runtime / host / container / layout / log / lib.rs`"
+      - "`graph` 承载 FigureGraph、hit-test、坐标、render、update integration tests"
+      - "`runtime` 承载 context/event/mutation/system/update"
+      - "`container` 承载 Viewport 等 Figure 级容器"
+      - "`figure/border` 承载 Border 子域"
+      - "保持 `novadraw_scene::*` 既有主要 facade 导出兼容"
+      - "不创建新 crate，除非依赖方向已证明不会引入循环依赖"
+      - "cargo fmt --check、cargo check --workspace、cargo test -p novadraw-scene 通过"

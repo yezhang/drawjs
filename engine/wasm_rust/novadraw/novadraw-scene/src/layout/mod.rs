@@ -12,7 +12,7 @@ pub use fill_layout::FillLayout;
 pub use flow_layout::{FlowDirection, FlowLayout};
 pub use xy_layout::XYLayout;
 
-use crate::scene::BlockId;
+use crate::graph::BlockId;
 use novadraw_geometry::Rectangle;
 
 /// 布局上下文 trait

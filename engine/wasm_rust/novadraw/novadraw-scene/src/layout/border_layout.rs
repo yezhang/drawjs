@@ -5,7 +5,7 @@
 
 use super::LayoutContext;
 use super::LayoutManager;
-use crate::scene::BlockId;
+use crate::graph::BlockId;
 use novadraw_geometry::Rectangle;
 
 /// Border 布局区域

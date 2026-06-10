@@ -6,9 +6,9 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
+use crate::container::viewport::ViewportFigure;
 use crate::figure::{Bounded, RectangleFigure, Shape, Updatable};
-use crate::scene::FigureGraph;
-use crate::viewport::ViewportFigure;
+use crate::graph::FigureGraph;
 
 // ========== 测试用 Figure 类型 ==========
 

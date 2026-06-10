@@ -19,9 +19,13 @@
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use crate::scene::BlockId;
-use crate::update::listener::{NotificationEffect, NotificationQueue, UpdateEvent, UpdateListener};
-use crate::update::repair::{compute_damage_union, execute_repair_phase, merge_dirty_region};
+use crate::graph::BlockId;
+use crate::runtime::update::listener::{
+    NotificationEffect, NotificationQueue, UpdateEvent, UpdateListener,
+};
+use crate::runtime::update::repair::{
+    compute_damage_union, execute_repair_phase, merge_dirty_region,
+};
 
 /// Scene Update Manager
 ///
@@ -101,7 +105,7 @@ impl SceneUpdateManager {
 
     /// 统一 flush：收集 FigureGraph 和 SceneUpdateManager 两边的 effect，
     /// 在事务边界统一分发到所有注册的 listener。
-    pub fn flush_notifications(&mut self, graph: &mut crate::scene::FigureGraph) {
+    pub fn flush_notifications(&mut self, graph: &mut crate::graph::FigureGraph) {
         let um_effects = self.notification_effects.drain();
         self.dispatch_effects(&um_effects);
 
@@ -218,7 +222,7 @@ impl SceneUpdateManager {
     }
 }
 
-impl crate::update::UpdateManager for SceneUpdateManager {
+impl crate::runtime::update::UpdateManager for SceneUpdateManager {
     fn add_dirty_region(&mut self, block_id: BlockId, rect: Rectangle) {
         SceneUpdateManager::add_dirty_region(self, block_id, rect);
     }
@@ -231,7 +235,7 @@ impl crate::update::UpdateManager for SceneUpdateManager {
         SceneUpdateManager::drain_invalid_blocks(self)
     }
 
-    fn perform_update(&mut self, graph: &mut crate::scene::FigureGraph, canvas: &mut NdCanvas) {
+    fn perform_update(&mut self, graph: &mut crate::graph::FigureGraph, canvas: &mut NdCanvas) {
         if self.updating {
             return;
         }
@@ -257,7 +261,7 @@ impl crate::update::UpdateManager for SceneUpdateManager {
         self.updating = false;
     }
 
-    fn perform_validation(&mut self, graph: &mut crate::scene::FigureGraph) {
+    fn perform_validation(&mut self, graph: &mut crate::graph::FigureGraph) {
         graph.perform_validation_cycle(self);
     }
 

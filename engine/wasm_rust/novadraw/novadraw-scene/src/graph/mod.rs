@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 use super::figure::Updatable;
 use super::layout::LayoutManager;
-use super::update::{FigureEvent, NotificationEffect, NotificationQueue, UpdateManager};
+use crate::runtime::update::{FigureEvent, NotificationEffect, NotificationQueue, UpdateManager};
 use crate::{PendingMutationBatch, mutation::PendingMutationKind};
 
 // 渲染模块
@@ -1533,7 +1533,7 @@ impl Default for FigureGraph {
 #[cfg(test)]
 mod tests {
     use super::super::figure::{Bounded, RectangleFigure, Shape, Updatable};
-    use crate::scene::FigureGraphRenderRef;
+    use crate::graph::FigureGraphRenderRef;
     use crate::{FigureEvent, FigureGraph, NotificationEffect, Rectangle, ViewportFigure};
     use novadraw_core::Color as NovadrawCoreColor;
     use novadraw_render::NdCanvas;

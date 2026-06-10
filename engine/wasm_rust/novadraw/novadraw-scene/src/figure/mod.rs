@@ -23,6 +23,8 @@ mod root;
 mod rounded_rectangle;
 mod triangle;
 
+pub mod border;
+
 pub use ellipse::EllipseFigure;
 pub use polygon::PolygonFigure;
 pub use polyline::PolylineFigure;
@@ -36,8 +38,8 @@ use novadraw_geometry::{Rectangle, Translatable};
 use novadraw_render::NdCanvas;
 use novadraw_render::command::{LineCap, LineJoin};
 
-use crate::border::Border;
 use crate::{MouseEvent, NovadrawContext};
+use border::Border;
 
 // ============================================================================
 // Bounded Trait: 边界相关方法
