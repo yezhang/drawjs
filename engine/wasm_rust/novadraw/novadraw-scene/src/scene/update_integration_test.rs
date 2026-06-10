@@ -531,3 +531,68 @@ fn test_apply_pending_reparent_to_invalid_parent_keeps_original_tree() {
             .contains(&child_id)
     );
 }
+
+#[test]
+fn test_apply_pending_reparent_to_self_keeps_original_tree() {
+    let (mut scene, mut update_manager) = new_scene();
+    let root_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 400.0, 400.0)));
+    let child_id = scene.add_child_to(
+        root_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 20.0, 20.0)),
+    );
+    let mut pending_mutations = PendingMutations::new();
+    pending_mutations.enqueue(PendingMutation::reparent(child_id, child_id));
+
+    assert!(!scene.apply_pending_mutations(&mut update_manager, pending_mutations.drain()));
+
+    assert_eq!(scene.get_block(child_id).unwrap().parent, Some(root_id));
+    assert!(
+        scene
+            .get_block(root_id)
+            .unwrap()
+            .children
+            .contains(&child_id)
+    );
+}
+
+#[test]
+fn test_apply_pending_reparent_to_descendant_keeps_original_tree() {
+    let (mut scene, mut update_manager) = new_scene();
+    let root_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 400.0, 400.0)));
+    let parent_id = scene.add_child_to(
+        root_id,
+        Box::new(RectangleFigure::new(0.0, 0.0, 100.0, 100.0)),
+    );
+    let child_id = scene.add_child_to(
+        parent_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 20.0, 20.0)),
+    );
+    let grandchild_id = scene.add_child_to(
+        child_id,
+        Box::new(RectangleFigure::new(12.0, 12.0, 8.0, 8.0)),
+    );
+    let mut pending_mutations = PendingMutations::new();
+    pending_mutations.enqueue(PendingMutation::reparent(child_id, grandchild_id));
+
+    assert!(!scene.apply_pending_mutations(&mut update_manager, pending_mutations.drain()));
+
+    assert_eq!(scene.get_block(child_id).unwrap().parent, Some(parent_id));
+    assert_eq!(
+        scene.get_block(grandchild_id).unwrap().parent,
+        Some(child_id)
+    );
+    assert!(
+        scene
+            .get_block(parent_id)
+            .unwrap()
+            .children
+            .contains(&child_id)
+    );
+    assert!(
+        scene
+            .get_block(child_id)
+            .unwrap()
+            .children
+            .contains(&grandchild_id)
+    );
+}

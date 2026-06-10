@@ -1,5 +1,5 @@
 version: 1
-last_updated: "2026-06-09"
+last_updated: "2026-06-10"
 
 selection_rules:
   - 先处理职责边界错误，再处理实现细节
@@ -192,6 +192,26 @@ candidate_items:
     notes:
       - "AD-011 已先封装 `FigureGraph.blocks` / `uuid_map`；`FigureBlock` 字段/方法公开面范围更大，需单独 REVIEW"
       - "REVIEW 结论：问题真实存在，应提升为 AD-012；先收窄 FigureBlock 公开可变面与导出面，不同时重构 render/event/layout 内部遍历"
+
+  - id: CAD-008
+    title: PendingMutation reparent cycle invariant audit
+    contract: "结构性变更必须通过 PendingMutation 延迟应用，且 apply 阶段必须维护 FigureGraph 树不变量"
+    evolution_kind: architecture
+    priority: high
+    status: promoted
+    evidence:
+      - novadraw-scene/src/scene/mod.rs
+      - novadraw-scene/src/context/mod.rs
+      - novadraw-scene/src/mutation/mod.rs
+      - novadraw-scene/src/scene/update_integration_test.rs
+    promote_when:
+      - "确认 `apply_reparent_mutation` 只校验 old_parent/new_parent 存在，但未拒绝 `child == new_parent` 或 `new_parent` 位于 child 子树"
+      - "确认自定义 Figure 可通过 `NovadrawContext::reparent_later()` 申请这种结构变更"
+    reject_when:
+      - "已有统一祖先链校验能证明 reparent 不会形成环"
+    notes:
+      - "Discovery 结论：问题真实存在。当前 `apply_reparent_mutation` 在 detach/attach 前已校验目标存在性，但未校验防环；把 child reparent 到自身子孙会破坏树结构不变量"
+      - "提升为 AD-017；本轮只处理 reparent 防环和回归测试，不混入 `EditorInteractionCore::scene_manager_mut()` 内部逃生口或 `FigureGraph::get_block()` 只读 API 收敛"
 
 items:
   - id: AD-001
@@ -689,3 +709,29 @@ items:
       - "crate 外不能通过 `PendingMutation::AddChild { child: BlockId }` 把既有 detached block 附加到图结构"
       - "`apply_pending_mutations` 不接受外部任意 Vec，而只接受由 PendingMutations drain 出来的 batch"
       - "dispatch 后 apply 的事务顺序保持不变"
+
+  - id: AD-017
+    title: PendingMutation reparent cycle invariant audit
+    contract: "结构性变更必须通过 PendingMutation 延迟应用，且 apply 阶段必须维护 FigureGraph 树不变量"
+    evolution_kind: architecture
+    priority: high
+    status: verified
+    parent_id: CAD-008
+    evidence:
+      - novadraw-scene/src/scene/mod.rs
+      - novadraw-scene/src/context/mod.rs
+      - novadraw-scene/src/mutation/mod.rs
+      - novadraw-scene/src/scene/update_integration_test.rs
+    progress_notes:
+      - "从新一轮 discovery 提升：`apply_reparent_mutation` 已校验 child、old_parent、new_parent 存在，但未拒绝把 child 挂到自身或自身子孙下"
+      - "`NovadrawContext::reparent_later()` 是 Figure 回调公开能力，自定义 Figure 可申请该 reparent；如果 apply 阶段允许形成环，会破坏 render/event/layout/update 遍历前提"
+      - "拆分决定：本项只处理 reparent 树不变量，不处理 editor 内部 `scene_manager_mut()` 或 `FigureGraph::get_block()` 只读 API 收敛"
+      - "EXECUTE 完成：新增内部祖先链校验，`apply_reparent_mutation` 在 detach/attach 前拒绝 self reparent 与 descendant reparent"
+      - "新增回归测试：reparent 到自身、reparent 到子孙均返回 false 且保持原 parent/children 关系"
+      - "验证通过：cargo fmt --check、cargo check、cargo test -p novadraw-scene"
+    done_when:
+      - "`apply_reparent_mutation` 在 detach/attach 前拒绝 `child == new_parent`"
+      - "`apply_reparent_mutation` 在 detach/attach 前拒绝 `new_parent` 位于 `child` 子树内"
+      - "新增回归测试覆盖 reparent 到自身和 reparent 到子孙均无副作用"
+      - "不改变正常 reparent、add/remove PendingMutation 时序或 UpdateManager 调度语义"
+      - "cargo fmt --check、cargo check、cargo test -p novadraw-scene 通过"

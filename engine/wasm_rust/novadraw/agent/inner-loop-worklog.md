@@ -22,6 +22,29 @@
 
 ## Entries
 
+## 2026-06-10 / AD-017
+
+- Goal: 收敛 PendingMutation reparent apply 阶段的树不变量，防止 Figure 回调申请形成 FigureGraph 环。
+- Root Cause: `apply_reparent_mutation()` 已校验 child、old_parent、new_parent 存在，但没有拒绝 `child == new_parent` 或 `new_parent` 位于 child 子树；一旦 detach/attach 执行，会破坏 render/event/layout/update 遍历依赖的树结构前提。
+- Minimal Fix: 在 `FigureGraph` 内新增迭代式祖先链校验，并在 detach/attach 前拒绝 self reparent 与 descendant reparent；使用 blocks 长度作为遍历上界，避免既有损坏图导致无限循环。
+- Files: `novadraw-scene/src/scene/mod.rs`, `novadraw-scene/src/scene/update_integration_test.rs`, `agent/outer-loop-delta-backlog.yaml`, `agent/governance-contract-coverage.md`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: cargo fmt --check ✅, cargo check ✅, cargo test -p novadraw-scene 143/143 + 3 doctests ✅
+- Decision: C-08 恢复为 aligned；PendingMutation apply 阶段现在在产生结构副作用前维护 FigureGraph 树不变量。
+- Split Decision: 不处理 `EditorInteractionCore::scene_manager_mut()`、`FigureGraph::get_block()` 或 Viewport/ScrollPane 集成；这些是相邻候选，不属于本轮 reparent 防环根因。
+- Post-Execution Reflection: 本轮更接近理想架构，因为结构性变更不仅通过 PendingMutation 延迟应用，还在消费 batch 的唯一图级入口统一维护树不变量，失败路径保持无副作用。
+- New Candidate Deltas: 无。
+- Next Step: 提交 AD-017；如继续迭代，回到 discovery/review 选择新的最小 delta。
+
+## 2026-06-09 / New Cycle Discovery / AD-017
+
+- Goal: 在 AD-016 follow-up 提交后启动新一轮 architecture delta discovery。
+- Audited Contracts: C-01/C-02 Figure/FigureBlock ownership, C-03/C-04 FigureGraph vs UpdateManager, C-05 EventDispatcher, C-06 SceneHost, C-07 Composition Root, C-08 PendingMutation Timing, C-09 Interface Boundary。
+- Checked Entrypoints: `novadraw-scene/src/scene/mod.rs`, `novadraw-scene/src/context/mod.rs`, `novadraw-scene/src/mutation/mod.rs`, `novadraw-scene/src/event/mod.rs`, `novadraw-scene/src/update/mod.rs`, `novadraw-scene/src/update/deferred.rs`, `apps/editor/src/system.rs`, `apps/editor/src/scene_manager/scene_host.rs`, `novadraw/src/lib.rs`, `novadraw-scene/src/figure/**`。
+- Candidate Deltas: CAD-008 / AD-017 promoted；另记录但不提升：`EditorInteractionCore::scene_manager_mut()` 内部逃生口、`FigureGraph::get_block()` 只读类型暴露面。
+- Root Cause: `apply_reparent_mutation` 已校验节点存在和 invalid parent 失败路径，但没有防止把 child reparent 到自身或自身子孙；这会破坏 FigureGraph 树不变量，并影响 render/event/layout/update 遍历前提。
+- Decision: 提升 AD-017，优先修 C-08 的树不变量缺口；其他发现暂缓，避免一次 delta 混入组合根 API 与只读查询 API 收敛。
+- Next Step: 在 detach/attach 前补 `child == new_parent` 与 descendant guard，并添加无副作用回归测试。
+
 ## 2026-06-09 / AD-016 Review Follow-up
 
 - Goal: 修复提交级 Review 发现的 PendingMutation apply 失败路径副作用问题。

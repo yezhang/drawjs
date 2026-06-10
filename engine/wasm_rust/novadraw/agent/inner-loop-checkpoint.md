@@ -3,17 +3,16 @@
 ## Metadata
 
 - schema_version: 1
-- updated_at: 2026-06-09
+- updated_at: 2026-06-10
 - checkpoint_kind: architecture-loop
 
 ## Current Delta
 
-- COMPLETE
+- AD-017 PendingMutation reparent cycle invariant audit
 
 ## Current Status
 
-- complete-ready（AD-016 已 verified；C-01 到 C-10 均 aligned；completion baseline verification 已通过）
-  - Review follow-up 已完成：PendingMutation invalid parent/new_parent 失败路径不再产生结构副作用
+- verified（AD-017 已完成执行与最小验证；C-08 已恢复为 aligned）
 
 ## What Was Done
 
@@ -214,6 +213,15 @@
 - **Coverage Decision**：C-08 提升为 aligned；C-01 到 C-10 当前均 aligned。
 - **验证**：cargo fmt --check ✅，cargo check ✅，cargo test -p novadraw-scene 139/139 + 3 doctests ✅，cargo test -p editor 6/6 ✅，API 残留 rg 检查通过 ✅。
 
+### AD-017 PendingMutation reparent cycle invariant audit（本轮，verified）
+- **根因分析**：`apply_reparent_mutation()` 已校验 child、old_parent、new_parent 存在，但没有拒绝 reparent 到自身或子孙节点；自定义 Figure 可通过 `NovadrawContext::reparent_later()` 申请该变更，若 apply 阶段形成环，会破坏 FigureGraph 树不变量。
+- **最小修复**：
+  - 在 `FigureGraph` 内新增迭代式祖先链校验，使用 blocks 长度作为上界，避免既有损坏图导致无限循环。
+  - `apply_reparent_mutation()` 在 detach/attach 前拒绝 `child == new_parent` 与 `new_parent` 位于 child 子树内。
+  - 新增 self reparent 与 descendant reparent 无副作用回归测试，确认失败后 parent/children 关系保持不变。
+- **Coverage Decision**：C-08 恢复为 aligned；PendingMutation apply 阶段维护 FigureGraph 树不变量。
+- **验证**：cargo fmt --check ✅，cargo check ✅，cargo test -p novadraw-scene 143/143 + 3 doctests ✅。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
@@ -240,16 +248,17 @@
 - ✅ AD-015 已完成：理想架构文档组合根旧表述已清理，C-09 已 aligned。
 - ✅ Completion baseline verification 已通过：backlog 无 open/candidate，coverage 无 partially_aligned/unassessed/drifting，`cargo test` 全量通过。
 - ✅ AD-016 Review follow-up 已完成：invalid add/reparent mutation 不再污染图结构。
+- ✅ AD-017 已完成：`apply_reparent_mutation` 在 detach/attach 前拒绝 self reparent 与 descendant reparent，C-08 已恢复 aligned。
 
 ## Next Small Step
 
-- 当前架构循环已达到 complete-ready。下一轮优先做提交整理或开启新的 architecture delta discovery，不要重新打开 AD-014/AD-015/AD-016。
-- Viewport/ScrollPane 的真实 Figure-tree 集成仍应作为后续独立 delta，不与 SceneHost 边界混在一起。
+- 提交 AD-017 相关代码、测试与 workflow 状态；用户已说明暂不 push。
+- 下一轮如继续迭代，应先回到 discovery/review，暂不把 `EditorInteractionCore::scene_manager_mut()`、`FigureGraph::get_block()` 或 Viewport/ScrollPane 集成混入 AD-017 提交。
 
 ## Blockers
 
 - BASELINE-001（历史 cargo fmt drift）已通过本轮 `cargo fmt` / `cargo fmt --check` 收敛
-- 当前无新的硬阻塞
+- 当前无新的硬阻塞；注意本地 `master` 仍领先 `origin/master` 1 个未 push 提交
 
 ## Verification State
 
@@ -267,9 +276,13 @@
 - completion state consistency grep: passed ✅
 - cargo test: passed ✅
 - AD-016 follow-up cargo test -p novadraw-scene: 141/141 + 3 doctests passed ✅
+- AD-017 cargo fmt --check: passed ✅
+- AD-017 cargo check: passed ✅
+- AD-017 cargo test -p novadraw-scene: 143/143 + 3 doctests passed ✅
+- AD-017 workflow YAML parse: pending
 
 ## Resume Prompt
 
 ```text
-当前架构循环已到 complete-ready。AD-014/AD-015/AD-016 均 verified；C-01 到 C-10 均 aligned；backlog 无 open/candidate；completion baseline verification 已通过（cargo fmt --check、cargo check、cargo test、状态一致性 grep）。AD-016 Review follow-up 已修复 invalid PendingMutation 失败路径结构副作用，并通过 cargo test -p novadraw-scene。下一步优先提交 follow-up 修复，或在提交后开启新的 architecture delta discovery；不要重新打开 AD-014/AD-015/AD-016。
+AD-017 PendingMutation reparent cycle invariant audit 已执行并通过最小验证；C-08 已恢复 aligned。下一步先提交 AD-017 相关代码、测试与 workflow 状态，暂不 push；若继续迭代，回到 discovery/review 选择新的最小 delta，不混入 EditorInteractionCore::scene_manager_mut、FigureGraph::get_block 或 Viewport/ScrollPane。
 ```

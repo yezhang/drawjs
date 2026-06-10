@@ -464,6 +464,19 @@ impl FigureGraph {
         true
     }
 
+    fn is_descendant_of(&self, mut node: BlockId, ancestor: BlockId) -> bool {
+        for _ in 0..self.blocks.len() {
+            if node == ancestor {
+                return true;
+            }
+            let Some(parent) = self.blocks.get(node).and_then(|block| block.parent) else {
+                return false;
+            };
+            node = parent;
+        }
+        false
+    }
+
     fn apply_remove_mutation(
         &mut self,
         update_manager: &mut dyn UpdateManager,
@@ -514,6 +527,9 @@ impl FigureGraph {
             return false;
         };
         if !self.blocks.contains_key(old_parent) || !self.blocks.contains_key(new_parent) {
+            return false;
+        }
+        if child == new_parent || self.is_descendant_of(new_parent, child) {
             return false;
         }
 
