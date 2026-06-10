@@ -235,6 +235,24 @@ candidate_items:
       - "REVIEW 结论：问题真实存在。按 draw2d 对标，Viewport 核心能力应在 `novadraw-scene`；apps/editor 或未来 GEF-like 层只负责 mouse wheel、auto-expose、selection feedback 等策略集成"
       - "提升为 AD-018；本轮只实现 Viewport 作为 Figure 树坐标根/裁剪容器的最小协议，不混入 ScrollBar UI、mouse wheel、auto-expose 或完整 ScrollPane layout"
 
+  - id: CAD-010
+    title: novadraw-scene directory boundary realignment
+    contract: "目录结构应表达职责边界；先做模块边界优化，再做 crate 边界优化"
+    evolution_kind: architecture
+    priority: high
+    status: promoted
+    evidence:
+      - doc/01-architecture/ideal-directory-structure.md
+      - novadraw-scene/src/scene_host.rs
+      - novadraw-scene/src/lib.rs
+    promote_when:
+      - "确认 `novadraw-scene/src` 根层仍平铺 host / runtime / graph / container 等不同职责对象"
+      - "确认可以拆出不改变外部 facade 的最小目录迁移"
+    reject_when:
+      - "目录边界已能清晰表达 host / runtime / graph / container 职责"
+    notes:
+      - "REVIEW 结论：问题真实存在，但应拆成小步。当前先提升 AD-019A，只移动 SceneHost 到 host 子域，不触碰 Viewport 暂停线、runtime 批量迁移或 scene -> graph 大迁移"
+
 items:
   - id: AD-001
     title: UpdateManager boundary audit
@@ -787,3 +805,28 @@ items:
       - "render 支持 Viewport content client area 裁剪，hit-test 支持 viewport -> content 降域，damage repair 支持 content damage 映射到 root 坐标"
       - "不实现 ScrollBar UI、mouse wheel、auto-expose、selection feedback 或完整 ScrollPane layout"
       - "cargo fmt、cargo check、cargo test -p novadraw-scene 通过"
+
+  - id: AD-019A
+    title: Host boundary directory split
+    contract: "SceneHost 是极薄平台调度层，应归入 host 子域，不与 FigureGraph / runtime / container 根层平铺"
+    evolution_kind: architecture
+    priority: high
+    status: verified
+    parent_id: CAD-010
+    evidence:
+      - novadraw-scene/src/host/mod.rs
+      - novadraw-scene/src/host/scene_host.rs
+      - novadraw-scene/src/lib.rs
+      - doc/01-architecture/ideal-directory-structure.md
+    progress_notes:
+      - "按理想目录结构先做模块边界优化，不拆 crate；本轮只迁移 host 边界"
+      - "将 `novadraw-scene/src/scene_host.rs` 移入 `novadraw-scene/src/host/scene_host.rs`"
+      - "新增 `host/mod.rs` 并继续通过 `novadraw_scene::SceneHost` re-export，外部 facade 不变"
+      - "不触碰 Viewport 暂停线，不迁移 runtime，不执行 scene -> graph 大迁移，不修改 render 主循环"
+      - "验证通过：cargo fmt --check、cargo check -p novadraw-scene、cargo test -p novadraw-scene"
+    done_when:
+      - "`SceneHost` 文件位于 `novadraw-scene/src/host/scene_host.rs`"
+      - "`novadraw_scene::SceneHost` 对外导出路径保持不变"
+      - "不改 `SceneHost` trait 语义，不改 app/editor WinitSceneHost 行为"
+      - "不修改 `render_recursive.rs` / `render_iterative.rs` 主循环逻辑"
+      - "cargo fmt --check、cargo check -p novadraw-scene、cargo test -p novadraw-scene 通过"

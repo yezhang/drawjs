@@ -7,6 +7,7 @@
 //! - [`figure`] - Figure 渲染接口和实现
 //! - [`border`] - Border 边框系统
 //! - [`scene`] - 场景图管理
+//! - [`host`] - 平台宿主与渲染入口协调
 //! - [`viewport`] - 视口管理
 //! - [`update`] - 更新管理器
 
@@ -16,11 +17,11 @@ pub mod border;
 pub mod context;
 pub mod event;
 pub mod figure;
+pub mod host;
 pub mod layout;
 pub mod log;
 pub mod mutation;
 pub mod scene;
-pub mod scene_host;
 pub mod system;
 pub mod update;
 pub mod viewport;
@@ -35,13 +36,13 @@ pub use figure::{
     Bounded, ChildTransform, Direction, EllipseFigure, Figure, PolygonFigure, PolylineFigure,
     RectangleFigure, RootFigure, RoundedRectangleFigure, Shape, TriangleFigure, Updatable,
 };
+pub use host::SceneHost;
 pub use layout::{
     BorderLayout, BorderRegion, FillLayout, FlowDirection, FlowLayout, LayoutManager, XYLayout,
 };
 pub use mutation::{PendingMutationBatch, PendingMutations};
 pub use novadraw_geometry::{Point, Rectangle};
 pub use scene::{BlockId, FigureGraph, FigureRenderer};
-pub use scene_host::SceneHost;
 pub use system::NovadrawSystem;
 pub use update::{
     FigureEvent, NotificationEffect, NotificationQueue, SceneUpdateManager, UpdateEvent,
