@@ -8,6 +8,7 @@ use novadraw_render::NdCanvas;
 
 use crate::figure::{Bounded, RectangleFigure, Shape, Updatable};
 use crate::scene::FigureGraph;
+use crate::viewport::ViewportFigure;
 
 // ========== 测试用 Figure 类型 ==========
 
@@ -499,6 +500,40 @@ fn test_render_clips_non_local_coordinate_figure_to_client_area() {
     assert!(
         has_clip_rect(&iterative_clips, 17.0, 25.0, 80.0, 64.0),
         "iterative renderer should clip non-local figure children to client area: {:?}",
+        iterative_clips
+    );
+}
+
+#[test]
+fn test_viewport_figure_render_uses_content_clip_and_transform() {
+    let mut scene = FigureGraph::new();
+    let root_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 400.0, 300.0)));
+    let viewport_id = scene.add_child_to(
+        root_id,
+        Box::new(
+            ViewportFigure::new(100.0, 50.0, 200.0, 100.0)
+                .with_origin(20.0, 10.0)
+                .with_zoom(2.0),
+        ),
+    );
+    scene.add_child_to(
+        viewport_id,
+        Box::new(RectangleFigure::new(30.0, 20.0, 40.0, 40.0)),
+    );
+
+    let recursive_gc = scene.render();
+    let recursive_clips = collect_clip_rects(&recursive_gc);
+    assert!(
+        has_clip_rect(&recursive_clips, 20.0, 10.0, 100.0, 50.0),
+        "recursive renderer should clip viewport children in content coordinates: {:?}",
+        recursive_clips
+    );
+
+    let iterative_gc = scene.render_iterative();
+    let iterative_clips = collect_clip_rects(&iterative_gc);
+    assert!(
+        has_clip_rect(&iterative_clips, 20.0, 10.0, 100.0, 50.0),
+        "iterative renderer should clip viewport children in content coordinates: {:?}",
         iterative_clips
     );
 }

@@ -5,8 +5,8 @@ use novadraw_geometry::Rectangle;
 use slotmap::Key;
 
 use crate::{
-    BlockId, FigureGraph, PendingMutations, RectangleFigure, SceneUpdateManager, XYLayout,
-    mutation::PendingMutation,
+    BlockId, FigureGraph, PendingMutations, RectangleFigure, SceneUpdateManager, ViewportFigure,
+    XYLayout, mutation::PendingMutation,
 };
 
 fn new_scene() -> (FigureGraph, SceneUpdateManager) {
@@ -243,6 +243,32 @@ fn test_add_child_under_coordinate_root_repair_uses_child_coordinate_domain() {
     assert_eq!(
         canvas.damage().union,
         Some(Rectangle::new(120.0, 80.0, 40.0, 40.0))
+    );
+}
+
+#[test]
+fn test_add_child_under_viewport_repair_uses_content_transform() {
+    let (mut scene, mut update_manager) = new_scene();
+    let contents_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 400.0, 300.0)));
+    let viewport_id = scene.add_child_to(
+        contents_id,
+        Box::new(
+            ViewportFigure::new(100.0, 50.0, 200.0, 100.0)
+                .with_origin(20.0, 10.0)
+                .with_zoom(2.0),
+        ),
+    );
+
+    scene.add_child(
+        &mut update_manager,
+        viewport_id,
+        Box::new(RectangleFigure::new(30.0, 20.0, 40.0, 40.0)),
+    );
+
+    let canvas = scene.perform_update(&mut update_manager);
+    assert_eq!(
+        canvas.damage().union,
+        Some(Rectangle::new(120.0, 70.0, 80.0, 80.0))
     );
 }
 

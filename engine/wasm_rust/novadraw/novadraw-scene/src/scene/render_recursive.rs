@@ -137,23 +137,27 @@ impl<'a> FigureRenderer<'a> {
         let id = self.counter;
 
         if block.figure.use_local_coordinates() {
-            let bounds = block.figure.bounds();
-            let (top, left, bottom, right) = block.figure.insets();
+            let transform = block.figure.child_transform();
+            let client_area = block.figure.client_area();
             debug_render!(
-                "[RECUR] #{:02} paintClientArea use_local=true, translate({}, {}) clip(0,0,{},{})",
+                "[RECUR] #{:02} paintClientArea use_local=true, scale({}) translate({}, {}) clip({},{},{},{})",
                 id,
-                bounds.x + left,
-                bounds.y + top,
-                bounds.width - left - right,
-                bounds.height - top - bottom
+                transform.scale,
+                transform.translate_x,
+                transform.translate_y,
+                client_area.x,
+                client_area.y,
+                client_area.width,
+                client_area.height
             );
-            self.gc.translate(bounds.x + left, bounds.y + top);
-            // clip 到 client area = bounds - insets
+            self.gc.scale(transform.scale, transform.scale);
+            self.gc
+                .translate(transform.translate_x, transform.translate_y);
             self.gc.clip_rect(
-                0.0,
-                0.0,
-                bounds.width - left - right,
-                bounds.height - top - bottom,
+                client_area.x,
+                client_area.y,
+                client_area.width,
+                client_area.height,
             );
         } else {
             let client_area = block.figure.client_area();

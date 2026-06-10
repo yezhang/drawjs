@@ -32,8 +32,8 @@ pub use event::{
     MouseEventKind,
 };
 pub use figure::{
-    Bounded, Direction, EllipseFigure, Figure, PolygonFigure, PolylineFigure, RectangleFigure,
-    RootFigure, RoundedRectangleFigure, Shape, TriangleFigure, Updatable,
+    Bounded, ChildTransform, Direction, EllipseFigure, Figure, PolygonFigure, PolylineFigure,
+    RectangleFigure, RootFigure, RoundedRectangleFigure, Shape, TriangleFigure, Updatable,
 };
 pub use layout::{
     BorderLayout, BorderRegion, FillLayout, FlowDirection, FlowLayout, LayoutManager, XYLayout,
@@ -47,4 +47,4 @@ pub use update::{
     FigureEvent, NotificationEffect, NotificationQueue, SceneUpdateManager, UpdateEvent,
     UpdateListener, UpdateManager,
 };
-pub use viewport::Viewport;
+pub use viewport::{Viewport, ViewportFigure};

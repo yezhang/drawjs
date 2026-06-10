@@ -8,11 +8,11 @@
 
 ## Current Delta
 
-- AD-017 PendingMutation reparent cycle invariant audit
+- AD-018 Viewport Figure-tree integration
 
 ## Current Status
 
-- verified（AD-017 已完成执行与最小验证；C-08 已恢复为 aligned）
+- verified（AD-018 已完成执行与最小验证；Viewport 已作为 Figure 树坐标根/裁剪容器接入）
 
 ## What Was Done
 
@@ -222,11 +222,22 @@
 - **Coverage Decision**：C-08 恢复为 aligned；PendingMutation apply 阶段维护 FigureGraph 树不变量。
 - **验证**：cargo fmt --check ✅，cargo check ✅，cargo test -p novadraw-scene 143/143 + 3 doctests ✅。
 
+### AD-018 Viewport Figure-tree integration（本轮，verified）
+- **根因分析**：g2 中 `Viewport` / `ScrollPane` 是 draw2d Figure 级组件，GEF 只提供 viewer/helper/policy 集成；Novadraw 当前 `Viewport` 仍是 standalone math helper，尚未通过 Figure 树父链协议参与 render / hit-test / damage repair。
+- **最小修复**：
+  - 新增 `ChildTransform`，将普通坐标根和 Viewport 的 child -> parent 变换统一为 Figure 协议。
+  - 新增 `ViewportFigure`，自身 bounds 位于父坐标域，子节点处于 content 坐标域，`origin` / `zoom` 通过 `child_transform()` 与 `client_area()` 接入父链。
+  - render recursive / iterative、hit-test、damage repair 统一消费 Figure 的子树变换协议。
+  - 新增 Viewport hit-test、render content clip、damage repair origin/zoom 映射回归测试。
+- **Coverage Decision**：C-03 / C-09 保持 aligned；Viewport 核心语义位于 `novadraw-scene`，未回流到 apps/editor 或 SceneHost。
+- **验证**：cargo fmt ✅，cargo check ✅，cargo test -p novadraw-scene 146/146 + 3 doctests ✅。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
 - ✅ client area 已统一到 `Bounded::client_area()`，布局与渲染不再各自推导。
 - ✅ `Viewport` 已完成 coordinate-domain audit：API、注释、测试均改为 viewport/content 坐标域，未继续暴露 screen/world 语义。
+- ✅ AD-018 已完成：`ViewportFigure` 作为 Figure 树坐标根和裁剪容器接入 render / hit-test / damage repair。
 - ✅ AD-001C 已完成：调度触发属于组合根 / SceneHost，UpdateManager 不承担平台 redraw 调度。
 - ✅ AD-002 已完成：SceneHost 保持极薄平台调度层，editor/render 策略状态位于组合根。
 - ✅ AD-003 已完成：Figure 回调只记录 pending mutation，结构性改树发生在顶层分发结束后。
@@ -249,11 +260,12 @@
 - ✅ Completion baseline verification 已通过：backlog 无 open/candidate，coverage 无 partially_aligned/unassessed/drifting，`cargo test` 全量通过。
 - ✅ AD-016 Review follow-up 已完成：invalid add/reparent mutation 不再污染图结构。
 - ✅ AD-017 已完成：`apply_reparent_mutation` 在 detach/attach 前拒绝 self reparent 与 descendant reparent，C-08 已恢复 aligned。
+- ✅ AD-018 已完成：Viewport 核心语义位于 `novadraw-scene` Figure 协议；ScrollBar UI / mouse wheel / auto-expose / ScrollPane layout 留作后续独立 delta。
 
 ## Next Small Step
 
-- 提交 AD-017 相关代码、测试与 workflow 状态；用户已说明暂不 push。
-- 下一轮如继续迭代，应先回到 discovery/review，暂不把 `EditorInteractionCore::scene_manager_mut()`、`FigureGraph::get_block()` 或 Viewport/ScrollPane 集成混入 AD-017 提交。
+- 提交 AD-018 相关代码、测试与 workflow 状态；用户此前说明暂不 push。
+- 下一轮如继续迭代，应先回到 discovery/review；ScrollBar UI、mouse wheel、auto-expose、完整 ScrollPane layout 应独立评估，不混入 AD-018。
 
 ## Blockers
 
@@ -279,10 +291,15 @@
 - AD-017 cargo fmt --check: passed ✅
 - AD-017 cargo check: passed ✅
 - AD-017 cargo test -p novadraw-scene: 143/143 + 3 doctests passed ✅
-- AD-017 workflow YAML parse: pending
+- AD-018 cargo fmt: passed ✅
+- AD-018 cargo check: passed ✅
+- AD-018 cargo test -p novadraw-scene: 146/146 + 3 doctests passed ✅
+- AD-018 workflow YAML parse: passed ✅
+- AD-018 git diff --check: passed ✅
+- Full cargo clippy -- -D warnings: failed on existing non-AD-018 clippy debt in apps/vello-app and older novadraw-scene modules; not mixed into this delta
 
 ## Resume Prompt
 
 ```text
-AD-017 PendingMutation reparent cycle invariant audit 已执行并通过最小验证；C-08 已恢复 aligned。下一步先提交 AD-017 相关代码、测试与 workflow 状态，暂不 push；若继续迭代，回到 discovery/review 选择新的最小 delta，不混入 EditorInteractionCore::scene_manager_mut、FigureGraph::get_block 或 Viewport/ScrollPane。
+AD-018 Viewport Figure-tree integration 已执行并通过最小验证；ViewportFigure 已在 novadraw-scene 中作为 Figure 树坐标根/裁剪容器接入 render、hit-test、damage repair。下一步先提交 AD-018 相关代码、测试与 workflow 状态，暂不 push；若继续迭代，回到 discovery/review 选择新的最小 delta，ScrollBar UI、mouse wheel、auto-expose、完整 ScrollPane layout 不混入本轮。
 ```

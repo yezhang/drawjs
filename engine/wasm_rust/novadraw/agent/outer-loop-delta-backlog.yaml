@@ -213,6 +213,28 @@ candidate_items:
       - "Discovery 结论：问题真实存在。当前 `apply_reparent_mutation` 在 detach/attach 前已校验目标存在性，但未校验防环；把 child reparent 到自身子孙会破坏树结构不变量"
       - "提升为 AD-017；本轮只处理 reparent 防环和回归测试，不混入 `EditorInteractionCore::scene_manager_mut()` 内部逃生口或 `FigureGraph::get_block()` 只读 API 收敛"
 
+  - id: CAD-009
+    title: Viewport and ScrollPane Figure-tree integration
+    contract: "Viewport/ScrollPane 属于 draw2d Figure 级组件，应通过 Figure 树父链坐标协议接入 render / hit-test / damage repair"
+    evolution_kind: parity
+    priority: high
+    status: promoted
+    evidence:
+      - /Users/bytedance/Documents/code/GitHub/gef-classic/org.eclipse.draw2d/src/org/eclipse/draw2d/Viewport.java
+      - /Users/bytedance/Documents/code/GitHub/gef-classic/org.eclipse.draw2d/src/org/eclipse/draw2d/ScrollPane.java
+      - novadraw-scene/src/viewport.rs
+      - novadraw-scene/src/figure/mod.rs
+      - novadraw-scene/src/scene/mod.rs
+      - novadraw-scene/src/update/repair.rs
+    promote_when:
+      - "确认 g2 中 `Viewport` / `ScrollPane` 是 `org.eclipse.draw2d` 的 Figure 级组件，而 GEF 只提供 viewer/helper/policy 集成"
+      - "确认 Novadraw 当前 `Viewport` 仍是 standalone math helper，未作为 Figure 树坐标根、裁剪容器参与 render / hit-test / damage repair"
+    reject_when:
+      - "Viewport 被证明只应作为 apps/editor 平台滚动状态，而不影响 Figure 树坐标与裁剪协议"
+    notes:
+      - "REVIEW 结论：问题真实存在。按 draw2d 对标，Viewport 核心能力应在 `novadraw-scene`；apps/editor 或未来 GEF-like 层只负责 mouse wheel、auto-expose、selection feedback 等策略集成"
+      - "提升为 AD-018；本轮只实现 Viewport 作为 Figure 树坐标根/裁剪容器的最小协议，不混入 ScrollBar UI、mouse wheel、auto-expose 或完整 ScrollPane layout"
+
 items:
   - id: AD-001
     title: UpdateManager boundary audit
@@ -735,3 +757,33 @@ items:
       - "新增回归测试覆盖 reparent 到自身和 reparent 到子孙均无副作用"
       - "不改变正常 reparent、add/remove PendingMutation 时序或 UpdateManager 调度语义"
       - "cargo fmt --check、cargo check、cargo test -p novadraw-scene 通过"
+
+  - id: AD-018
+    title: Viewport Figure-tree integration
+    contract: "Viewport 属于 draw2d Figure 级组件；应作为 Figure 树坐标根和裁剪容器接入 render / hit-test / damage repair"
+    evolution_kind: parity
+    priority: high
+    status: verified
+    parent_id: CAD-009
+    evidence:
+      - novadraw-scene/src/figure/mod.rs
+      - novadraw-scene/src/viewport.rs
+      - novadraw-scene/src/scene/mod.rs
+      - novadraw-scene/src/scene/render_recursive.rs
+      - novadraw-scene/src/scene/render_iterative.rs
+      - novadraw-scene/src/update/repair.rs
+      - novadraw-scene/src/scene/bounds_test.rs
+      - novadraw-scene/src/scene/update_integration_test.rs
+    progress_notes:
+      - "从 CAD-009 REVIEW 提升：g2 中 `Viewport` / `ScrollPane` 位于 draw2d，GEF 只围绕它们提供 viewer/helper/policy 集成；Novadraw 不应把 Viewport 状态放到 apps/editor 或 SceneHost"
+      - "新增 `ChildTransform`，将普通坐标根和 Viewport 的 child -> parent 变换统一为 Figure 协议，避免在 render / hit-test / repair 三处硬编码 Viewport 分支"
+      - "新增 `ViewportFigure`：自身 bounds 位于父坐标域，子节点位于 content 坐标域；`origin` / `zoom` 通过 `child_transform()` 与 `client_area()` 接入父链"
+      - "render recursive / iterative 改为消费 `child_transform()` 和 content-domain client area；hit-test 与 damage repair 复用同一父链协议"
+      - "新增回归测试：Viewport 下 hit-test 降域、render 按 content client area 裁剪、damage repair 按 origin/zoom 映射到 root 坐标"
+      - "验证通过：cargo fmt、cargo check、cargo test -p novadraw-scene"
+    done_when:
+      - "`ViewportFigure` 位于 `novadraw-scene`，作为 Figure 树节点而不是 app/editor 平台状态存在"
+      - "Viewport 子节点坐标通过统一父链协议转换，不在 render / hit-test / repair 中分别硬编码特殊分支"
+      - "render 支持 Viewport content client area 裁剪，hit-test 支持 viewport -> content 降域，damage repair 支持 content damage 映射到 root 坐标"
+      - "不实现 ScrollBar UI、mouse wheel、auto-expose、selection feedback 或完整 ScrollPane layout"
+      - "cargo fmt、cargo check、cargo test -p novadraw-scene 通过"

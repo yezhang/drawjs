@@ -32,7 +32,7 @@ pub use rounded_rectangle::RoundedRectangleFigure;
 pub use triangle::{Direction, TriangleFigure};
 
 use novadraw_core::Color;
-use novadraw_geometry::Rectangle;
+use novadraw_geometry::{Rectangle, Translatable};
 use novadraw_render::NdCanvas;
 use novadraw_render::command::{LineCap, LineJoin};
 
@@ -42,6 +42,58 @@ use crate::{MouseEvent, NovadrawContext};
 // ============================================================================
 // Bounded Trait: 边界相关方法
 // ============================================================================
+
+/// 当前 Figure 提供给子树的坐标变换。
+///
+/// 表达 `child -> parent` 的统一缩放和平移：`parent = child * scale + translate`。
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ChildTransform {
+    /// 统一缩放因子。
+    pub scale: f64,
+    /// X 方向平移。
+    pub translate_x: f64,
+    /// Y 方向平移。
+    pub translate_y: f64,
+}
+
+impl ChildTransform {
+    /// 恒等变换。
+    pub const IDENTITY: Self = Self {
+        scale: 1.0,
+        translate_x: 0.0,
+        translate_y: 0.0,
+    };
+
+    /// 创建只有平移的变换。
+    pub const fn translation(translate_x: f64, translate_y: f64) -> Self {
+        Self {
+            scale: 1.0,
+            translate_x,
+            translate_y,
+        }
+    }
+
+    /// 创建统一缩放和平移变换。
+    pub const fn uniform(scale: f64, translate_x: f64, translate_y: f64) -> Self {
+        Self {
+            scale,
+            translate_x,
+            translate_y,
+        }
+    }
+
+    /// 应用 `child -> parent` 变换。
+    pub fn apply_to<T: Translatable>(self, target: &mut T) {
+        target.scale(self.scale);
+        target.translate(self.translate_x, self.translate_y);
+    }
+
+    /// 应用 `parent -> child` 逆变换。
+    pub fn apply_inverse_to<T: Translatable>(self, target: &mut T) {
+        target.translate(-self.translate_x, -self.translate_y);
+        target.scale(1.0 / self.scale);
+    }
+}
 
 /// 边界相关方法 trait
 ///
@@ -110,6 +162,20 @@ pub trait Bounded: Send + Sync {
     /// 子节点的 bounds 将处于该坐标根的坐标域中。
     fn use_local_coordinates(&self) -> bool {
         false
+    }
+
+    /// 当前 Figure 提供给子树的 `child -> parent` 坐标变换。
+    ///
+    /// 默认只表达 draw2d `useLocalCoordinates()` 的 client-area 平移；Viewport 等
+    /// Figure 可以覆盖此方法，把 content offset / zoom 纳入同一父链协议。
+    fn child_transform(&self) -> ChildTransform {
+        if self.use_local_coordinates() {
+            let bounds = self.bounds();
+            let (top, left, _, _) = self.insets();
+            ChildTransform::translation(bounds.x + left, bounds.y + top)
+        } else {
+            ChildTransform::IDENTITY
+        }
     }
 
     // ==================== 布局相关方法 ====================

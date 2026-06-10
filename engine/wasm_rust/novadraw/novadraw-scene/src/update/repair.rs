@@ -30,6 +30,7 @@ const DAMAGE_REGION_MAX_COUNT: usize = 8;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct DamagePropagationStep {
+    pub scale: f64,
     pub offset_x: f64,
     pub offset_y: f64,
     pub clip: Option<Rectangle>,
@@ -69,6 +70,7 @@ pub(crate) fn propagate_damage_through_parent_chain(
     steps: &[DamagePropagationStep],
 ) -> Option<Rectangle> {
     for step in steps {
+        contribution.scale(step.scale);
         contribution.translate(step.offset_x, step.offset_y);
         if let Some(clip) = step.clip {
             contribution = contribution.intersection(clip)?;
@@ -120,6 +122,7 @@ fn collect_parent_chain_steps(
     let current = graph.get_block(block_id)?;
     let contents_id = graph.get_contents();
     steps.push(DamagePropagationStep {
+        scale: 1.0,
         offset_x: 0.0,
         offset_y: 0.0,
         clip: Some(current.figure_bounds()),
@@ -133,15 +136,11 @@ fn collect_parent_chain_steps(
     while let Some(current_id) = walker_id {
         let current = graph.get_block(current_id)?;
         let bounds = current.figure_bounds();
-        let (offset_x, offset_y) = if current.figure.use_local_coordinates() {
-            let (top, left, _, _) = current.figure.insets();
-            (bounds.x + left, bounds.y + top)
-        } else {
-            (0.0, 0.0)
-        };
+        let transform = current.figure.child_transform();
         steps.push(DamagePropagationStep {
-            offset_x,
-            offset_y,
+            scale: transform.scale,
+            offset_x: transform.translate_x,
+            offset_y: transform.translate_y,
             clip: Some(bounds),
         });
         if Some(current_id) == contents_id {
@@ -412,6 +411,7 @@ mod tests {
     fn test_parent_chain_single_level_propagation() {
         let local_damage = Rectangle::new(10.0, 20.0, 30.0, 40.0);
         let steps = [DamagePropagationStep {
+            scale: 1.0,
             offset_x: 100.0,
             offset_y: 50.0,
             clip: None,
@@ -429,11 +429,13 @@ mod tests {
         let local_damage = Rectangle::new(5.0, 6.0, 20.0, 10.0);
         let steps = [
             DamagePropagationStep {
+                scale: 1.0,
                 offset_x: 30.0,
                 offset_y: 40.0,
                 clip: None,
             },
             DamagePropagationStep {
+                scale: 1.0,
                 offset_x: 100.0,
                 offset_y: 200.0,
                 clip: None,
@@ -452,11 +454,13 @@ mod tests {
         let local_damage = Rectangle::new(10.0, 10.0, 80.0, 60.0);
         let steps = [
             DamagePropagationStep {
+                scale: 1.0,
                 offset_x: 20.0,
                 offset_y: 30.0,
                 clip: Some(Rectangle::new(40.0, 50.0, 30.0, 20.0)),
             },
             DamagePropagationStep {
+                scale: 1.0,
                 offset_x: 100.0,
                 offset_y: 0.0,
                 clip: Some(Rectangle::new(150.0, 40.0, 20.0, 20.0)),

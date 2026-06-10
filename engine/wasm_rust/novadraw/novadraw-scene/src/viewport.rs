@@ -8,7 +8,10 @@
 //! 额外添加全局空间特判。
 
 use glam::DVec2;
-use novadraw_geometry::Transform;
+use novadraw_geometry::{Rectangle, Transform};
+use novadraw_render::NdCanvas;
+
+use crate::figure::{Bounded, ChildTransform, Figure, Updatable};
 
 /// 视口
 ///
@@ -143,6 +146,93 @@ impl Default for Viewport {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Draw2D 风格的 Viewport Figure。
+///
+/// `ViewportFigure` 是 Figure 树中的坐标根和裁剪容器：自身 bounds 位于父坐标域，
+/// 子节点位于 content 坐标域。
+#[derive(Clone, Debug, PartialEq)]
+pub struct ViewportFigure {
+    bounds: Rectangle,
+    viewport: Viewport,
+}
+
+impl ViewportFigure {
+    /// 创建 Viewport Figure。
+    pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
+        Self {
+            bounds: Rectangle::new(x, y, width, height),
+            viewport: Viewport::new(),
+        }
+    }
+
+    /// 使用已有 viewport helper 创建 Viewport Figure。
+    pub fn with_viewport(mut self, viewport: Viewport) -> Self {
+        self.viewport = viewport;
+        self
+    }
+
+    /// 设置 content origin。
+    pub fn with_origin(mut self, x: f64, y: f64) -> Self {
+        self.viewport.origin = DVec2::new(x, y);
+        self
+    }
+
+    /// 设置统一缩放。
+    pub fn with_zoom(mut self, zoom: f64) -> Self {
+        self.viewport.zoom = zoom;
+        self
+    }
+
+    /// 返回当前 viewport helper。
+    pub fn viewport(&self) -> Viewport {
+        self.viewport
+    }
+}
+
+impl Bounded for ViewportFigure {
+    fn bounds(&self) -> Rectangle {
+        self.bounds
+    }
+
+    fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        self.bounds = Rectangle::new(x, y, width, height);
+    }
+
+    fn name(&self) -> &'static str {
+        "ViewportFigure"
+    }
+
+    fn use_local_coordinates(&self) -> bool {
+        true
+    }
+
+    fn child_transform(&self) -> ChildTransform {
+        let scale = self.viewport.zoom;
+        ChildTransform::uniform(
+            scale,
+            self.bounds.x - self.viewport.origin.x * scale,
+            self.bounds.y - self.viewport.origin.y * scale,
+        )
+    }
+
+    fn client_area(&self) -> Rectangle {
+        Rectangle::new(
+            self.viewport.origin.x,
+            self.viewport.origin.y,
+            self.bounds.width / self.viewport.zoom,
+            self.bounds.height / self.viewport.zoom,
+        )
+    }
+}
+
+impl Updatable for ViewportFigure {
+    fn validate(&mut self) {}
+}
+
+impl Figure for ViewportFigure {
+    fn paint_figure(&self, _gc: &mut NdCanvas) {}
 }
 
 #[cfg(test)]

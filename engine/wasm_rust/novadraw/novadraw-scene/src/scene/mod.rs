@@ -1316,38 +1316,29 @@ impl FigureGraph {
         }
     }
 
-    /// 坐标转换：子到父（只在坐标根时生效）
+    /// 坐标转换：子到父（由 Figure 的子树坐标协议决定）
     ///
     /// 对应 draw2d: translateToParent(Translatable)
     ///
-    /// 只有在 `use_local_coordinates() = true` 时才执行 offset 翻译。
-    /// 该偏移表示“当前坐标根到其父坐标域”的变换。
+    /// 普通坐标根只执行 client-area 平移；Viewport 等 Figure 可以通过
+    /// `child_transform()` 同时表达 content origin 与 zoom。
     #[allow(clippy::collapsible_if, clippy::needless_return)]
     pub fn translate_to_parent<T: Translatable>(&self, block_id: BlockId, t: &mut T) {
         if let Some(block) = self.blocks.get(block_id) {
-            if block.figure.use_local_coordinates() {
-                let bounds = block.figure.bounds();
-                let (top, left, _, _) = block.figure.insets();
-                t.translate(bounds.x + left, bounds.y + top);
-                return;
-            }
+            block.figure.child_transform().apply_to(t);
         }
     }
 
-    /// 坐标转换：父到子（只在坐标根时生效）
+    /// 坐标转换：父到子（由 Figure 的子树坐标协议决定）
     ///
     /// 对应 draw2d: translateFromParent(Translatable)
     ///
-    /// 只有在 `use_local_coordinates() = true` 时才执行 offset 翻译。
+    /// 普通坐标根只执行 client-area 平移逆变换；Viewport 等 Figure 可以通过
+    /// `child_transform()` 同时表达 content origin 与 zoom。
     #[allow(clippy::collapsible_if, clippy::needless_return)]
     pub fn translate_from_parent<T: Translatable>(&self, block_id: BlockId, t: &mut T) {
         if let Some(block) = self.blocks.get(block_id) {
-            if block.figure.use_local_coordinates() {
-                let bounds = block.figure.bounds();
-                let (top, left, _, _) = block.figure.insets();
-                t.translate(-(bounds.x + left), -(bounds.y + top));
-                return;
-            }
+            block.figure.child_transform().apply_inverse_to(t);
         }
     }
 
@@ -1543,7 +1534,7 @@ impl Default for FigureGraph {
 mod tests {
     use super::super::figure::{Bounded, RectangleFigure, Shape, Updatable};
     use crate::scene::FigureGraphRenderRef;
-    use crate::{FigureEvent, FigureGraph, NotificationEffect, Rectangle};
+    use crate::{FigureEvent, FigureGraph, NotificationEffect, Rectangle, ViewportFigure};
     use novadraw_core::Color as NovadrawCoreColor;
     use novadraw_render::NdCanvas;
 
@@ -2013,6 +2004,29 @@ mod tests {
             scene.hit_test_simple((115.0, 65.0)),
             Some(coordinate_root_id)
         );
+        assert_eq!(scene.hit_test_simple((50.0, 50.0)), Some(contents_id));
+    }
+
+    #[test]
+    fn test_hit_test_translates_through_viewport_figure() {
+        let mut scene = FigureGraph::new();
+        let contents_id =
+            scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 300.0, 300.0)));
+        let viewport_id = scene.add_child_to(
+            contents_id,
+            Box::new(
+                ViewportFigure::new(100.0, 50.0, 120.0, 80.0)
+                    .with_origin(20.0, 10.0)
+                    .with_zoom(2.0),
+            ),
+        );
+        let child_id = scene.add_child_to(
+            viewport_id,
+            Box::new(RectangleFigure::new(30.0, 20.0, 20.0, 20.0)),
+        );
+
+        assert_eq!(scene.hit_test_simple((120.0, 70.0)), Some(child_id));
+        assert_eq!(scene.hit_test_simple((105.0, 55.0)), Some(viewport_id));
         assert_eq!(scene.hit_test_simple((50.0, 50.0)), Some(contents_id));
     }
 

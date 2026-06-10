@@ -22,15 +22,15 @@ pub use novadraw_render::traits;
 
 #[cfg(feature = "vello")]
 pub use novadraw_scene::{
-    BasicEventDispatcher, BlockId, Border, BorderLayout, BorderRegion, Bounded, Direction,
-    DispatchContext, EllipseFigure, Event, EventDispatcher, Figure, FigureEvent, FigureGraph,
-    FigureRenderer, FillLayout, FlowDirection, FlowLayout, LayoutManager, LineBorder, MarginBorder,
-    MouseButton, MouseEvent, MouseEventKind, NotificationEffect, NotificationQueue,
+    BasicEventDispatcher, BlockId, Border, BorderLayout, BorderRegion, Bounded, ChildTransform,
+    Direction, DispatchContext, EllipseFigure, Event, EventDispatcher, Figure, FigureEvent,
+    FigureGraph, FigureRenderer, FillLayout, FlowDirection, FlowLayout, LayoutManager, LineBorder,
+    MarginBorder, MouseButton, MouseEvent, MouseEventKind, NotificationEffect, NotificationQueue,
     NovadrawContext, NovadrawSystem, PendingMutationBatch, PendingMutations, Point, PolygonFigure,
     PolylineFigure, Rectangle, RectangleBorder, RectangleFigure, RootFigure,
     RoundedRectangleFigure, SceneDispatchContext, SceneHost, SceneNovadrawContext,
     SceneUpdateManager, Shape, TriangleFigure, Updatable, UpdateEvent, UpdateListener,
-    UpdateManager, Viewport, XYLayout,
+    UpdateManager, Viewport, ViewportFigure, XYLayout,
 };
 
 #[cfg(feature = "vello")]

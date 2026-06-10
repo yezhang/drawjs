@@ -22,6 +22,20 @@
 
 ## Entries
 
+## 2026-06-10 / AD-018
+
+- Goal: 按 draw2d 对标，把 Viewport 从 standalone math helper 推进为 Figure 树中的坐标根和裁剪容器。
+- Root Cause: g2 中 `Viewport` / `ScrollPane` 位于 `org.eclipse.draw2d`，GEF 只提供 viewer/helper/policy 集成；Novadraw 当前 `Viewport` 尚未作为 Figure 节点参与 render / hit-test / damage repair，若在 apps/editor 或 SceneHost 保存滚动状态，会重新引入 Figure 树外全局坐标特判。
+- Minimal Fix: 新增 `ChildTransform` 作为 Figure 子树坐标协议；新增 `ViewportFigure`，用 `origin` / `zoom` 计算 content -> parent 变换，并用 content-domain `client_area()` 驱动裁剪；render recursive / iterative、hit-test、damage repair 均消费同一协议。
+- Files: `novadraw-scene/src/figure/mod.rs`, `novadraw-scene/src/viewport.rs`, `novadraw-scene/src/scene/mod.rs`, `novadraw-scene/src/scene/render_recursive.rs`, `novadraw-scene/src/scene/render_iterative.rs`, `novadraw-scene/src/update/repair.rs`, `novadraw-scene/src/scene/bounds_test.rs`, `novadraw-scene/src/scene/update_integration_test.rs`, `novadraw-scene/src/lib.rs`, `novadraw/src/lib.rs`, `agent/outer-loop-delta-backlog.yaml`, `agent/governance-contract-coverage.md`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: cargo fmt ✅, cargo check ✅, cargo test -p novadraw-scene 146/146 + 3 doctests ✅, backlog YAML parse ✅, git diff --check ✅
+- Baseline Verification: `cargo clippy -- -D warnings` 发现非本轮 clippy debt（apps/vello-app needless borrow、旧 novadraw-scene derivable impl / clone-on-copy 等），未混入 AD-018 修复。
+- Decision: C-03 / C-09 保持 aligned；Viewport 核心语义归属 `novadraw-scene`，apps/editor 和 SceneHost 不拥有滚动/视口图语义状态。
+- Split Decision: 不实现 ScrollBar UI、mouse wheel、auto-expose、selection feedback 或完整 ScrollPane layout；这些属于后续独立 delta。
+- Post-Execution Reflection: 本轮更接近理想架构，因为 Viewport 现在沿 Figure 树父链坐标协议闭合，render / hit-test / damage repair 不需要各自维护特殊分支，也没有把 draw2d Figure 级语义上移到 GEF-like/editor 层。
+- New Candidate Deltas: ScrollPane layout and range model integration；editor mouse-wheel viewport policy；Viewport auto-expose helper。
+- Next Step: 提交 AD-018；如继续迭代，回到 discovery/review 选择 ScrollPane 或 editor policy 中的一个最小项。
+
 ## 2026-06-10 / AD-017
 
 - Goal: 收敛 PendingMutation reparent apply 阶段的树不变量，防止 Figure 回调申请形成 FigureGraph 环。
