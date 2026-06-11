@@ -34,11 +34,23 @@ pub enum RenderCommandKind {
         matrix: Transform,
     },
 
+    /// 替换当前变换矩阵
+    SetTransform {
+        /// 变换矩阵
+        matrix: Transform,
+    },
+
+    /// 重置当前变换矩阵为单位矩阵
+    ResetTransform,
+
     /// 设置裁剪区域
     Clip {
         /// 裁剪矩形 [左上角, 右下角]
         rect: [glam::DVec2; 2],
     },
+
+    /// 清空当前裁剪区域
+    ResetClip,
 
     /// 清除矩形区域
     ClearRect {

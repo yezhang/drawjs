@@ -912,3 +912,32 @@ items:
       - "doctor 能检测新增 architecture/parity delta 缺少 M1-M10 milestone_id"
       - "doctor 能检测 checkpoint schema 缺失、顺序错误或 current delta 不在 backlog"
       - "doctor 已接入 `agent/workflow-verify.sh`"
+
+  - id: AD-020
+    title: Graphics state stack and clip-transform command snapshot
+    contract: "M1 Graphics state 必须支持 push/pop scoped nesting，clip 与 transform composition 必须在命令层可重复验证"
+    evolution_kind: parity
+    milestone_id: M1
+    priority: high
+    status: verified
+    parent_id: null
+    evidence:
+      - novadraw-render/src/context.rs
+      - novadraw-render/src/command.rs
+      - novadraw-render/src/backend/vello/mod.rs
+      - agent/draw2d-core-milestones.yaml
+      - agent/goal-roadmap.md
+    progress_notes:
+      - "Root Cause：`NdCanvas` 只生成 `PushState/RestoreState/PopState` 命令但不维护 Graphics 状态，`clip_depth()` 恒为 0，`set_transform/reset_transform` 也被编码为 concat；因此 M1 的 state stack nesting 与 clip/transform command snapshot 无法在命令层稳定验证"
+      - "新增 `GraphicsState` 与 `state_stack`，让 `NdCanvas` 在命令生成层维护 fill/stroke/line/transform/clip_depth 状态"
+      - "新增 `RenderCommandKind::SetTransform`、`ResetTransform`、`ResetClip`，使替换 transform 和清空 clip 不再伪装成 concat/no-op"
+      - "修正 Vello backend 状态解释：RenderState 记录 clip_depth，PushState 不重复推 clip；RestoreState/PopState 根据 depth 差弹出 clip layer；ResetClip 弹出当前全部 clip layer"
+      - "新增 3 个 M1 契约测试：Graphics state stack nesting、set/reset transform snapshot、clip reset/restore command snapshot"
+      - "验证通过：cargo fmt --check、cargo test -p novadraw-render、cargo check --workspace"
+    done_when:
+      - "`NdCanvas::push_state` / `restore_state` / `pop_state` 能恢复 Graphics 状态并维护 clip depth"
+      - "`set_transform` 与 `reset_transform` 输出可区分的 snapshot 命令，而不是继续输出 concat"
+      - "`reset_clip` 输出命令并重置命令层 clip depth"
+      - "Vello backend 能解释新增命令并按 clip depth 恢复 scene layer"
+      - "新增测试覆盖 state stack nesting 与 clip-transform command snapshot"
+      - "cargo fmt --check、cargo test -p novadraw-render、cargo check --workspace 通过"

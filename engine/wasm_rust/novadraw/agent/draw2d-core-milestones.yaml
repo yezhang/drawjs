@@ -60,7 +60,7 @@ milestones:
   - id: M1
     title: 几何与 Graphics 基础
     layer: Foundation
-    status: not_started
+    status: in_progress
     goal: >
       Establish the geometry and drawing substrate required by all higher-level
       Draw2D protocols.

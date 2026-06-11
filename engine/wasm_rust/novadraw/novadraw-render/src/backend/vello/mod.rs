@@ -25,8 +25,8 @@ pub use winit::{WinitWindowProxy, WinitWindowProxyInner};
 struct RenderState {
     /// 当前变换矩阵
     transform: Transform,
-    /// 当前裁剪区域
-    clip: Option<[DVec2; 2]>,
+    /// 当前已推入 scene 的裁剪层数量。
+    clip_depth: usize,
 }
 
 pub struct VelloRenderer {
@@ -192,46 +192,37 @@ impl VelloRenderer {
         self.state_stack.last_mut().unwrap()
     }
 
+    fn pop_clip_layers(&mut self, count: usize) {
+        for _ in 0..count {
+            self.scene.pop_layer();
+        }
+    }
+
     /// 处理单个渲染命令
     fn render_command(&mut self, cmd: &RenderCommand) {
         match &cmd.kind {
             // ===== 状态管理命令 =====
             crate::command::RenderCommandKind::PushState => {
                 debug!("PushState, stack depth: {}", self.state_stack.len());
-                // 保存当前状态到栈
                 self.state_stack.push(self.current_state().clone());
-
-                // 应用裁剪区域
-                if let Some(clip) = self.current_state().clip {
-                    self.push_clip_layer(&clip);
-                }
             }
 
             crate::command::RenderCommandKind::RestoreState => {
                 debug!("RestoreState, stack depth: {}", self.state_stack.len());
-                // 恢复到最近保存状态，不弹出
-                // 恢复到栈顶-2（即最近一次 pushState 保存的状态）
                 if self.state_stack.len() >= 2 {
-                    let last_idx = self.state_stack.len() - 1;
-                    let saved_idx = self.state_stack.len() - 2;
-                    // 检查当前状态是否有 clip（需要弹出）
-                    let current_has_clip = self.state_stack[last_idx].clip.is_some();
-                    // 只有当当前状态有 clip 时，才弹出层
-                    if current_has_clip {
-                        self.scene.pop_layer();
-                    }
-                    self.state_stack[last_idx] = self.state_stack[saved_idx].clone();
+                    let current_depth = self.current_state().clip_depth;
+                    let saved = self.state_stack[self.state_stack.len() - 2].clone();
+                    self.pop_clip_layers(current_depth.saturating_sub(saved.clip_depth));
+                    *self.current_state_mut() = saved;
                 }
             }
 
             crate::command::RenderCommandKind::PopState => {
                 debug!("PopState, stack depth: {}", self.state_stack.len());
-                // 弹出并恢复状态
                 if self.state_stack.len() > 1 {
-                    if self.current_state().clip.is_some() {
-                        // 弹出裁剪层
-                        self.scene.pop_layer();
-                    }
+                    let current_depth = self.current_state().clip_depth;
+                    let saved_depth = self.state_stack[self.state_stack.len() - 2].clip_depth;
+                    self.pop_clip_layers(current_depth.saturating_sub(saved_depth));
                     self.state_stack.pop();
                 }
             }
@@ -244,10 +235,27 @@ impl VelloRenderer {
                 self.current_state_mut().transform = new_transform;
             }
 
+            crate::command::RenderCommandKind::SetTransform { matrix } => {
+                debug!("SetTransform: {:?}", matrix);
+                self.current_state_mut().transform = *matrix;
+            }
+
+            crate::command::RenderCommandKind::ResetTransform => {
+                debug!("ResetTransform");
+                self.current_state_mut().transform = Transform::IDENTITY;
+            }
+
             crate::command::RenderCommandKind::Clip { rect } => {
                 debug!("Clip: {:?}", rect);
-                self.current_state_mut().clip = Some(*rect);
                 self.push_clip_layer(rect);
+                self.current_state_mut().clip_depth += 1;
+            }
+
+            crate::command::RenderCommandKind::ResetClip => {
+                debug!("ResetClip");
+                let depth = self.current_state().clip_depth;
+                self.pop_clip_layers(depth);
+                self.current_state_mut().clip_depth = 0;
             }
 
             // ===== 绘制命令 =====

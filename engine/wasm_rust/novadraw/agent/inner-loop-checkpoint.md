@@ -8,11 +8,11 @@
 
 ## Current Delta
 
-- WF-001 Workflow doctor state consistency gate
+- AD-020 Graphics state stack and clip-transform command snapshot
 
 ## Current Status
 
-- verified（最新 workflow 已执行 BOOTSTRAP / ASSESS；M1-M10 达成情况已审计；WF-001 已新增 workflow doctor 并接入 baseline verification）
+- verified（M1 已启动；AD-020 已完成 Graphics state stack / clip-transform command snapshot，并通过 delta verification）
 
 ## What Was Done
 
@@ -273,6 +273,17 @@
 - **验证**：`ruby agent/workflow-doctor.rb` ✅。
 - **Baseline Verification**：`bash agent/workflow-verify.sh` 在 `cargo clippy -- -D warnings` 失败于既有 `apps/vello-app/src/main.rs` needless borrow；已登记 `BASELINE-002`，不混入本轮修复。
 
+### 2026-06-11 / AD-020 Graphics state stack and clip-transform command snapshot（本轮，verified）
+- **Milestone**：M1 几何与 Graphics 基础。
+- **根因分析**：`NdCanvas` 只生成状态命令但不维护 Graphics 状态，`clip_depth()` 恒为 0，`set_transform/reset_transform` 被编码为 concat/no-op，导致 M1 的 state stack nesting 与 clip/transform snapshot 缺少命令层验收点。
+- **最小修复**：
+  - `NdCanvas` 新增 `GraphicsState` 与 `state_stack`，维护 fill/stroke/line/transform/clip_depth。
+  - `RenderCommandKind` 新增 `SetTransform`、`ResetTransform`、`ResetClip`。
+  - Vello backend 改为按 clip depth 解释 restore/pop/reset，不在 PushState 时重复推 clip layer。
+  - 新增 3 个 `novadraw-render` 单元测试覆盖 M1 probes。
+- **M1 状态**：`agent/draw2d-core-milestones.yaml` 中 M1 从 `not_started` 推进为 `in_progress`；不标记 `contract_aligned`。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-render ✅，cargo check --workspace ✅。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
@@ -304,13 +315,14 @@
 - ⚠️ AD-018 后续视觉验证暂停：Viewport 核心语义已在引擎测试中通过，但 `apps/viewport-app` 的 `clip_to_viewport` 自动截图显示 content 裁剪未生效；恢复时优先查 NdCanvas/Vello clip 与 perform_update repair 路径，不先动渲染主循环。
 - ✅ AD-019A 已完成：`SceneHost` 进入 `host` 子域，facade 导出保持不变；本轮没有触碰 Viewport、runtime、scene->graph 或渲染主循环。
 - ✅ AD-019B 已完成：`novadraw-scene/src` 已收敛为 `figure / graph / runtime / host / container / layout / log / lib.rs`；未创建新 crate，未修改渲染主循环逻辑。
-- ✅ M1-M10 达成情况已按最新 SSOT 审计：全部保持 `not_started`，但 M2/M4/M5/M6/M8/M10 有历史局部实现，后续必须通过各 milestone probes 推进，不按代码存在性直接升级。
+- ✅ M1 已进入 `in_progress`：AD-020 已收口 Graphics state stack / clip-transform command snapshot；M2-M10 仍保持 `not_started`。
 - ✅ WF-001 已完成：workflow doctor 初版可检测 milestone、roadmap、backlog、checkpoint 与 debt 的基础状态漂移，并已接入 `workflow-verify.sh`。
+- ✅ AD-020 已完成：命令层可验证 Graphics 状态栈嵌套、set/reset transform 快照、clip reset/restore 快照。
 
 ## Next Small Step
 
 - 当前不要继续排查 Viewport `clip_to_viewport`，该项随 M8 收口。
-- 下一步按最新 workflow 回到 REVIEW：优先创建/选择第一个真正挂 M1-M10 的最小 milestone delta；建议从 M1 Graphics state stack / clip-transform command snapshot 开始，因为 M3 及后续里程碑依赖 M1。
+- 下一步继续 M1：优先在 `geometry missing types` 与 `Graphics text/image/alpha command support` 中选择一个最小 delta；不要直接跳到 M3 complete。
 
 ## Blockers
 
@@ -351,9 +363,12 @@
 - AD-019B cargo test -p novadraw-scene: 146/146 + 3 doctests passed ✅
 - WF-001 ruby agent/workflow-doctor.rb: passed ✅
 - WF-001 baseline verification `bash agent/workflow-verify.sh`: failed on existing BASELINE-002 (`apps/vello-app` clippy needless borrow) ⚠️
+- AD-020 cargo fmt --check: passed ✅
+- AD-020 cargo test -p novadraw-render: 3/3 tests passed ✅
+- AD-020 cargo check --workspace: passed ✅
 
 ## Resume Prompt
 
 ```text
-WF-001 Workflow doctor state consistency gate 已完成并通过 `ruby agent/workflow-doctor.rb`。最新 milestone 审计结论：M1-M10 仍全部保持 `not_started`，历史代码能力不能直接等价为 milestone 验收完成；M0 已进入 `in_progress`。下一轮先 REVIEW 并选择首个挂 M1-M10 的最小 delta，建议从 M1 Graphics state stack / clip-transform command snapshot 开始；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
+AD-020 Graphics state stack and clip-transform command snapshot 已完成并通过验证。M1 已从 `not_started` 推进到 `in_progress`；本轮只完成 Graphics 状态栈和 clip/transform 快照，不代表 M1 complete。下一轮继续 M1，优先选择 geometry missing types 或 Graphics text/image/alpha command support 中的一个最小 delta；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
 ```

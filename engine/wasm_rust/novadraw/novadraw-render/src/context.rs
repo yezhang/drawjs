@@ -1,7 +1,6 @@
 //! 渲染上下文
 //!
-//! 参考 HTML5 Canvas API 设计，直接生成命令（无状态栈）。
-//! 状态管理由 VelloRenderer 执行器负责。
+//! 参考 HTML5 Canvas API 设计，生成可重放的渲染命令。
 
 use glam::DVec2;
 use novadraw_core::Color;
@@ -10,21 +9,38 @@ use novadraw_geometry::Transform;
 use crate::command::{Path, RenderCommand, RenderCommandKind};
 use crate::submission::{DamageSet, RenderSubmission};
 
+#[derive(Clone, Debug)]
+struct GraphicsState {
+    fill_color: Option<Color>,
+    stroke_color: Option<Color>,
+    stroke_width: f64,
+    line_cap: crate::command::LineCap,
+    line_join: crate::command::LineJoin,
+    transform: Transform,
+    clip_depth: usize,
+}
+
+impl Default for GraphicsState {
+    fn default() -> Self {
+        Self {
+            fill_color: None,
+            stroke_color: None,
+            stroke_width: 1.0,
+            line_cap: crate::command::LineCap::Butt,
+            line_join: crate::command::LineJoin::Miter,
+            transform: Transform::IDENTITY,
+            clip_depth: 0,
+        }
+    }
+}
+
 pub struct NdCanvas {
     pub damage: DamageSet,
     commands: Vec<RenderCommand>,
     /// 当前正在构建的路径（用于 begin_path/fill/stroke 流程）
     current_path: Option<Path>,
-    /// 当前填充颜色
-    fill_color: Option<Color>,
-    /// 当前描边颜色
-    stroke_color: Option<Color>,
-    /// 当前描边宽度
-    stroke_width: f64,
-    /// 当前线帽样式
-    line_cap: crate::command::LineCap,
-    /// 当前连接样式
-    line_join: crate::command::LineJoin,
+    state: GraphicsState,
+    state_stack: Vec<GraphicsState>,
 }
 
 impl Default for NdCanvas {
@@ -39,11 +55,8 @@ impl NdCanvas {
             damage: DamageSet::default(),
             commands: Vec::new(),
             current_path: None,
-            fill_color: None,
-            stroke_color: None,
-            stroke_width: 1.0,
-            line_cap: crate::command::LineCap::Butt,
-            line_join: crate::command::LineJoin::Miter,
+            state: GraphicsState::default(),
+            state_stack: Vec::new(),
         }
     }
 
@@ -57,6 +70,7 @@ impl NdCanvas {
     /// 对应 Draw2D: Graphics.pushState()
     /// 将当前状态复制并压入状态栈
     pub fn push_state(&mut self) {
+        self.state_stack.push(self.state.clone());
         self.create_command(RenderCommandKind::PushState);
     }
 
@@ -65,6 +79,9 @@ impl NdCanvas {
     /// 对应 Draw2D: Graphics.restoreState()
     /// 用于在 paintFigure 之后、paintChildren 之前恢复裁剪区
     pub fn restore_state(&mut self) {
+        if let Some(saved) = self.state_stack.last() {
+            self.state = saved.clone();
+        }
         self.create_command(RenderCommandKind::RestoreState);
     }
 
@@ -73,6 +90,9 @@ impl NdCanvas {
     /// 对应 Draw2D: Graphics.popState()
     /// 用于在所有绘制完成后恢复 pushState 前的状态
     pub fn pop_state(&mut self) {
+        if let Some(saved) = self.state_stack.pop() {
+            self.state = saved;
+        }
         self.create_command(RenderCommandKind::PopState);
     }
 
@@ -81,6 +101,7 @@ impl NdCanvas {
     /// 生成 ConcatTransform 命令
     pub fn translate(&mut self, x: f64, y: f64) {
         let t = Transform::from_translation(x, y);
+        self.state.transform = self.state.transform.then_transform(t);
         self.create_command(RenderCommandKind::ConcatTransform { matrix: t });
     }
 
@@ -89,6 +110,7 @@ impl NdCanvas {
     /// 生成 ConcatTransform 命令
     pub fn rotate(&mut self, angle: f64) {
         let t = Transform::from_rotation(angle);
+        self.state.transform = self.state.transform.then_transform(t);
         self.create_command(RenderCommandKind::ConcatTransform { matrix: t });
     }
 
@@ -97,22 +119,25 @@ impl NdCanvas {
     /// 生成 ConcatTransform 命令
     pub fn scale(&mut self, x: f64, y: f64) {
         let t = Transform::from_scale(x, y);
+        self.state.transform = self.state.transform.then_transform(t);
         self.create_command(RenderCommandKind::ConcatTransform { matrix: t });
     }
 
     pub fn transform(&mut self, a: f64, b: f64, c: f64, d: f64, e: f64, f: f64) {
         let t = Transform::new(a, b, c, d, e, f);
+        self.state.transform = self.state.transform.then_transform(t);
         self.create_command(RenderCommandKind::ConcatTransform { matrix: t });
     }
 
     pub fn set_transform(&mut self, a: f64, b: f64, c: f64, d: f64, e: f64, f: f64) {
         let t = Transform::new(a, b, c, d, e, f);
-        self.create_command(RenderCommandKind::ConcatTransform { matrix: t });
+        self.state.transform = t;
+        self.create_command(RenderCommandKind::SetTransform { matrix: t });
     }
 
     pub fn reset_transform(&mut self) {
-        let t = Transform::IDENTITY;
-        self.create_command(RenderCommandKind::ConcatTransform { matrix: t });
+        self.state.transform = Transform::IDENTITY;
+        self.create_command(RenderCommandKind::ResetTransform);
     }
 
     pub fn clear_rect(&mut self, x: f64, y: f64, width: f64, height: f64, color: Color) {
@@ -302,12 +327,10 @@ impl NdCanvas {
     #[allow(clippy::collapsible_if)]
     pub fn fill(&mut self) {
         if let Some(path) = self.current_path.take() {
-            if let Some(color) = self.fill_color {
+            if let Some(color) = self.state.fill_color {
                 // 跳过完全透明的颜色
                 if color.a > 0.0 {
                     self.create_command(RenderCommandKind::FillPath { path, color });
-                    // 保存颜色供后续使用
-                    self.fill_color = Some(color);
                 }
             }
         }
@@ -317,10 +340,10 @@ impl NdCanvas {
     #[allow(clippy::collapsible_if)]
     pub fn stroke(&mut self) {
         if let Some(path) = self.current_path.take() {
-            if let Some(color) = self.stroke_color {
-                let width = self.stroke_width;
-                let line_cap = self.line_cap;
-                let line_join = self.line_join;
+            if let Some(color) = self.state.stroke_color {
+                let width = self.state.stroke_width;
+                let line_cap = self.state.line_cap;
+                let line_join = self.state.line_join;
                 self.create_command(RenderCommandKind::StrokePath {
                     path,
                     color,
@@ -335,16 +358,16 @@ impl NdCanvas {
     /// 填充并描边当前路径
     pub fn fill_and_stroke(&mut self) {
         if let Some(path) = self.current_path.take() {
-            if let Some(color) = self.fill_color {
+            if let Some(color) = self.state.fill_color {
                 self.create_command(RenderCommandKind::FillPath {
                     path: path.clone(),
                     color,
                 });
             }
-            if let Some(color) = self.stroke_color {
-                let width = self.stroke_width;
-                let line_cap = self.line_cap;
-                let line_join = self.line_join;
+            if let Some(color) = self.state.stroke_color {
+                let width = self.state.stroke_width;
+                let line_cap = self.state.line_cap;
+                let line_join = self.state.line_join;
                 self.create_command(RenderCommandKind::StrokePath {
                     path,
                     color,
@@ -358,10 +381,14 @@ impl NdCanvas {
 
     pub fn clip_rect(&mut self, x: f64, y: f64, width: f64, height: f64) {
         let rect = [DVec2::new(x, y), DVec2::new(x + width, y + height)];
+        self.state.clip_depth += 1;
         self.create_command(RenderCommandKind::Clip { rect });
     }
 
-    pub fn reset_clip(&mut self) {}
+    pub fn reset_clip(&mut self) {
+        self.state.clip_depth = 0;
+        self.create_command(RenderCommandKind::ResetClip);
+    }
 
     pub fn clear_commands(&mut self) {
         self.commands.clear();
@@ -391,23 +418,23 @@ impl NdCanvas {
     }
 
     pub fn fill_style(&mut self, color: Color) {
-        self.fill_color = Some(color);
+        self.state.fill_color = Some(color);
     }
 
     pub fn stroke_style(&mut self, color: Color) {
-        self.stroke_color = Some(color);
+        self.state.stroke_color = Some(color);
     }
 
     pub fn line_width(&mut self, width: f64) {
-        self.stroke_width = width;
+        self.state.stroke_width = width;
     }
 
     pub fn line_cap(&mut self, cap: crate::command::LineCap) {
-        self.line_cap = cap;
+        self.state.line_cap = cap;
     }
 
     pub fn line_join(&mut self, join: crate::command::LineJoin) {
-        self.line_join = join;
+        self.state.line_join = join;
     }
 
     pub fn line_dash_offset(&mut self, _offset: f64) {}
@@ -463,6 +490,118 @@ impl NdCanvas {
     }
 
     pub fn clip_depth(&self) -> usize {
-        0
+        self.state.clip_depth
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::command::LineJoin;
+
+    fn assert_transform_eq(actual: Transform, expected: Transform) {
+        let actual = actual.coeffs();
+        let expected = expected.coeffs();
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn graphics_state_stack_restores_nested_clip_transform_and_stroke_state() {
+        let mut canvas = NdCanvas::new();
+        canvas.translate(10.0, 0.0);
+        canvas.clip_rect(0.0, 0.0, 100.0, 100.0);
+        canvas.line_width(2.0);
+
+        canvas.push_state();
+        canvas.scale(2.0, 2.0);
+        canvas.clip_rect(10.0, 10.0, 20.0, 20.0);
+        canvas.line_width(7.0);
+
+        assert_eq!(canvas.clip_depth(), 2);
+
+        canvas.restore_state();
+        assert_eq!(canvas.clip_depth(), 1);
+
+        canvas.stroke_style(Color::rgba(1.0, 0.0, 0.0, 1.0));
+        canvas.line_join(LineJoin::Bevel);
+        canvas.begin_path();
+        canvas.move_to(0.0, 0.0);
+        canvas.line_to(10.0, 10.0);
+        canvas.stroke();
+
+        let stroke = canvas.commands().last().expect("stroke command");
+        let RenderCommandKind::StrokePath {
+            width, line_join, ..
+        } = stroke.kind
+        else {
+            panic!("expected StrokePath after restored state");
+        };
+        assert_eq!(width, 2.0);
+        assert_eq!(line_join, LineJoin::Bevel);
+
+        canvas.pop_state();
+        assert_eq!(canvas.clip_depth(), 1);
+    }
+
+    #[test]
+    fn set_transform_and_reset_transform_emit_snapshot_commands() {
+        let mut canvas = NdCanvas::new();
+
+        canvas.translate(10.0, 20.0);
+        canvas.set_transform(2.0, 0.0, 0.0, 2.0, 5.0, 6.0);
+        canvas.reset_transform();
+
+        let commands = canvas.commands();
+        assert_eq!(commands.len(), 3);
+
+        match commands[0].kind {
+            RenderCommandKind::ConcatTransform { matrix } => {
+                assert_transform_eq(matrix, Transform::from_translation(10.0, 20.0));
+            }
+            _ => panic!("expected translate as ConcatTransform"),
+        }
+
+        match commands[1].kind {
+            RenderCommandKind::SetTransform { matrix } => {
+                assert_transform_eq(matrix, Transform::new(2.0, 0.0, 0.0, 2.0, 5.0, 6.0));
+            }
+            _ => panic!("expected SetTransform"),
+        }
+
+        assert!(matches!(
+            commands[2].kind,
+            RenderCommandKind::ResetTransform
+        ));
+    }
+
+    #[test]
+    fn clip_reset_and_restore_are_visible_in_command_snapshot() {
+        let mut canvas = NdCanvas::new();
+
+        canvas.push_state();
+        canvas.clip_rect(0.0, 0.0, 100.0, 100.0);
+        canvas.translate(5.0, 6.0);
+        canvas.clip_rect(10.0, 10.0, 30.0, 40.0);
+        canvas.restore_state();
+        canvas.reset_clip();
+        canvas.pop_state();
+
+        assert_eq!(canvas.clip_depth(), 0);
+        let kinds = canvas
+            .commands()
+            .iter()
+            .map(|command| &command.kind)
+            .collect::<Vec<_>>();
+
+        assert!(matches!(kinds[0], RenderCommandKind::PushState));
+        assert!(matches!(kinds[1], RenderCommandKind::Clip { .. }));
+        assert!(matches!(
+            kinds[2],
+            RenderCommandKind::ConcatTransform { .. }
+        ));
+        assert!(matches!(kinds[3], RenderCommandKind::Clip { .. }));
+        assert!(matches!(kinds[4], RenderCommandKind::RestoreState));
+        assert!(matches!(kinds[5], RenderCommandKind::ResetClip));
+        assert!(matches!(kinds[6], RenderCommandKind::PopState));
     }
 }

@@ -22,6 +22,20 @@
 
 ## Entries
 
+## 2026-06-11 / AD-020
+
+- Goal: 启动 M1，补齐 Graphics state stack / clip-transform command snapshot 的最小契约实现与测试。
+- Root Cause: `NdCanvas` 只生成 `PushState/RestoreState/PopState` 命令但不维护 Graphics 状态，`clip_depth()` 恒为 0，`set_transform/reset_transform` 被编码为 concat/no-op；因此 M1 要求的 Graphics state stack nesting 与 clip/transform command snapshot 无法在命令层稳定验证。
+- Minimal Fix: 在 `NdCanvas` 中新增 `GraphicsState` 与 `state_stack`，维护 fill/stroke/line/transform/clip_depth；新增 `SetTransform`、`ResetTransform`、`ResetClip` 命令；Vello backend 改为按 clip depth 恢复 scene layer，PushState 不再重复推 clip layer。
+- Tests: 新增 3 个 `novadraw-render` 单元测试，覆盖嵌套状态恢复、`set_transform/reset_transform` 快照命令、clip reset/restore 命令序列。
+- Files: `novadraw-render/src/context.rs`, `novadraw-render/src/command.rs`, `novadraw-render/src/backend/vello/mod.rs`, `agent/draw2d-core-milestones.yaml`, `agent/goal-roadmap.md`, `agent/outer-loop-delta-backlog.yaml`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: cargo fmt --check ✅, cargo test -p novadraw-render ✅, cargo check --workspace ✅
+- Decision: M1 从 `not_started` 推进为 `in_progress`；本轮只收口 Graphics 状态栈和 clip/transform 快照，不把 M1 标记为 `contract_aligned`。
+- Split Decision: 不处理 Dimension/PointList/precision geometry、文本/图像/alpha，也不修复 Viewport visual clipping 或 M3 render traversal probes。
+- Post-Execution Reflection: 本轮更接近 M1，因为 Graphics 命令层现在可以表达并验证状态栈、clip 与 transform 的确定性组合，为 M3 绘制裁剪闭环提供稳定 substrate。
+- New Candidate Deltas: M1 geometry missing types audit；M1 text/image/alpha command support；M3 recursive/iterative command equivalence probe。
+- Next Step: 继续 M1，优先补 geometry missing types 或 Graphics text/image/alpha 中的一个最小 delta；不要直接跳到 M3 complete。
+
 ## 2026-06-11 / Milestone Assessment + WF-001
 
 - Goal: 按最新 `workflow-continuous` 先执行 BOOTSTRAP / ASSESS，检查 M1-M10 达成情况，并补齐 M0 工作流前置校验能力。
