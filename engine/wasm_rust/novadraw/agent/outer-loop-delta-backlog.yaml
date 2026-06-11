@@ -1,5 +1,11 @@
 version: 1
-last_updated: "2026-06-10"
+last_updated: "2026-06-11"
+
+milestone_id_policy: >
+  Deltas created on or after 2026-06-11 must carry a milestone_id field
+  referencing M1-M10 in agent/draw2d-core-milestones.yaml (see
+  workflow_integration.delta_conditionally_required_fields in that file).
+  Deltas authored before 2026-06-11 are grandfathered and may omit it.
 
 selection_rules:
   - 先处理职责边界错误，再处理实现细节
@@ -8,6 +14,7 @@ selection_rules:
   - 如果 delta 需要跨多个子系统，先拆分
   - 新问题默认先作为 candidate，评估后再进入正式 backlog
   - 默认只主动推进 evolution_kind 为 architecture 或 parity 的条目
+  - 新增 delta（2026-06-11 起）必须挂 milestone_id；旧 delta 免补
 
 evolution_kind_definitions:
   architecture: 理想架构收敛项，处理职责边界、状态归属、协议时序和依赖方向
