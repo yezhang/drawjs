@@ -27,6 +27,7 @@
 - [ ] 已确认本次任务是否允许扫描本项目现状实现
 - [ ] 已确认第三方参考源码路径
 - [ ] 已确认本次任务的 SSOT 文档或代码入口
+- [ ] 已确认本次任务关联的 milestone（如属于 M1-M10 范围），编号以 `agent/draw2d-core-milestones.yaml` 为准
 
 ## 关键事实镜像
 
@@ -44,6 +45,11 @@
 
 - 项目文档总入口：`doc/00-index.md`
 - 完整项目规则：`CLAUDE.md`
+- **Milestone 编号 SSOT（M1-M10）**：`agent/draw2d-core-milestones.yaml`
+- **当前进度快照 + 阻塞项**：`agent/goal-roadmap.md`
+- **产品交付清单 / Demo 矩阵**：`doc/06-roadmap/`
+
+> Milestone 编号唯一来源是 `agent/draw2d-core-milestones.yaml`。任何 delta、PR、commit、文档引用 `M{n}` 一律指 YAML M{n}，禁止在其他文档发明独立编号。
 
 ### 架构分析边界
 

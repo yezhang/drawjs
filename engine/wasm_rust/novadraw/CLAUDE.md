@@ -65,6 +65,17 @@ cargo fmt --check && cargo check && cargo clippy -- -D warnings && cargo test
 | 渲染管线 | [doc/03-rendering/](doc/03-rendering/) |
 | 架构设计 | [doc/01-architecture/](doc/01-architecture/) |
 | 坐标系 | [doc/04-coordinates/](doc/04-coordinates/) |
+| 路线图（产品视图 + Demo 矩阵） | [doc/06-roadmap/](doc/06-roadmap/) |
+
+### Milestone 与路线图
+
+- **Milestone 编号 SSOT（M1-M10）**：`agent/draw2d-core-milestones.yaml`（机器可读，承载契约 + probes + 依赖）
+- **当前进度快照 + 阻塞项**：`agent/goal-roadmap.md`（每完成一个 milestone 更新）
+- **产品交付清单**：`doc/06-roadmap/product-deliverables.md`（5 图元 / 6 布局 / 6 边框 等策略层清单）
+- **Demo + 验证矩阵**：`doc/06-roadmap/demo-matrix.md`（每个 milestone 配套 demo + 截图断言策略 + GEF 层探索附录）
+
+> 任何 delta、PR、commit、文档引用 `M{n}` 一律指 YAML M{n}，禁止在其他文档发明独立编号。
+> 节点编辑器等 GEF 层能力不在 draw2d 核心 milestone 内，详见 `demo-matrix.md` 附录 A。
 
 ## 架构设计原则
 

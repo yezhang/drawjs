@@ -48,6 +48,11 @@ doc/
 │   ├── java_to_rust_oo.md            # Java OOP 特性等价实现
 │   └── java_to_rust_migration.md     # 迁移步骤指南 + 多态支持
 │
+├── 06-roadmap/                       # 路线图（产品视图 + Demo 视图）
+│   ├── 00-index.md                   # 路线图三方职能边界说明
+│   ├── product-deliverables.md       # 每个 milestone 的产品策略层清单
+│   └── demo-matrix.md                # 每个 milestone 的 demo + 验证矩阵
+│
 ├── adr/                              # 架构决策记录
 │   ├── README.md                     # ADR 列表与模板
 │   ├── adr-001-webgpu-rust-stack.md  # Rust + WebGPU 技术栈决策
@@ -114,13 +119,24 @@ doc/
 | `java_to_rust_oo.md` | OOP 等价实现 | 20 种 Java OOP 特性与 Rust 对应关系 |
 | `java_to_rust_migration.md` | 迁移指南 | 迁移步骤、多态调用支持、决策流程 |
 
-### 6. 历史文档
+### 6. 路线图
+
+| 文档 | 主题 | 关键内容 |
+|------|------|----------|
+| `06-roadmap/00-index.md` | 路线图三方职能边界 | YAML（协议）/ doc（产品+demo）/ agent（状态）三方文件分工 |
+| `06-roadmap/product-deliverables.md` | 产品交付清单 | 每个 YAML milestone 下要交付的图元/布局/边框等策略层清单 |
+| `06-roadmap/demo-matrix.md` | Demo 与验证矩阵 | 每个 milestone 配套的 demo + 截图断言/帧率断言策略 + GEF 层探索附录 |
+
+> 路线图编号唯一来源：`agent/draw2d-core-milestones.yaml`，doc 内不发明独立编号。
+> 当前进度快照见 `agent/goal-roadmap.md`。
+
+### 7. 历史文档
 
 | 文档 | 主题 | 说明 |
 |------|------|------|
 | `deprecated/架构设计-历史.md` | 早期架构设计 | 已被《理想架构设计.md》取代，仅作历史参考 |
 
-### 7. 架构决策记录
+### 8. 架构决策记录
 
 | 文档 | 主题 | 关键内容 |
 |------|------|----------|
