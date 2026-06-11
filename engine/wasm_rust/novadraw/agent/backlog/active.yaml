@@ -190,3 +190,26 @@ items:
   - "push/restore/pop 能恢复 font 与 alpha 状态"
   - "新增单元测试覆盖 text/image/alpha command snapshot"
   - "cargo fmt --check、cargo test -p novadraw-render、cargo check --workspace、cargo check -p novadraw-render --features vello 通过"
+- id: AD-024
+  title: M1 contract probes summary
+  contract: M1 status can only advance to contract_aligned when all YAML probes have traceable automated evidence
+  evolution_kind: workflow
+  priority: high
+  status: verified
+  parent_id: M1
+  evidence:
+  - agent/m1-contract-probes-summary.md
+  - agent/draw2d-core-milestones.yaml
+  - agent/goal-roadmap.md
+  - novadraw-geometry/src
+  - novadraw-render/src/context.rs
+  progress_notes:
+  - "Root Cause：M1 已完成多个实现 delta，但状态仍为 `in_progress`；需要用 YAML probes 而不是主观判断决定是否推进到 `contract_aligned`。"
+  - "生成 `agent/m1-contract-probes-summary.md`，逐项映射 geometry operation、Graphics state stack nesting、clip/transform command snapshots、text/image/alpha command snapshots 的测试证据。"
+  - "确认 `cargo test -p novadraw-geometry` 42/42 通过，`cargo test -p novadraw-render` 7/7 通过。"
+  - "M1 从 `in_progress` 推进到 `contract_aligned`；不推进到 `behavior_verified` 或 `complete`，因为产品层检查尚未建立。"
+  done_when:
+  - "M1 probes summary 文件存在，并说明 status decision"
+  - "每个 YAML probe 都有对应自动化测试证据"
+  - "`agent/draw2d-core-milestones.yaml` 与 `agent/goal-roadmap.md` 的 M1 状态同步为 `contract_aligned`"
+  - "workflow doctor 通过"

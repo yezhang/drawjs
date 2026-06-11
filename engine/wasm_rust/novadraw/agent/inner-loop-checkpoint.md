@@ -8,11 +8,11 @@
 
 ## Current Delta
 
-- AD-023 Graphics text image alpha command support
+- AD-024 M1 contract probes summary
 
 ## Current Status
 
-- verified（AD-023 已补齐 Graphics text/image/alpha 命令层语义，并通过 delta verification）
+- verified（AD-024 已生成 M1 probes summary，并将 M1 推进到 contract_aligned）
 
 ## What Was Done
 
@@ -319,6 +319,17 @@
   - 形状、路径、文字命令在录制时应用当前 global alpha。
 - **验证**：cargo fmt --check ✅，cargo test -p novadraw-render 7/7 ✅，cargo check --workspace ✅，cargo check -p novadraw-render --features vello ✅。
 
+### 2026-06-11 / AD-024 M1 contract probes summary（本轮，verified）
+- **Milestone**：M1 几何与 Graphics 基础。
+- **根因分析**：M1 已完成 AD-020/021/022/023，但状态推进必须按 YAML probes 逐项映射自动化证据，而不是按主观完成感判断。
+- **最小修复**：
+  - 新增 `agent/m1-contract-probes-summary.md`。
+  - 汇总 M1 scope、contracts、probes、delta evidence、verification 与 residual risks。
+  - 确认 geometry operation、Graphics state stack nesting、clip/transform command snapshots、text/image/alpha command snapshots 均已有测试证据。
+  - 将 M1 从 `in_progress` 推进到 `contract_aligned`。
+- **边界判断**：不推进到 `behavior_verified` 或 `complete`；产品层 existence checks 尚未建立。
+- **验证**：cargo test -p novadraw-geometry 42/42 ✅，cargo test -p novadraw-render 7/7 ✅。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
@@ -357,11 +368,12 @@
 - ✅ AD-022 已完成：M1 geometry 补齐 `Dimension`、`PointList` 与 precision geometry。
 - ✅ WF-002 已完成：backlog 热路径已拆为 manifest / index / active，冷历史进入 archive，doctor 仍可全量校验。
 - ✅ AD-023 已完成：M1 Graphics text/image/alpha 进入命令层快照，`NdCanvas` 不再把相关 API 保持为 no-op。
+- ✅ AD-024 已完成：M1 contract probes summary 确认 YAML probes 全部有自动化证据，M1 状态已推进到 `contract_aligned`。
 
 ## Next Small Step
 
 - 当前不要继续排查 Viewport `clip_to_viewport`，该项随 M8 收口。
-- 下一步继续 M1：执行 `M1 contract probes summary`，检查 YAML M1 probes 是否都已有测试与证据，再决定是否推进到 `contract_aligned`；不要直接跳到 M3 complete。
+- 下一步二选一：继续 M1 product-layer existence checks 以准备 `behavior_verified`，或在依赖允许的前提下启动 M2；不要直接跳到 M3 complete。
 
 ## Blockers
 
@@ -419,9 +431,11 @@
 - AD-023 cargo test -p novadraw-render: 7/7 tests passed ✅
 - AD-023 cargo check --workspace: passed ✅
 - AD-023 cargo check -p novadraw-render --features vello: passed ✅
+- AD-024 cargo test -p novadraw-geometry: 42/42 tests passed ✅
+- AD-024 cargo test -p novadraw-render: 7/7 tests passed ✅
 
 ## Resume Prompt
 
 ```text
-AD-023 Graphics text image alpha command support 已完成并通过验证。`NdCanvas` 的 `font`、`fill_text`、`stroke_text`、`draw_image`、`global_alpha` 已进入可回放命令流；M1 仍为 `in_progress`。下一轮执行 M1 contract probes summary，检查 geometry operation、Graphics state stack nesting、clip/transform command snapshots、text/image/alpha command snapshots 是否证据齐全，再决定是否推进到 `contract_aligned`；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
+AD-024 M1 contract probes summary 已完成并通过验证。`agent/m1-contract-probes-summary.md` 已确认 M1 YAML probes 均有自动化证据，M1 已从 `in_progress` 推进到 `contract_aligned`；但不能推进到 `behavior_verified` 或 `complete`，因为产品层 existence checks 尚未建立。下一轮可选择继续 M1 product-layer existence checks，或在依赖允许的前提下启动 M2；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
 ```

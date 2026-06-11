@@ -22,6 +22,21 @@
 
 ## Entries
 
+## 2026-06-11 / AD-024
+
+- Goal: 生成 M1 contract probes summary，判断 M1 是否可以从 `in_progress` 推进到 `contract_aligned`。
+- Root Cause: M1 已完成 AD-020/021/022/023 多个实现 delta，但 milestone 状态不能按主观进度推进，必须按 `agent/draw2d-core-milestones.yaml` 的 probes 逐项映射自动化证据。
+- Minimal Fix:
+  - 新增 `agent/m1-contract-probes-summary.md`。
+  - 汇总 M1 scope、contracts、probes、delta evidence、verification 与 residual risks。
+  - 将 geometry operation、Graphics state stack nesting、clip/transform command snapshots、text/image/alpha command snapshots 映射到具体测试。
+  - 将 M1 从 `in_progress` 推进到 `contract_aligned`。
+- Tests: `cargo test -p novadraw-geometry` 42/42 ✅；`cargo test -p novadraw-render` 7/7 ✅。
+- Files: `agent/m1-contract-probes-summary.md`, `agent/draw2d-core-milestones.yaml`, `agent/goal-roadmap.md`, `agent/backlog/active.yaml`, `agent/backlog/index.yaml`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Decision: M1 可以推进到 `contract_aligned`；不能推进到 `behavior_verified` 或 `complete`，因为产品层检查尚未建立，demo matrix 也只允许 M1 无独立 demo。
+- Verification: workflow doctor、backlog YAML parse、git diff --check 待本轮最终校验。
+- Next Step: 选择 `M1 product-layer existence checks`，或在依赖允许的前提下启动 M2。
+
 ## 2026-06-11 / AD-023
 
 - Goal: 继续 M1，补齐 Graphics text / image / alpha command support。
