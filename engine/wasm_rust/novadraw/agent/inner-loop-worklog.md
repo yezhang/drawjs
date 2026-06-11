@@ -22,6 +22,22 @@
 
 ## Entries
 
+## 2026-06-11 / WF-002
+
+- Goal: 拆分过长的 `agent/outer-loop-delta-backlog.yaml`，降低 Agent 每轮读取 backlog 时的上下文污染。
+- Root Cause: 原 backlog 文件约 1000 行，混合规则、candidate、baseline debt、当前 delta 和历史 archive；Agent 默认全量读取会把冷历史、旧路径证据和已完成决策带入热路径上下文。
+- Minimal Fix:
+  - 将 `outer-loop-delta-backlog.yaml` 降级为 manifest。
+  - 新增 `agent/backlog/schema.yaml`、`index.yaml`、`active.yaml`、`candidates.yaml`、`baseline-debts.yaml`、`archive/2026-06.yaml`。
+  - 更新 `workflow-doctor.rb`，通过 manifest 聚合 active/candidates/archive/debts 并校验 ID、状态、milestone_id、checkpoint current delta。
+  - 更新 workflow 启动脚本和说明文档，让 Agent 默认读取 index/active，不默认读取 archive。
+- Files: `agent/outer-loop-delta-backlog.yaml`, `agent/backlog/**`, `agent/workflow-doctor.rb`, `agent/workflow-continuous.md`, `agent/workflow-run-continuous.sh`, `agent/workflow-run-once.sh`, `agent/README.md`, `agent/workflow-map.md`, `agent/architecture-review-agent.md`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: ruby -c agent/workflow-doctor.rb ✅, ruby agent/workflow-doctor.rb ✅, backlog YAML parse ✅, git diff --check ✅
+- Decision: WF-002 状态 `verified`；`outer-loop-delta-backlog.yaml` 只保留 manifest，历史条目进入 archive。
+- Split Decision: 本轮不重写全部历史 worklog 中的旧路径引用；这些属于历史记录，不在热路径读取。
+- Post-Execution Reflection: Agent 热路径上下文从 992 行 backlog 降到 manifest 13 行 + active 162 行；doctor 仍可机器全量校验 archive。
+- Next Step: 回到 M1，继续 `Graphics text/image/alpha command support`，或先做 M1 probes 汇总判断是否可推进到 `contract_aligned`。
+
 ## 2026-06-11 / AD-022
 
 - Goal: 推进 M1 geometry missing types，补齐 `Dimension`、`PointList` 和 precision geometry 的具体实现与测试。

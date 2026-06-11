@@ -76,7 +76,7 @@
 Architecture Review Agent 不负责：
 
 - 检查 `agent/inner-loop-checkpoint.md` 是否与 backlog 一致。
-- 判断 `outer-loop-delta-backlog.yaml` 的状态迁移是否正确。
+- 判断 backlog manifest、active/candidates/archive 的状态迁移是否正确。
 - 判断 `inner-loop-worklog.md` 是否完整。
 - 推进 workflow 状态。
 - 替代 `review-delta-backlog`、`resume-architecture-work` 或 `execute-architecture-delta`。

@@ -13,7 +13,7 @@
 项目进入理想目标完成态必须同时满足：
 
 1. `agent/governance-contract-coverage.md` 中所有契约状态均为 `aligned`。
-2. `agent/outer-loop-delta-backlog.yaml` 中不存在 `architecture` 或 `parity` 类型的 `pending`、`proposed`、`in_progress`、`split`、`blocked` 条目。
+2. `agent/backlog/active.yaml` 中不存在 `architecture` 或 `parity` 类型的 `pending`、`proposed`、`in_progress`、`split`、`blocked` 条目。
 3. 最近一次 `discover-architecture-deltas` 对 `unassessed`、`drifting`、`partially_aligned` 契约重新审计后，没有发现新的可执行 candidate。
 4. `agent/quality-workflow-readiness.md` 至少达到 `Level 2 / Stable Enough`，且 Go / No-Go checklist 无阻塞项。
 5. 当前基线债务已关闭，或已被显式接受且不影响理想架构语义。
@@ -46,7 +46,7 @@
 1. `BOOTSTRAP`
    - 读取 `AGENTS.md`、`CLAUDE.md`、`doc/理想架构设计.md`。
    - 读取 `agent/README.md`、`agent/workflow-continuous.md`、`agent/governance-architecture-contracts.md`。
-   - 读取 backlog、checkpoint、worklog、coverage、readiness。
+   - 读取 `agent/outer-loop-delta-backlog.yaml` manifest、`agent/backlog/index.yaml`、`agent/backlog/active.yaml`、checkpoint、worklog、coverage、readiness；仅在审计或冲突排查时读取 `agent/backlog/archive/*.yaml`。
    - 读取 `agent/draw2d-core-milestones.yaml`（milestone 编号 SSOT）和 `agent/goal-roadmap.md`（当前进度快照）。
    - 运行 `ruby agent/workflow-doctor.rb`，先确认 milestone / roadmap / backlog / checkpoint 状态没有机器可检出的漂移。
 
@@ -83,7 +83,7 @@
    - 失败必须分类为本轮回归或既有基线债务。
 
 8. `RECORD`
-   - 更新 `outer-loop-delta-backlog.yaml`。
+   - 更新 `agent/backlog/active.yaml` / `agent/backlog/candidates.yaml` / `agent/backlog/baseline-debts.yaml`，必要时更新 manifest 或 archive。
    - 更新 `inner-loop-checkpoint.md`。
    - 追加 `inner-loop-worklog.md`。
    - 更新 `governance-contract-coverage.md`。

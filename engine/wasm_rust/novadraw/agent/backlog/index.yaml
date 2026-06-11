@@ -1,0 +1,12 @@
+---
+version: 1
+last_updated: '2026-06-11'
+current_delta: WF-002
+next_recommended_delta: M1 Graphics text/image/alpha command support
+read_order:
+- agent/backlog/index.yaml
+- agent/backlog/active.yaml
+- agent/backlog/candidates.yaml
+notes:
+- Agent resume should read index and active before archive.
+- Archive files are cold history and should be read only for audit or conflict resolution.

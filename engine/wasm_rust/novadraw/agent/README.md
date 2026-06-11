@@ -67,7 +67,12 @@ title: Solo Coder Architecture Workflow
 
 ### Outer Loop
 
-- `agent/outer-loop-delta-backlog.yaml`: 外循环 backlog，记录 candidate、正式 delta、门禁和基线债务
+- `agent/outer-loop-delta-backlog.yaml`: backlog manifest，只保存 schema / index / active / candidates / baseline debts / archive 入口
+- `agent/backlog/index.yaml`: Agent 热路径入口，记录当前 delta、下一步建议和默认读取顺序
+- `agent/backlog/active.yaml`: 当前和近期 delta；恢复工作时优先读取，避免历史噪音污染上下文
+- `agent/backlog/candidates.yaml`: 尚未评估或待提升的候选项
+- `agent/backlog/baseline-debts.yaml`: baseline verification 债务
+- `agent/backlog/archive/*.yaml`: 已完成、已拒绝、已提升的冷历史；只在审计、追溯或冲突排查时读取
 
 ### Inner Loop
 
@@ -164,7 +169,7 @@ title: Solo Coder Architecture Workflow
 
 ### 产出
 
-- `outer-loop-delta-backlog.yaml` 中新增或更新候选项
+- `agent/backlog/candidates.yaml` 中新增或更新候选项
 - 当前最值得处理的正式 delta
 - 不值得进入 backlog 的 rejected 项
 - 每个候选项的 `evolution_kind`
@@ -218,7 +223,7 @@ title: Solo Coder Architecture Workflow
 
 - `delta_verification` 未通过，delta 不得进入 `verified`
 - `architecture_review` 发现 Blocker 或 High finding 时，delta 不得进入 `verified`
-- `baseline_verification` 未通过且属于仓库既有问题时，允许继续推进，但必须写入 `outer-loop-delta-backlog.yaml`、`inner-loop-checkpoint.md` 和 `inner-loop-worklog.md`
+- `baseline_verification` 未通过且属于仓库既有问题时，允许继续推进，但必须写入 `agent/backlog/baseline-debts.yaml`、`inner-loop-checkpoint.md` 和 `inner-loop-worklog.md`
 - 任何口头说明都不能替代基线债务记录
 
 ## 推荐状态机
@@ -259,6 +264,9 @@ title: Solo Coder Architecture Workflow
 - `doc/理想架构设计.md`
 - `agent/governance-architecture-contracts.md`
 - `agent/outer-loop-delta-backlog.yaml`
+- `agent/backlog/index.yaml`
+- `agent/backlog/active.yaml`
+- `agent/backlog/candidates.yaml`
 - `agent/governance-contract-coverage.md`
 - `agent/quality-discover-smoke-test.md`
 - 相关代码文件
@@ -302,6 +310,8 @@ title: Solo Coder Architecture Workflow
 - `doc/理想架构设计.md`
 - `agent/governance-architecture-contracts.md`
 - `agent/outer-loop-delta-backlog.yaml`
+- `agent/backlog/index.yaml`
+- `agent/backlog/active.yaml`
 - `agent/inner-loop-checkpoint.md`
 
 然后输出：
@@ -328,7 +338,7 @@ title: Solo Coder Architecture Workflow
 - 先说明根因
 - 给最小修改方案
 - 修改代码并验证
-- 更新 `outer-loop-delta-backlog.yaml`
+- 更新 `agent/backlog/active.yaml` / `agent/backlog/candidates.yaml` / `agent/backlog/baseline-debts.yaml`
 - 更新 `inner-loop-checkpoint.md`
 - 追加 `inner-loop-worklog.md`
 - 更新 `governance-contract-coverage.md`

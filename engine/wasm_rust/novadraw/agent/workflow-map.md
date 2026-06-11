@@ -75,7 +75,7 @@ flowchart TD
 - 总体闭环、门禁与日常路径以 `agent/README.md` 为准。
 - 持续运行控制层、终局判定和防失控预算以 `agent/workflow-continuous.md` 为准。
 - 当前进行中的 delta、阻塞点和推荐下一步以 `agent/inner-loop-checkpoint.md` 为准。
-- 状态定义、强制门禁和基线债务以 `agent/outer-loop-delta-backlog.yaml` 为准。
+- backlog manifest 入口以 `agent/outer-loop-delta-backlog.yaml` 为准；热路径状态以 `agent/backlog/index.yaml` / `agent/backlog/active.yaml` 为准；状态定义、强制门禁和基线债务分别以 `agent/backlog/schema.yaml` / `agent/backlog/baseline-debts.yaml` 为准。
 - 工作流可用等级以 `agent/quality-workflow-readiness.md` 为准。
 - Milestone 编号（M1-M10）、契约与依赖以 `agent/draw2d-core-milestones.yaml` 为准；进度快照与三方文件同步规则以 `agent/goal-roadmap.md` 为准；产品视图与 demo 矩阵以 `doc/06-roadmap/` 为准。
 

@@ -1,0 +1,873 @@
+---
+version: 1
+last_updated: '2026-06-11'
+candidate_items:
+- id: CAD-001
+  title: Update listener responsibility audit
+  contract: 更新监听器只承担监听语义，不吞并编排或图状态职责
+  evolution_kind: architecture
+  priority: medium
+  status: rejected
+  evidence:
+  - novadraw-scene/src/update/listener.rs
+  - novadraw-scene/src/update/mod.rs
+  - novadraw-scene/src/scene/mod.rs
+  promote_when:
+  - 能明确指出监听器与 UpdateManager 的边界偏差
+  - 能写出清晰的 done_when
+  - 问题不是 AD-001 的重复项
+  reject_when:
+  - 只是命名层面问题
+  - 不能落到具体职责边界或可验证行为
+  notes:
+  - 已提升并扩展为 AD-006，范围从 update listener 扩展到 notification foundation
+  - 不再保留为候选条目，避免与正式 backlog 重复
+- id: CAD-002
+  title: FigureGraph and FigureBlock public mutation surface audit
+  contract: FigureGraph 持有树关系和图级状态；FigureBlock 只是节点运行时状态容器
+  evolution_kind: architecture
+  priority: high
+  status: promoted
+  evidence:
+  - novadraw-scene/src/scene/mod.rs
+  - novadraw-scene/src/lib.rs
+  promote_when:
+  - 确认 `FigureGraph.blocks` / `uuid_map` 公开字段允许外部绕过图级不变量
+  - 确认 `FigureBlock` 公开字段或方法允许绕过 parent/children、selection、bounds、update/dirty 协议
+  reject_when:
+  - 公开面仅限 crate 内部且无法从外部破坏不变量
+  notes:
+  - Completion audit 发现 `FigureGraph` 公开 `blocks` / `uuid_map`
+  - "`FigureBlock::add_child()` 只追加 children，不维护 child parent 或 update/dirty 协议"
+  - "`FigureBlock::set_bounds()` 可直接改内部 Figure bounds，不经过 FigureGraph / UpdateManager"
+  - REVIEW 结论：问题真实存在，但原范围过大；先提升为 AD-011，只处理 `FigureGraph.blocks` / `uuid_map` 公开存储面，FigureBlock
+    字段/方法收窄留作后续评估
+- id: CAD-003
+  title: Editor interaction hot-path logging cleanup
+  contract: event dispatch、hit-test、render 等高频路径默认不打印运行时日志
+  evolution_kind: architecture
+  priority: medium
+  status: promoted
+  evidence:
+  - apps/editor/src/system.rs
+  - apps/editor/src/app_window.rs
+  - apps/editor/src/scene_manager/interactive_figure.rs
+  promote_when:
+  - 确认 editor 鼠标移动、entered、exited 或平台输入路径仍默认打印运行时日志
+  - 清理不改变事件语义、坐标转换或交互状态写入
+  reject_when:
+  - 这些日志已被 debug feature 或测试专用路径隔离
+  notes:
+  - Completion audit 发现 editor 层 mouse move / raw pointer / enter / exit 路径仍有 `tracing::info!`
+  - REVIEW 结论：问题真实存在，且不重复 AD-008；AD-008 清理 engine event/hit-test，本项处理 editor 默认交互路径日志
+- id: CAD-004
+  title: Composition root residual public read surface audit
+  contract: NovadrawSystem 是组合根；app_window 只做平台输入适配
+  evolution_kind: architecture
+  priority: medium
+  status: promoted
+  evidence:
+  - apps/editor/src/system.rs
+  - apps/editor/src/app_window.rs
+  promote_when:
+  - 确认 `WinitNovadrawSystem::scene_manager()` 只读逃生口让 app_window 依赖组合根内部结构
+  - 确认 app_window 直接引用 `EditorInteractionCore::logical_from_raw` 泄漏内部实现边界
+  reject_when:
+  - 只读访问被证明是稳定 public query API，且不暴露内部结构
+  notes:
+  - 建议评估是否改为 `current_scene()`、`is_scene()` 或独立 platform input adapter
+  - render strategy wiring 也可能属于相邻候选，但应避免与本项混在同一 delta
+  - REVIEW 结论：问题真实存在。`app_window` 仍通过 `system.scene_manager().current_scene` 依赖组合根内部
+    `SceneManager`，并直接调用 `EditorInteractionCore::logical_from_raw` 复用内部输入转换 helper
+  - 提升为 AD-014；本轮只处理组合根只读面和平台输入适配边界，不混入 CAD-005 文档清扫或 CAD-006 PendingMutation 生产边界
+- id: CAD-005
+  title: Ideal architecture stale composition-root document cleanup
+  contract: 理想架构文档、契约、coverage 与代码现状一致
+  evolution_kind: architecture
+  priority: medium
+  status: promoted
+  evidence:
+  - doc/理想架构设计.md
+  - agent/governance-contract-coverage.md
+  promote_when:
+  - 确认文档仍把 NovadrawSystem trait 描述为持有或暴露 scene/update_manager/dispatcher
+  - 确认文档对当前实现对比表与 AD-010 后现状冲突
+  reject_when:
+  - 相关段落已经全部同步为组合根内部装配与命名动作
+  notes:
+  - Completion audit 发现理想架构文档早期章节仍有旧组合根表述
+  - REVIEW 结论：问题真实存在。`doc/理想架构设计.md` 仍把 NovadrawSystem trait 描述为持有 `scene/update_manager/dispatcher/scene_host`，并在多处保留
+    `NovadrawSystem.update_manager` / `NovadrawSystem.dispatcher` 与 `WinitEventDispatcher`
+    旧平台入口表述
+  - 提升为 AD-015；本轮只清理理想架构文档中的组合根公开面和平台输入旧命名，不处理 CAD-006 PendingMutation 生产边界
+- id: CAD-006
+  title: PendingMutation production boundary audit
+  contract: 结构性变更必须通过 PendingMutation 延迟应用，且生产阶段边界清晰
+  evolution_kind: architecture
+  priority: medium
+  status: promoted
+  evidence:
+  - novadraw-scene/src/mutation/mod.rs
+  - novadraw-scene/src/scene/mod.rs
+  - novadraw-scene/src/context/mod.rs
+  promote_when:
+  - 确认 `PendingMutations` 普通队列无法区分 dispatch 中 enqueue 与非 dispatch enqueue
+  - 确认 `PendingMutation::AddChild` 携带既有 child id 会暴露低层图操作能力
+  reject_when:
+  - 现有 API 被证明只在受控上下文中构造，且公开能力不破坏 C-08 时序
+  notes:
+  - Completion audit 未发现主路径时序破坏，但发现类型层面仍有可审计空间
+  - 'REVIEW 结论：问题真实存在。`PendingMutation` / `PendingMutations::enqueue` / `MutationContext`
+    曾作为公开构造与 enqueue 面暴露，`apply_pending_mutations` 接收任意 `Vec<PendingMutation>`，且 `PendingMutation::AddChild
+    { child: BlockId }` 允许携带既有节点 ID 附加到底层图结构'
+  - 提升为 AD-016；本轮只收敛 PendingMutation 类型边界，不改变 dispatch 后 apply 的运行时事务顺序
+- id: CAD-007
+  title: FigureBlock public mutation surface audit
+  contract: FigureBlock 是节点运行时状态容器；公开方法不能绕过 FigureGraph 图级不变量
+  evolution_kind: architecture
+  priority: high
+  status: promoted
+  parent_id: AD-011
+  evidence:
+  - novadraw-scene/src/scene/mod.rs
+  - novadraw-scene/src/scene/render_recursive.rs
+  - novadraw-scene/src/scene/render_iterative.rs
+  promote_when:
+  - 确认 `FigureBlock` 公开字段或方法允许外部绕过 parent/children、selection、bounds、visibility、update/dirty
+    协议
+  - 能拆出不破坏 render/event/layout 内部遍历的最小封装步骤
+  reject_when:
+  - 公开面仅为只读或受 FigureGraph 命名方法保护，无法破坏图级不变量
+  notes:
+  - AD-011 已先封装 `FigureGraph.blocks` / `uuid_map`；`FigureBlock` 字段/方法公开面范围更大，需单独 REVIEW
+  - REVIEW 结论：问题真实存在，应提升为 AD-012；先收窄 FigureBlock 公开可变面与导出面，不同时重构 render/event/layout
+    内部遍历
+- id: CAD-008
+  title: PendingMutation reparent cycle invariant audit
+  contract: 结构性变更必须通过 PendingMutation 延迟应用，且 apply 阶段必须维护 FigureGraph 树不变量
+  evolution_kind: architecture
+  priority: high
+  status: promoted
+  evidence:
+  - novadraw-scene/src/scene/mod.rs
+  - novadraw-scene/src/context/mod.rs
+  - novadraw-scene/src/mutation/mod.rs
+  - novadraw-scene/src/scene/update_integration_test.rs
+  promote_when:
+  - 确认 `apply_reparent_mutation` 只校验 old_parent/new_parent 存在，但未拒绝 `child == new_parent`
+    或 `new_parent` 位于 child 子树
+  - 确认自定义 Figure 可通过 `NovadrawContext::reparent_later()` 申请这种结构变更
+  reject_when:
+  - 已有统一祖先链校验能证明 reparent 不会形成环
+  notes:
+  - Discovery 结论：问题真实存在。当前 `apply_reparent_mutation` 在 detach/attach 前已校验目标存在性，但未校验防环；把
+    child reparent 到自身子孙会破坏树结构不变量
+  - 提升为 AD-017；本轮只处理 reparent 防环和回归测试，不混入 `EditorInteractionCore::scene_manager_mut()`
+    内部逃生口或 `FigureGraph::get_block()` 只读 API 收敛
+- id: CAD-009
+  title: Viewport and ScrollPane Figure-tree integration
+  contract: Viewport/ScrollPane 属于 draw2d Figure 级组件，应通过 Figure 树父链坐标协议接入 render /
+    hit-test / damage repair
+  evolution_kind: parity
+  priority: high
+  status: promoted
+  evidence:
+  - "/Users/bytedance/Documents/code/GitHub/gef-classic/org.eclipse.draw2d/src/org/eclipse/draw2d/Viewport.java"
+  - "/Users/bytedance/Documents/code/GitHub/gef-classic/org.eclipse.draw2d/src/org/eclipse/draw2d/ScrollPane.java"
+  - novadraw-scene/src/viewport.rs
+  - novadraw-scene/src/figure/mod.rs
+  - novadraw-scene/src/scene/mod.rs
+  - novadraw-scene/src/update/repair.rs
+  promote_when:
+  - 确认 g2 中 `Viewport` / `ScrollPane` 是 `org.eclipse.draw2d` 的 Figure 级组件，而 GEF 只提供
+    viewer/helper/policy 集成
+  - 确认 Novadraw 当前 `Viewport` 仍是 standalone math helper，未作为 Figure 树坐标根、裁剪容器参与 render
+    / hit-test / damage repair
+  reject_when:
+  - Viewport 被证明只应作为 apps/editor 平台滚动状态，而不影响 Figure 树坐标与裁剪协议
+  notes:
+  - REVIEW 结论：问题真实存在。按 draw2d 对标，Viewport 核心能力应在 `novadraw-scene`；apps/editor 或未来
+    GEF-like 层只负责 mouse wheel、auto-expose、selection feedback 等策略集成
+  - 提升为 AD-018；本轮只实现 Viewport 作为 Figure 树坐标根/裁剪容器的最小协议，不混入 ScrollBar UI、mouse wheel、auto-expose
+    或完整 ScrollPane layout
+- id: CAD-010
+  title: novadraw-scene directory boundary realignment
+  contract: 目录结构应表达职责边界；先做模块边界优化，再做 crate 边界优化
+  evolution_kind: architecture
+  priority: high
+  status: promoted
+  evidence:
+  - doc/01-architecture/ideal-directory-structure.md
+  - novadraw-scene/src/scene_host.rs
+  - novadraw-scene/src/lib.rs
+  promote_when:
+  - 确认 `novadraw-scene/src` 根层仍平铺 host / runtime / graph / container 等不同职责对象
+  - 确认可以拆出不改变外部 facade 的最小目录迁移
+  reject_when:
+  - 目录边界已能清晰表达 host / runtime / graph / container 职责
+  notes:
+  - REVIEW 结论：问题真实存在，但应拆成小步。当前先提升 AD-019A，只移动 SceneHost 到 host 子域，不触碰 Viewport 暂停线、runtime
+    批量迁移或 scene -> graph 大迁移
+items:
+- id: AD-001
+  title: UpdateManager boundary audit
+  contract: UpdateManager 只负责两阶段更新编排，不拥有图级语义
+  evolution_kind: architecture
+  priority: high
+  status: done
+  parent_id: 
+  split_into:
+  - AD-001A
+  - AD-001B
+  - AD-001C
+  verification_scope:
+    delta_verification:
+    - cargo check
+    - cargo test -p novadraw-scene
+    baseline_verification:
+    - "./agent/workflow-verify.sh"
+  baseline_debt_refs:
+  - BASELINE-001
+  evidence:
+  - novadraw-scene/src/update/mod.rs
+  - novadraw-scene/src/update/deferred.rs
+  - apps/editor/src/system.rs
+  progress_notes:
+  - 已将 validation 阶段中的图级语义从 SceneUpdateManager 回收到 FigureGraph
+  - UpdateManager 新增 invalid queue drain 接口，仅保留 phase 触发与队列所有权
+  - repair phase 与 system 调度样板仍待继续审计
+  - backlog review 已确认该条目同时承载 validation / repair / scheduling 三个独立子问题，正式转为 split
+  - AD-001A / AD-001B / AD-001C 均已 verified，父项边界审计已完成并回写状态
+  done_when:
+  - 明确哪些职责应保留在 UpdateManager，哪些应回归 FigureGraph 或组合根
+  - 如需调整接口，调用点可以编译通过
+  - 相关测试通过
+- id: AD-001A
+  title: UpdateManager validation boundary audit
+  contract: UpdateManager 在 validation phase 中不承担图级 validation 语义
+  evolution_kind: architecture
+  priority: high
+  status: verified
+  parent_id: AD-001
+  split_into: []
+  verification_scope:
+    delta_verification:
+    - cargo check
+    - cargo test -p novadraw-scene
+    baseline_verification:
+    - "./agent/workflow-verify.sh"
+  baseline_debt_refs:
+  - BASELINE-001
+  evidence:
+  - novadraw-scene/src/update/mod.rs
+  - novadraw-scene/src/update/deferred.rs
+  - novadraw-scene/src/scene/mod.rs
+  - novadraw-scene/src/scene/update_integration_test.rs
+  progress_notes:
+  - validation 图级语义已从 SceneUpdateManager 回收到 FigureGraph
+  - invalid queue drain 接口已补齐，UpdateManager 仅保留 phase 触发与队列所有权
+  done_when:
+  - validation 阶段不再由 UpdateManager 读取图级语义
+  - FigureGraph 编排 validation cycle，调用链保持可编译
+  - 相关测试通过
+- id: AD-001B
+  title: UpdateManager repair boundary audit
+  contract: UpdateManager 在 repair phase 中不持有不必要的图级语义
+  evolution_kind: architecture
+  priority: high
+  status: verified
+  parent_id: AD-001
+  split_into: []
+  verification_scope:
+    delta_verification:
+    - cargo check
+    - cargo test -p novadraw-scene
+    baseline_verification:
+    - "./agent/workflow-verify.sh"
+  baseline_debt_refs:
+  - BASELINE-001
+  evidence:
+  - novadraw-scene/src/update/deferred.rs
+  - novadraw-scene/src/update/repair.rs
+  - novadraw-scene/src/scene/mod.rs
+  progress_notes:
+  - 根因分析：collect_parent_chain_steps 中 offset=0 是全绝对坐标模型的直接推论，不是 bug
+  - Draw2D 的 dirty rect 是 figure-local（需要 translate），Novadraw 的 dirty rect 是绝对坐标（只需
+    intersect）
+  - 最小修复：更新 repair.rs 文件头注释，显式记录 offset=0 设计决策
+  - 新增 collect_parent_chain_steps_with_offset()，为 figure-local dirty 模型预留
+  - 给测试中 offset 非零的用例添加 figure-local 预留标注
+  - 验证通过：cargo check ✅，13/13 repair tests ✅
+  - 持续工作流 review 复核：repair.rs 已按 draw2d 父链 repairDamage 协议传播 dirty，SceneUpdateManager
+    只持有 dirty queue 与 update phase；cargo test -p novadraw-scene update::repair 14/14
+    ✅
+  done_when:
+  - repair phase 的图语义与算法边界明确
+  - UpdateManager 不重新吞并 FigureGraph 级职责
+  - 相关测试通过
+- id: AD-001C
+  title: Update scheduling boundary audit
+  contract: 更新调度属于组合根 / SceneHost 协作边界，不回流到 UpdateManager
+  evolution_kind: architecture
+  priority: high
+  status: verified
+  parent_id: AD-001
+  split_into: []
+  verification_scope:
+    delta_verification:
+    - cargo check
+    - cargo check -p editor
+    baseline_verification:
+    - "./agent/workflow-verify.sh"
+  baseline_debt_refs:
+  - BASELINE-001
+  evidence:
+  - apps/editor/src/system.rs
+  - apps/editor/src/scene_manager/scene_host.rs
+  - novadraw-scene/src/update/deferred.rs
+  - novadraw-scene/src/scene_host.rs
+  - novadraw-scene/src/system/mod.rs
+  progress_notes:
+  - WinitNovadrawSystem 已用 run_update_transaction() 收口事件/脚本入口的 was_queued -> dispatch
+    -> request_update transition 样板
+  - WinitSceneHost 文档已从 about_to_wait 每帧驱动修正为 request-driven redraw 合帧
+  - SceneHost.execute_update() 会在 host flag 漏同步但 UpdateManager 已 queued 时执行更新，降低双
+    queued flag 漏调度风险
+  - NovadrawSystem 裸访问器已注释为高级逃生口，直接写入 invalid/dirty 时必须位于组合根调度事务中或显式 request_update()
+  - 验证通过：cargo check ✅，cargo check -p editor ✅，cargo test -p editor 7/7 ✅
+  done_when:
+  - redraw / queue / next-cycle 边界清晰
+  - UpdateManager 不承担平台调度职责
+  - 调用链可编译并通过最小验证
+- id: AD-002
+  title: SceneHost thin boundary audit
+  contract: SceneHost 是极薄平台调度层
+  evolution_kind: architecture
+  priority: high
+  status: verified
+  evidence:
+  - apps/editor/src/scene_manager/scene_host.rs
+  - apps/editor/src/system.rs
+  - novadraw-scene/src/scene_host.rs
+  progress_notes:
+  - WinitSceneHost 已移除 editor/render 策略状态 `use_iterative_render`，仅保留 window proxy
+    与 redraw pending 标记
+  - editor 的 `use_iterative_render` 开关已上移到组合根 WinitNovadrawSystem，I 键切换语义保留但不污染 SceneHost
+  - SceneHost 文档已修正 LightweightSystem 职责映射：Canvas / paint entry 对应 SceneHost + RenderBackend，而非旧
+    WinitEventDispatcher 表述
+  - 验证通过：cargo check ✅，cargo check -p editor ✅，cargo test -p editor 7/7 ✅
+  done_when:
+  - 明确 SceneHost 的最小职责集
+  - 平台细节与业务规则边界清晰
+  - 调用链保持可编译
+- id: AD-003
+  title: PendingMutation timing audit
+  contract: 结构性变更必须通过 PendingMutation 在正确时机应用
+  evolution_kind: architecture
+  priority: high
+  status: verified
+  evidence:
+  - novadraw-scene/src/mutation/mod.rs
+  - novadraw-scene/src/context/mod.rs
+  - novadraw-scene/src/scene/mod.rs
+  - apps/editor/src/system.rs
+  - doc/理想架构设计.md
+  progress_notes:
+  - PendingMutation 新增 AddChildFigure，使 Figure 回调能申请新增 child 而不在回调栈内修改 FigureGraph
+  - MutationContext / NovadrawContext 已暴露 add_child_later、remove_child_later、reparent_later
+    等显式 deferred structure mutation API
+  - SceneDispatchContext 现在接收 PendingMutations，SceneNovadrawContext 只 enqueue mutation，不直接改树
+  - editor 在顶层输入分发后继续调用 apply_pending_mutations()，应用时机保持在分发完成之后
+  - 新增测试验证 Figure 回调里的 add_child_later 不会在回调期间挂树，只有 apply_pending_mutations() 后生效
+  - 验证通过：cargo check ✅，cargo test -p novadraw-scene 139/139 + 3 doctests ✅，cargo test
+    -p editor 7/7 ✅
+  done_when:
+  - 应用时机与理想架构一致
+  - 分发期间不直接破坏图结构
+  - 相关验证通过
+- id: AD-004
+  title: NovadrawSystem composition root audit
+  contract: NovadrawSystem 是组合根
+  evolution_kind: architecture
+  priority: medium
+  status: verified
+  evidence:
+  - novadraw/src/lib.rs
+  - apps/editor/src/system.rs
+  - apps/editor/src/app_window.rs
+  progress_notes:
+  - 清理无效代码：移除未接入的 CGEvent mouse simulator 链路、core-graphics 依赖、无调用 logical wrapper、无效
+    layout 统计变量和测试 mock warning
+  - novadraw-scene 声明 debug_render feature，避免 cfg 检查误报
+  - WinitNovadrawSystem 新增 switch_scene、translate_contents、toggle_iterative_render
+    等组合根动作
+  - app_window 键盘入口不再直接通过 scene_manager_mut() 修改场景或图结构，只向组合根提交动作
+  - 验证通过：cargo check ✅，cargo test -p editor 5/5 ✅，cargo test -p novadraw-scene 139/139
+    + 3 doctests ✅
+  done_when:
+  - 组合根职责清晰
+  - 子系统依赖方向稳定
+  - 无额外全局状态引入
+- id: AD-005
+  title: Interaction state ownership audit
+  contract: 交互状态应归属 FigureGraph
+  evolution_kind: architecture
+  priority: medium
+  status: verified
+  evidence:
+  - novadraw-scene/src/event/mod.rs
+  - novadraw-scene/src/context/mod.rs
+  - novadraw-scene/src/scene/mod.rs
+  - apps/editor/src/system.rs
+  - apps/editor/src/scene_manager/interactive_figure.rs
+  - doc/理想架构设计.md
+  progress_notes:
+  - FigureBlock 新增 is_hovered/is_pressed 运行时状态，FigureGraph 提供 is/set accessor
+  - BasicEventDispatcher 通过 DispatchContext 写 hovered/pressed；自身仍不持有交互状态
+  - SceneDispatchContext 将 hovered/pressed 写入转发到 FigureGraph
+  - editor InteractiveRectFigure 移除 Mutex<InteractiveState>，不再在 Figure 内部保存 hovered/pressed/selected
+  - editor 场景构建从直接写 block.is_selected 改为 FigureGraph::set_selected(Some(id))
+  - 测试改为断言 FigureGraph interaction state，验证拖拽出界释放后 hovered/pressed/captured 均清理
+  - 验证通过：cargo check ✅，cargo test -p novadraw-scene 139/139 + 3 doctests ✅，cargo test
+    -p editor 5/5 ✅
+  done_when:
+  - hover/focus/capture 等状态归属明确
+  - 事件分发与状态持有边界清晰
+  - 行为验证通过
+- id: AD-006
+  title: Notification foundation audit
+  contract: 通知体系只承载变化传播，不吞并图状态、调度职责或业务逻辑
+  evolution_kind: architecture
+  priority: high
+  status: verified
+  evidence:
+  - novadraw-scene/src/update/listener.rs
+  - novadraw-scene/src/update/mod.rs
+  - novadraw-scene/src/update/deferred.rs
+  - novadraw-scene/src/scene/mod.rs
+  - doc/理想架构设计.md
+  progress_notes:
+  - UpdateListener trait 已扩展为三个独立方法（on_update_event / on_figure_event / on_notify）
+  - SceneUpdateManager 内部持有 listener 列表，add_listener() 注册接口
+  - perform_update() 末尾统一 flush FigureGraph + SceneUpdateManager 双队列到 listener
+  - editor 端注册 TraceUpdateListener 打通端到端链路
+  - 验证通过：cargo check ✅，126/126 tests ✅，cargo check -p editor ✅
+  done_when:
+  - 明确 Update / Figure / Coordinate / Property 通知的最小职责边界
+  - 至少一种最小通知链路真正接入运行时主干
+  - 不因通知体系引入图状态或调度职责回流
+- id: AD-007
+  title: Coordinate model alignment with g2
+  contract: bounds 表示相对最近坐标根的绝对值；dirty、hit-test、layout、render、event 均沿 draw2d 父链坐标协议闭合
+  evolution_kind: parity
+  priority: high
+  status: verified
+  evidence:
+  - novadraw-scene/src/scene/mod.rs
+  - novadraw-scene/src/update/repair.rs
+  - doc/02-figure/figure_bounds.md
+  - doc/02-figure/figure_tree_position.md
+  - doc/04-coordinates/coordinates.md
+  - org.eclipse.draw2d/src/org/eclipse/draw2d/Figure.java
+  progress_notes:
+  - 已推翻早期“全绝对坐标”过渡契约，改为严格保持 draw2d 的“相对最近坐标根的绝对值”语义
+  - use_local_coordinates 会创建子树坐标根；prim_translate 不传播到子节点，而是触发 CoordinateSystemChanged
+  - dirty / repair 已按产生者坐标域 + 父链 translateToParent 协议传播
+  - hit-test / mouse event dispatch 已按入口域点 + 父链 translateFromParent 降域，并在引擎层转换 MouseEvent.x/y
+  - layout 已统一通过 Bounded::client_area() 获取容器子域；坐标根 client area 原点为 (0,0)
+  - render 的 recursive / iterative 双路径已统一按 client area 裁剪；非坐标根不再错误裁剪完整 bounds
+  - Viewport standalone helper 已完成坐标域审计：screen/world API 改为 viewport/content，origin
+    表示 viewport 左上角对应的 content 坐标
+  - Viewport transform 已按 `viewport = (content - origin) * zoom` 修正，并用非零 origin 测试锁定
+  - 验证通过：cargo test -p novadraw-scene ✅，138/138 tests + 3 doctests ✅
+  done_when:
+  - 文档、注释、测试、实现对 bounds 语义给出一致定义
+  - translate_to_parent / from_parent / absolute / relative 语义明确
+  - dirty / repair / hit-test / render 至少在一条主链上遵守统一坐标契约
+- id: AD-008
+  title: Hot-path logging boundary cleanup
+  contract: event dispatch、hit-test、render 等高频路径默认不打印运行时日志
+  evolution_kind: architecture
+  priority: high
+  status: verified
+  evidence:
+  - novadraw-scene/src/event/mod.rs
+  - novadraw-scene/src/scene/mod.rs
+  - AGENTS.md
+  - CLAUDE.md
+  progress_notes:
+  - BasicEventDispatcher::refresh_mouse_target() 已移除 target transition 的 info/debug
+    日志
+  - FigureGraph::find_mouse_event_target_at/from() 已移除 hit-test 递归下降中的 info/trace
+    日志
+  - 事件语义保持不变：captured 优先、hit target fallback、entered/exited 分发、hovered/pressed 写入和
+    target 坐标转换仍由原链路处理
+  - Grep 确认 event.rs 与 scene.rs 不再包含 tracing::info/debug/trace 或 info/debug/trace
+    宏调用
+  - 验证通过：cargo fmt ✅，cargo check ✅，cargo test -p novadraw-scene 139/139 + 3 doctests
+    ✅，cargo test -p editor 5/5 ✅
+  done_when:
+  - 鼠标移动、事件分发、hit-test 默认路径无运行时日志
+  - 清理不改变事件 target 选择、坐标转换或交互状态写入语义
+  - 相关验证通过
+- id: AD-009
+  title: Figure and FigureBlock formal contract audit
+  contract: Figure 只负责内在能力；FigureBlock 是节点运行时状态容器
+  evolution_kind: architecture
+  priority: high
+  status: verified
+  evidence:
+  - novadraw-scene/src/figure/mod.rs
+  - novadraw-scene/src/scene/mod.rs
+  - novadraw-scene/src/context/mod.rs
+  - agent/governance-contract-coverage.md
+  progress_notes:
+  - 从 contract coverage 提升：C-01 / C-02 仍为 unassessed，阻塞持续工作流终局判定
+  - 本项先做正式审计；若发现职责回流，再拆出更小修复 delta
+  - 审计结论：Figure trait 与具体 figure 未持有 parent/children、FigureGraph、UpdateManager、SceneHost
+    或平台对象，符合内在能力边界
+  - 审计发现并修复：FigureBlock 原包含 paint_selection_overlay() 渲染行为，已迁移为 scene 渲染遍历 helper，FigureBlock
+    回到节点运行时状态容器
+  - 验证通过：cargo fmt ✅，cargo check ✅，cargo test -p novadraw-scene 139/139 + 3 doctests
+    ✅，cargo test -p editor 6/6 ✅
+  done_when:
+  - C-01 / C-02 均完成正式评估
+  - 明确 Figure 是否仍只持有内在数据与内在行为
+  - 明确 FigureBlock 是否只承载节点运行时状态，不持有平台对象或系统服务
+  - 如有偏差，生成新的 candidate 或子 delta；如无偏差，更新 coverage 为 aligned
+- id: AD-010
+  title: Interface boundary escape hatch audit
+  contract: 新接口优先表达职责边界，不为兼容现状引入职责回流
+  evolution_kind: architecture
+  priority: high
+  status: verified
+  evidence:
+  - novadraw-scene/src/system/mod.rs
+  - novadraw-scene/src/context/mod.rs
+  - agent/governance-contract-coverage.md
+  progress_notes:
+  - 从 continuous workflow cycle 2 review 提升：C-09 仍为 partially_aligned
+  - 已知风险点包括 NovadrawSystem 的高级 escape hatch，以及 NovadrawContext 默认 panic 的能力边界表达
+  - 本项应先审计是否存在真实职责回流；若只是显式高级接口且有足够门禁，可更新 coverage，否则拆出最小修复
+  - 审计结论：NovadrawSystem 的 scene/update_manager/dispatcher 可变逃生口当前没有外部调用，保留在公开 trait
+    上会扩大绕过组合根事务的入口
+  - 审计结论：NovadrawContext 默认 panic 将能力缺失推迟到运行时，不适合作为职责边界表达
+  - 最小修复：移除 NovadrawSystem 公开逃生口；NovadrawContext 的 selection 与 deferred mutation 能力改为实现方必须显式提供的方法
+  - 文档同步：理想架构不再示例 system.scene()/dispatcher()/update_manager()，改为组合根命名动作
+  - 验证通过：cargo fmt ✅，cargo check ✅，cargo test -p novadraw-scene 139/139 + 3 doctests
+    ✅，cargo test -p editor 6/6 ✅
+  done_when:
+  - 明确 scene/update_manager/dispatcher 逃生口是否仍需要保留，以及调用门禁是否足够
+  - 明确 NovadrawContext 的可选能力是否应通过 trait 分层、返回 Result、或保持当前 panic 默认实现
+  - 不引入 app/editor 层临时便利接口
+  - C-09 coverage 状态得到更新或生成更小子 delta
+- id: AD-011
+  title: FigureGraph storage encapsulation audit
+  contract: FigureGraph 持有树关系和图级状态；公开接口不能绕过图级不变量
+  evolution_kind: architecture
+  priority: high
+  status: verified
+  parent_id: CAD-002
+  evidence:
+  - novadraw-scene/src/scene/mod.rs
+  - novadraw-scene/src/context/mod.rs
+  - novadraw-scene/src/scene/render_recursive.rs
+  - novadraw-scene/src/scene/render_iterative.rs
+  - novadraw-scene/src/lib.rs
+  progress_notes:
+  - 从 CAD-002 REVIEW 提升：`FigureGraph.blocks` / `uuid_map` 当前是 public 字段，crate 外可直接插入、删除或修改节点，绕过
+    parent/children、uuid、validation、notification、dirty/update 协议
+  - 实际代码中内部模块大量读取 `blocks`；因此最小 delta 应先封装 FigureGraph 存储面，并为 context/render/layout
+    提供受控内部 accessor，不同时重构所有 FigureBlock 字段
+  - "`FigureBlock` 字段和方法公开面是相邻问题，但范围更大，应在 AD-011 后重新评估是否拆出 AD-012"
+  - "`FigureGraph.blocks` / `uuid_map` 已收窄为私有存储；外部 crate 改用 `figure_bounds()` / `set_visible()`
+    等图级命名方法，context 使用 crate 内 `block()` 只读 accessor"
+  - 验证通过：cargo fmt --check ✅，cargo check ✅，cargo check -p editor -p update-app ✅，cargo
+    test -p novadraw-scene 139/139 + 3 doctests ✅，cargo test -p editor 6/6 ✅
+  done_when:
+  - "`FigureGraph.blocks` 与 `uuid_map` 不再是 crate 外 public mutation surface"
+  - 保留必要的只读查询或 crate 内访问能力，避免破坏 render/event/layout 内部遍历
+  - 所有树结构、uuid 映射、selection/hover/pressed、bounds 修改仍必须通过 FigureGraph 命名方法或受控内部 helper"
+  - 不改变 Draw2D 坐标语义、event dispatch 语义或 PendingMutation apply 时机
+  - cargo fmt、cargo check、cargo test -p novadraw-scene、cargo test -p editor 通过
+- id: AD-012
+  title: FigureBlock public mutation surface audit
+  contract: FigureBlock 是节点运行时状态容器；公开接口不能绕过 FigureGraph 图级不变量
+  evolution_kind: architecture
+  priority: high
+  status: verified
+  parent_id: CAD-007
+  evidence:
+  - novadraw-scene/src/scene/mod.rs
+  - novadraw-scene/src/lib.rs
+  - novadraw/src/lib.rs
+  - novadraw-scene/src/update/repair.rs
+  - novadraw-scene/src/scene/render_recursive.rs
+  - novadraw-scene/src/scene/render_iterative.rs
+  progress_notes:
+  - "`FigureBlock` 仍作为 public 类型从 `novadraw-scene` 与 `novadraw` facade 导出，字段 `parent`
+    / `children` / `figure` / `is_selected` / `is_visible` / `is_valid` 等均为 public"
+  - "`FigureBlock::add_child()` 只追加 children，不维护 child parent 或 update/dirty/notification
+    协议"
+  - "`FigureBlock::set_bounds()` / `set_visible()` / `set_enabled()` / `set_figure()`
+    可绕过 FigureGraph 的坐标传播、dirty/update、selection/interaction 与 notification 规则"
+  - 本项只处理 FigureBlock 对 crate 外的公开可变面；render/event/layout 等 crate 内部遍历仍可通过 crate 内
+    helper 读取必要状态
+  - EXECUTE 完成：`FigureBlock` 字段收窄为 `pub(crate)`；删除未使用的 public mutator；保留 `id()` /
+    `uuid()` / size/bounds/count 只读 query
+  - EXECUTE 完成：`novadraw-scene` 与 `novadraw` facade 不再 re-export `FigureBlock`
+  - 验证通过：cargo fmt --check、cargo check、cargo test -p novadraw-scene、cargo test -p
+    editor
+  done_when:
+  - "`FigureBlock` 不再从 crate facade 暴露为可直接构造或可直接改字段的 public mutation surface"
+  - 外部调用方不能通过 FigureBlock 直接修改 parent/children、figure bounds、selection/hover/pressed、visibility/enabled/validity
+    或 layout manager
+  - 保留必要的只读查询能力，或改由 FigureGraph 提供命名 query API
+  - 不改变 Draw2D 坐标语义、render traversal 顺序、event dispatch 语义或 PendingMutation apply 时机
+  - cargo fmt、cargo check、cargo test -p novadraw-scene、cargo test -p editor 通过
+- id: AD-013
+  title: Editor interaction hot-path logging cleanup
+  contract: event dispatch、hit-test、render 等高频路径默认不打印运行时日志
+  evolution_kind: architecture
+  priority: medium
+  status: verified
+  parent_id: CAD-003
+  evidence:
+  - apps/editor/src/system.rs
+  - apps/editor/src/app_window.rs
+  - apps/editor/src/scene_manager/interactive_figure.rs
+  progress_notes:
+  - 从 CAD-003 REVIEW 提升：editor 默认交互路径仍在 mouse move、raw pointer dispatch、Winit CursorMoved、interactive
+    enter/exit 中打印 info 级日志
+  - 本项不重复 AD-008：AD-008 已清理 engine event dispatch / hit-test 热路径，本项只处理 editor 层平台输入与示例
+    Figure 回调的残留日志
+  - TraceUpdateListener 通知日志属于相邻调试输出；本轮若处理，需确保不扩大为通知体系重构
+  - EXECUTE 完成：移除 editor mouse move/press/release、raw pointer move/press/release、Winit
+    CursorMoved、interactive entered/exited 默认 info 日志；保留 InteractionTrace、状态写入、坐标转换和
+    PendingMutation apply 时机
+  - 验证通过：cargo fmt --check、cargo check、cargo test -p editor；目标日志标识 rg 检查无匹配
+  done_when:
+  - editor 鼠标移动、raw pointer、entered/exited 默认路径不再打印 info/debug/trace 日志
+  - 不改变事件 target 选择、坐标转换、InteractionTrace 内容、selection/hover/pressed 状态写入或 PendingMutation
+    apply 时机
+  - 保留测试/手动脚本所需的 trace 返回值；如需日志，只能通过显式 debug feature 或非默认调试入口隔离
+  - cargo fmt --check、cargo check、cargo test -p editor 通过
+- id: AD-014
+  title: Composition root residual read surface audit
+  contract: NovadrawSystem 是组合根；app_window 只做平台输入适配
+  evolution_kind: architecture
+  priority: medium
+  status: verified
+  parent_id: CAD-004
+  evidence:
+  - apps/editor/src/system.rs
+  - apps/editor/src/app_window.rs
+  - apps/editor/src/scene_manager/mod.rs
+  progress_notes:
+  - 从 CAD-004 REVIEW 提升：`WinitNovadrawSystem::scene_manager()` 暴露整个 `SceneManager`
+    只读引用，`app_window` 可直接读取 `current_scene` 并看见 `scene` 结构边界
+  - "`app_window` 使用 `system.scene_manager().current_scene` 判断 DPI 探针与 T 键平移门禁，说明平台输入层仍依赖组合根内部结构，而不是调用组合根命名
+    query/action"
+  - "`app_window` 直接调用 `EditorInteractionCore::logical_from_raw` 只为 DPI 探针取得逻辑坐标；该转换属于
+    editor 输入核心/组合根适配职责，不应要求平台窗口层了解内部 helper"
+  - 最小修复方向：用 `WinitNovadrawSystem` 命名 query/action 替代 `scene_manager()` 逃生口，例如 `is_scene()`
+    / `current_scene()` / `translate_contents_if_scene()`；DPI 探针坐标转换由组合根或独立平台输入 adapter
+    提供
+  - 拆分决定：不处理 CAD-005 理想架构文档旧表述，不处理 CAD-006 PendingMutation 生产阶段边界，不重构 render strategy
+    wiring
+  - EXECUTE 完成：删除 `EditorInteractionCore::scene_manager()` 与 `WinitNovadrawSystem::scene_manager()`
+    只读逃生口；`app_window` 改用 `is_scene()` 与 `translate_contents_if_scene()` 组合根命名 API
+  - EXECUTE 完成：将 raw pointer 逻辑坐标换算收敛到 `RawPointerInput::logical_position()`，`app_window`
+    不再直接引用 `EditorInteractionCore::logical_from_raw`
+  - 验证通过：cargo fmt --check、cargo check、cargo test -p editor；`rg` 确认 `app_window` /
+    `system` 中无 `scene_manager()` 或旧 logical helper 残留
+  done_when:
+  - "`app_window` 不再通过 `scene_manager()` 或 `SceneManager.current_scene` 读取组合根内部结构"
+  - 保留场景切换、DPI 探针、T 键平移、I 键渲染模式切换、H/M/C 手动交互脚本语义
+  - 平台输入层只调用组合根命名 query/action，或调用明确属于平台输入适配的坐标转换 API
+  - "`WinitNovadrawSystem::scene_manager()` 如无内部测试必要，应删除；如需测试访问，必须限制在测试或更窄的只读 query"
+  - 不改变事件分发、坐标转换结果、PendingMutation apply 时机或 UpdateManager 调度语义
+  - cargo fmt --check、cargo check、cargo test -p editor 通过
+- id: AD-015
+  title: Ideal architecture composition-root document cleanup
+  contract: 理想架构文档、契约、coverage 与代码现状一致
+  evolution_kind: architecture
+  priority: medium
+  status: verified
+  parent_id: CAD-005
+  evidence:
+  - doc/理想架构设计.md
+  - agent/governance-contract-coverage.md
+  progress_notes:
+  - 从 CAD-005 REVIEW 提升：理想架构文档仍把 `NovadrawSystem (trait)` 描述为持有 `scene/update_manager/dispatcher/scene_host`，与
+    AD-010 后公开 trait 只暴露 `render` / `viewport_size` / `request_update` 冲突
+  - 文档中多处 `NovadrawSystem.update_manager` / `NovadrawSystem.dispatcher` 旧表述已改为 NovadrawSystem
+    平台实现内部服务，不再暗示公开逃生口
+  - 组合根数据流中的 `WinitEventDispatcher` 旧平台入口已改为 `app_window` 平台输入适配 + `BasicEventDispatcher`
+    引擎无状态分发
+  - 验证通过：目标旧组合根关键词 rg 检查无未处理匹配；git diff --check 通过
+  done_when:
+  - 理想架构文档不再把 `NovadrawSystem trait` 表述为直接持有或暴露 `scene` / `update_manager` / `dispatcher`
+  - 理想架构文档对 UpdateManager / EventDispatcher 的持有关系表述为组合根平台实现内部装配，而不是公开 trait escape
+    hatch
+  - 平台输入入口表述与当前 app_window -> WinitNovadrawSystem 命名动作 -> BasicEventDispatcher 的职责分工一致
+  - 不改变运行时代码，不处理 CAD-006 PendingMutation 生产边界
+- id: AD-016
+  title: PendingMutation production boundary audit
+  contract: 结构性变更必须通过 PendingMutation 延迟应用，且生产阶段边界清晰
+  evolution_kind: architecture
+  priority: medium
+  status: verified
+  parent_id: CAD-006
+  evidence:
+  - novadraw-scene/src/mutation/mod.rs
+  - novadraw-scene/src/scene/mod.rs
+  - novadraw-scene/src/context/mod.rs
+  - novadraw-scene/src/scene/update_integration_test.rs
+  progress_notes:
+  - 从 CAD-006 REVIEW 提升：主路径时序正确，但 mutation 类型层面曾允许外部构造 `PendingMutation`、调用 `PendingMutations::enqueue`，并向
+    `apply_pending_mutations` 传入任意 `Vec<PendingMutation>`
+  - 删除 `PendingMutation::AddChild { parent, child }` 既有节点附加能力；新增 child 只通过 `AddChildFigure`
+    携带 `Box<dyn Figure>`，由 apply 阶段内部 allocate block
+  - "`PendingMutation` / `PendingMutationKind` / `MutationContext` / `PendingMutations::enqueue`
+    收窄为 crate 内部；公开 facade 不再 re-export `MutationContext` 或 `PendingMutation`"
+  - "`PendingMutations::drain()` 返回不可外部伪造的 `PendingMutationBatch`；`FigureGraph::apply_pending_mutations()`
+    只接受 batch，不接受任意 Vec"
+  - "`FigureGraph::allocate_block()` 收窄为 `pub(crate)`，避免 crate 外制造 detached block
+    再寻找低层 attach 路径"
+  - Architecture Review：Go。结构性变更仍只在顶层分发后 apply；本轮减少公开构造面，没有把业务逻辑放入 dispatcher 或 UpdateManager
+  - 验证通过：cargo fmt --check、cargo check、cargo test -p novadraw-scene、cargo test -p
+    editor、API 残留 rg 检查
+  - Review follow-up：修复 apply_add/apply_reparent 在校验目标 parent 前产生副作用的问题；invalid parent/new_parent
+    现在不会 allocate detached block 或 detach 原 child
+  - Follow-up 验证通过：cargo fmt --check、cargo check、cargo test -p novadraw-scene
+  done_when:
+  - crate 外不能构造具体 PendingMutation 或直接 enqueue mutation
+  - 'crate 外不能通过 `PendingMutation::AddChild { child: BlockId }` 把既有 detached block
+    附加到图结构'
+  - "`apply_pending_mutations` 不接受外部任意 Vec，而只接受由 PendingMutations drain 出来的 batch"
+  - dispatch 后 apply 的事务顺序保持不变
+- id: AD-017
+  title: PendingMutation reparent cycle invariant audit
+  contract: 结构性变更必须通过 PendingMutation 延迟应用，且 apply 阶段必须维护 FigureGraph 树不变量
+  evolution_kind: architecture
+  priority: high
+  status: verified
+  parent_id: CAD-008
+  evidence:
+  - novadraw-scene/src/scene/mod.rs
+  - novadraw-scene/src/context/mod.rs
+  - novadraw-scene/src/mutation/mod.rs
+  - novadraw-scene/src/scene/update_integration_test.rs
+  progress_notes:
+  - 从新一轮 discovery 提升：`apply_reparent_mutation` 已校验 child、old_parent、new_parent 存在，但未拒绝把
+    child 挂到自身或自身子孙下
+  - "`NovadrawContext::reparent_later()` 是 Figure 回调公开能力，自定义 Figure 可申请该 reparent；如果
+    apply 阶段允许形成环，会破坏 render/event/layout/update 遍历前提"
+  - 拆分决定：本项只处理 reparent 树不变量，不处理 editor 内部 `scene_manager_mut()` 或 `FigureGraph::get_block()`
+    只读 API 收敛
+  - EXECUTE 完成：新增内部祖先链校验，`apply_reparent_mutation` 在 detach/attach 前拒绝 self reparent
+    与 descendant reparent
+  - 新增回归测试：reparent 到自身、reparent 到子孙均返回 false 且保持原 parent/children 关系
+  - 验证通过：cargo fmt --check、cargo check、cargo test -p novadraw-scene
+  done_when:
+  - "`apply_reparent_mutation` 在 detach/attach 前拒绝 `child == new_parent`"
+  - "`apply_reparent_mutation` 在 detach/attach 前拒绝 `new_parent` 位于 `child` 子树内"
+  - 新增回归测试覆盖 reparent 到自身和 reparent 到子孙均无副作用
+  - 不改变正常 reparent、add/remove PendingMutation 时序或 UpdateManager 调度语义
+  - cargo fmt --check、cargo check、cargo test -p novadraw-scene 通过
+- id: AD-018
+  title: Viewport Figure-tree integration
+  contract: Viewport 属于 draw2d Figure 级组件；应作为 Figure 树坐标根和裁剪容器接入 render / hit-test
+    / damage repair
+  evolution_kind: parity
+  priority: high
+  status: verified
+  parent_id: CAD-009
+  evidence:
+  - novadraw-scene/src/figure/mod.rs
+  - novadraw-scene/src/viewport.rs
+  - novadraw-scene/src/scene/mod.rs
+  - novadraw-scene/src/scene/render_recursive.rs
+  - novadraw-scene/src/scene/render_iterative.rs
+  - novadraw-scene/src/update/repair.rs
+  - novadraw-scene/src/scene/bounds_test.rs
+  - novadraw-scene/src/scene/update_integration_test.rs
+  progress_notes:
+  - 从 CAD-009 REVIEW 提升：g2 中 `Viewport` / `ScrollPane` 位于 draw2d，GEF 只围绕它们提供 viewer/helper/policy
+    集成；Novadraw 不应把 Viewport 状态放到 apps/editor 或 SceneHost
+  - 新增 `ChildTransform`，将普通坐标根和 Viewport 的 child -> parent 变换统一为 Figure 协议，避免在 render
+    / hit-test / repair 三处硬编码 Viewport 分支
+  - 新增 `ViewportFigure`：自身 bounds 位于父坐标域，子节点位于 content 坐标域；`origin` / `zoom` 通过 `child_transform()`
+    与 `client_area()` 接入父链
+  - render recursive / iterative 改为消费 `child_transform()` 和 content-domain client
+    area；hit-test 与 damage repair 复用同一父链协议
+  - 新增回归测试：Viewport 下 hit-test 降域、render 按 content client area 裁剪、damage repair 按
+    origin/zoom 映射到 root 坐标
+  - 验证通过：cargo fmt、cargo check、cargo test -p novadraw-scene
+  done_when:
+  - "`ViewportFigure` 位于 `novadraw-scene`，作为 Figure 树节点而不是 app/editor 平台状态存在"
+  - Viewport 子节点坐标通过统一父链协议转换，不在 render / hit-test / repair 中分别硬编码特殊分支
+  - render 支持 Viewport content client area 裁剪，hit-test 支持 viewport -> content 降域，damage
+    repair 支持 content damage 映射到 root 坐标
+  - 不实现 ScrollBar UI、mouse wheel、auto-expose、selection feedback 或完整 ScrollPane layout
+  - cargo fmt、cargo check、cargo test -p novadraw-scene 通过
+- id: AD-019A
+  title: Host boundary directory split
+  contract: SceneHost 是极薄平台调度层，应归入 host 子域，不与 FigureGraph / runtime / container 根层平铺
+  evolution_kind: architecture
+  priority: high
+  status: verified
+  parent_id: CAD-010
+  evidence:
+  - novadraw-scene/src/host/mod.rs
+  - novadraw-scene/src/host/scene_host.rs
+  - novadraw-scene/src/lib.rs
+  - doc/01-architecture/ideal-directory-structure.md
+  progress_notes:
+  - 按理想目录结构先做模块边界优化，不拆 crate；本轮只迁移 host 边界
+  - 将 `novadraw-scene/src/scene_host.rs` 移入 `novadraw-scene/src/host/scene_host.rs`
+  - 新增 `host/mod.rs` 并继续通过 `novadraw_scene::SceneHost` re-export，外部 facade 不变
+  - 不触碰 Viewport 暂停线，不迁移 runtime，不执行 scene -> graph 大迁移，不修改 render 主循环
+  - 验证通过：cargo fmt --check、cargo check -p novadraw-scene、cargo test -p novadraw-scene
+  done_when:
+  - "`SceneHost` 文件位于 `novadraw-scene/src/host/scene_host.rs`"
+  - "`novadraw_scene::SceneHost` 对外导出路径保持不变"
+  - 不改 `SceneHost` trait 语义，不改 app/editor WinitSceneHost 行为
+  - 不修改 `render_recursive.rs` / `render_iterative.rs` 主循环逻辑
+  - cargo fmt --check、cargo check -p novadraw-scene、cargo test -p novadraw-scene 通过
+- id: AD-019B
+  title: novadraw-scene domain directory realignment
+  contract: novadraw-scene 的物理目录应表达 figure / graph / runtime / host / container 子域边界；crate
+    拆分必须等待依赖方向稳定
+  evolution_kind: architecture
+  priority: high
+  status: verified
+  parent_id: CAD-010
+  evidence:
+  - novadraw-scene/src/figure/border/
+  - novadraw-scene/src/graph/
+  - novadraw-scene/src/runtime/
+  - novadraw-scene/src/container/
+  - novadraw-scene/src/lib.rs
+  - doc/01-architecture/ideal-directory-structure.md
+  progress_notes:
+  - 按用户要求一次性调整当前可安全调整的目录边界
+  - 完成 `scene -> graph`；`context/event/mutation/system/update -> runtime`；`viewport
+    -> container/viewport.rs`；`border -> figure/border`
+  - 保留 root facade alias：`scene`、`update`、`context`、`event`、`mutation`、`system`、`viewport`、`border`
+    仍可从 `novadraw_scene` 访问，降低外部调用迁移风险
+  - 内部模块引用改向新子域路径，避免继续依赖 root re-export facade
+  - 未创建新 crate：`graph/runtime/context/update/mutation` 仍构成内部协作闭环，提前拆 crate 会制造循环依赖或迫使内部协议公开化
+  - 未修改 `render_recursive.rs` / `render_iterative.rs` 主循环逻辑；仅随 `graph/` 目录迁移路径
+  - 验证通过：cargo fmt --check、cargo check --workspace、cargo test -p novadraw-scene
+  done_when:
+  - "`novadraw-scene/src` 根层收敛为 `figure / graph / runtime / host / container / layout
+    / log / lib.rs`"
+  - "`graph` 承载 FigureGraph、hit-test、坐标、render、update integration tests"
+  - "`runtime` 承载 context/event/mutation/system/update"
+  - "`container` 承载 Viewport 等 Figure 级容器"
+  - "`figure/border` 承载 Border 子域"
+  - 保持 `novadraw_scene::*` 既有主要 facade 导出兼容
+  - 不创建新 crate，除非依赖方向已证明不会引入循环依赖
+  - cargo fmt --check、cargo check --workspace、cargo test -p novadraw-scene 通过

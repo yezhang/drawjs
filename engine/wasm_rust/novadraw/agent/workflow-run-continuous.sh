@@ -17,6 +17,10 @@ Required files:
   - ${ROOT_DIR}/agent/governance-architecture-contracts.md
   - ${ROOT_DIR}/agent/governance-contract-coverage.md
   - ${ROOT_DIR}/agent/outer-loop-delta-backlog.yaml
+  - ${ROOT_DIR}/agent/backlog/index.yaml
+  - ${ROOT_DIR}/agent/backlog/active.yaml
+  - ${ROOT_DIR}/agent/backlog/candidates.yaml
+  - ${ROOT_DIR}/agent/backlog/baseline-debts.yaml
   - ${ROOT_DIR}/agent/inner-loop-checkpoint.md
   - ${ROOT_DIR}/agent/inner-loop-worklog.md
   - ${ROOT_DIR}/agent/interruptions-inbox.md

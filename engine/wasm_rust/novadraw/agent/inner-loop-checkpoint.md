@@ -8,11 +8,11 @@
 
 ## Current Delta
 
-- AD-022 Geometry missing types foundation
+- WF-002 Backlog manifest split
 
 ## Current Status
 
-- verified（AD-022 已补齐 `Dimension`、`PointList` 和 precision geometry，并通过 delta verification）
+- verified（WF-002 已将 backlog 拆分为 manifest / index / active / candidates / debts / archive，并通过 workflow doctor）
 
 ## What Was Done
 
@@ -300,6 +300,15 @@
   - 新增 `Precision`、`DEFAULT_EPSILON`、`ApproxEq`，覆盖 `f64`、`Point`、`Rectangle`、`Transform`。
 - **验证**：cargo fmt --check ✅，cargo test -p novadraw-geometry 42/42 ✅，cargo check --workspace ✅。
 
+### 2026-06-11 / WF-002 Backlog manifest split（本轮，verified）
+- **根因分析**：`agent/outer-loop-delta-backlog.yaml` 约 1000 行，混合规则、候选项、基线债务、当前 delta 与历史记录；Agent 每轮全量读取会把冷历史和旧路径证据带入上下文。
+- **最小修复**：
+  - `outer-loop-delta-backlog.yaml` 降级为 manifest。
+  - 新增 `agent/backlog/schema.yaml`、`index.yaml`、`active.yaml`、`candidates.yaml`、`baseline-debts.yaml`、`archive/2026-06.yaml`。
+  - `workflow-doctor.rb` 改为通过 manifest 聚合校验 active/candidates/archive/debts。
+  - workflow 启动脚本和说明文档改为默认读取 index/active，archive 仅审计追溯时读取。
+- **验证**：ruby -c agent/workflow-doctor.rb ✅，ruby agent/workflow-doctor.rb ✅，backlog YAML parse ✅，git diff --check ✅。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
@@ -336,6 +345,7 @@
 - ✅ AD-020 已完成：命令层可验证 Graphics 状态栈嵌套、set/reset transform 快照、clip reset/restore 快照。
 - ✅ AD-021 已完成：`NdCanvas` 不再暴露可变命令 Vec 入口，外部只能通过 Graphics API 生成命令并通过只读快照/提交读取录制结果。
 - ✅ AD-022 已完成：M1 geometry 补齐 `Dimension`、`PointList` 与 precision geometry。
+- ✅ WF-002 已完成：backlog 热路径已拆为 manifest / index / active，冷历史进入 archive，doctor 仍可全量校验。
 
 ## Next Small Step
 
@@ -390,9 +400,13 @@
 - AD-022 cargo fmt --check: passed ✅
 - AD-022 cargo test -p novadraw-geometry: 42/42 tests passed ✅
 - AD-022 cargo check --workspace: passed ✅
+- WF-002 ruby -c agent/workflow-doctor.rb: passed ✅
+- WF-002 ruby agent/workflow-doctor.rb: passed ✅
+- WF-002 backlog YAML parse: passed ✅
+- WF-002 git diff --check: passed ✅
 
 ## Resume Prompt
 
 ```text
-AD-022 Geometry missing types foundation 已完成并通过验证。`novadraw-geometry` 已补齐 `Dimension`、`PointList`、`Precision`/`ApproxEq`，`Size` 保持兼容别名；M1 仍为 `in_progress`。下一轮继续 M1，优先推进 Graphics text/image/alpha command support，或先做 M1 probes 汇总判断是否具备 `contract_aligned` 条件；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
+WF-002 Backlog manifest split 已完成并通过验证。`agent/outer-loop-delta-backlog.yaml` 现在只是 manifest；默认恢复工作读取 `agent/backlog/index.yaml` 和 `agent/backlog/active.yaml`，历史条目位于 `agent/backlog/archive/2026-06.yaml`，仅审计追溯时读取。下一轮回到 M1，优先推进 Graphics text/image/alpha command support，或先做 M1 probes 汇总判断是否具备 `contract_aligned` 条件；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
 ```

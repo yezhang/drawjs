@@ -72,6 +72,32 @@ rescue Psych::SyntaxError => e
   {}
 end
 
+def load_backlog_manifest
+  manifest = load_yaml("agent/outer-loop-delta-backlog.yaml")
+  return { "legacy" => true, "manifest" => manifest } unless manifest["version"] == 2
+
+  entrypoints = manifest["entrypoints"] || {}
+  %w[schema index active candidates baseline_debts].each do |key|
+    fail_check("backlog manifest missing entrypoint: #{key}") unless entrypoints[key]
+    require_file(entrypoints[key]) if entrypoints[key]
+  end
+
+  archives = Array(manifest["archives"])
+  fail_check("backlog manifest archives must not be empty") if archives.empty?
+  archives.each { |relative| require_file(relative) }
+
+  {
+    "legacy" => false,
+    "manifest" => manifest,
+    "schema" => load_yaml(entrypoints["schema"]),
+    "index" => load_yaml(entrypoints["index"]),
+    "active" => load_yaml(entrypoints["active"]),
+    "candidates" => load_yaml(entrypoints["candidates"]),
+    "baseline_debts" => load_yaml(entrypoints["baseline_debts"]),
+    "archives" => archives.map { |relative| load_yaml(relative) },
+  }
+end
+
 def future_delta?(id)
   return false unless id
 
@@ -163,8 +189,27 @@ def check_demo_matrix(milestone_ids)
 end
 
 def check_backlog
-  data = load_yaml("agent/outer-loop-delta-backlog.yaml")
-  all_items = Array(data["candidate_items"]) + Array(data["items"])
+  data = load_backlog_manifest
+  if data["legacy"]
+    manifest = data["manifest"]
+    all_items = Array(manifest["candidate_items"]) + Array(manifest["items"])
+    debts = Array(manifest["baseline_debts"])
+  else
+    schema = data["schema"]
+    %w[selection_rules evolution_kind_definitions hard_gates status_definitions verification_definitions].each do |field|
+      value = schema[field]
+      fail_check("backlog schema missing #{field}") if value.nil? || (value.respond_to?(:empty?) && value.empty?)
+    end
+
+    all_items = Array(data.dig("candidates", "candidate_items")) +
+                Array(data.dig("active", "items")) +
+                data["archives"].flat_map { |archive| Array(archive["candidate_items"]) + Array(archive["items"]) }
+    debts = Array(data.dig("baseline_debts", "baseline_debts"))
+
+    current_delta = data.dig("index", "current_delta")
+    fail_check("backlog index missing current_delta") if current_delta.nil? || current_delta.empty?
+  end
+
   ids = Set.new
 
   all_items.each do |item|
@@ -186,7 +231,11 @@ def check_backlog
     fail_check("#{id} milestone_id must be M1-M10") unless item["milestone_id"] =~ /\AM(?:[1-9]|10)\z/
   end
 
-  Array(data["baseline_debts"]).each do |debt|
+  if defined?(current_delta) && current_delta && !ids.include?(current_delta)
+    fail_check("backlog index current_delta #{current_delta} not found in backlog items")
+  end
+
+  debts.each do |debt|
     id = debt["id"]
     status = debt["status"]
     fail_check("baseline debt missing id") unless id
