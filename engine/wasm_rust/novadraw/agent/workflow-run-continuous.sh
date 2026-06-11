@@ -24,6 +24,7 @@ Required files:
   - ${ROOT_DIR}/agent/quality-workflow-readiness.md
   - ${ROOT_DIR}/agent/quality-testing-strategy.md
   - ${ROOT_DIR}/agent/quality-discover-smoke-test.md
+  - ${ROOT_DIR}/agent/workflow-doctor.rb
 
 Prompt:
 请按 agent/workflow-continuous.md 运行持续架构闭环。

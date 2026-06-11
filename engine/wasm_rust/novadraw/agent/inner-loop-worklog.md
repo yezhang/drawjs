@@ -22,6 +22,22 @@
 
 ## Entries
 
+## 2026-06-11 / Milestone Assessment + WF-001
+
+- Goal: 按最新 `workflow-continuous` 先执行 BOOTSTRAP / ASSESS，检查 M1-M10 达成情况，并补齐 M0 工作流前置校验能力。
+- Milestone Assessment: YAML 与 `goal-roadmap.md` 均显示 M1-M10 全部 `not_started`；代码中已有 M2/M4/M5/M6/M8/M10 等历史局部能力，但未完成 probes / product deliverables / demo matrix 三层验收，因此不直接升级 milestone 状态。
+- Root Cause: 新里程碑体系已经定义状态机、同步规则和 M0 `workflow doctor checks`，但仓库缺少自动化控制器来检测 milestone / roadmap / backlog / checkpoint / debt 的状态漂移，状态一致性仍依赖人工审计。
+- Minimal Fix: 新增 `agent/workflow-doctor.rb`，校验 M0/M1-M10 必填字段、状态机、companion 文件、goal-roadmap 同步、demo matrix 覆盖、backlog id/status/milestone_id、baseline debt 状态、checkpoint schema 与 current delta；将 doctor 接入 `agent/workflow-verify.sh`。
+- Workflow Finding: 首次运行 doctor 发现历史 `candidate_items` 使用 `promoted`，但 backlog 状态定义未声明该状态；本轮将 `promoted` 纳入 `outer-loop-delta-backlog.yaml` 状态定义，保持历史候选迁移语义不变。
+- Files: `agent/workflow-doctor.rb`, `agent/workflow-verify.sh`, `agent/outer-loop-delta-backlog.yaml`, `agent/draw2d-core-milestones.yaml`, `agent/workflow-continuous.md`, `agent/workflow-run-continuous.sh`, `agent/README.md`, `agent/quality-workflow-readiness.md`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: `ruby agent/workflow-doctor.rb` ✅
+- Baseline Verification: `bash agent/workflow-verify.sh` 运行到 `cargo clippy -- -D warnings` 时失败于既有 `apps/vello-app/src/main.rs` 两处 needless borrow；已登记 `BASELINE-002`，不混入 WF-001 修复。
+- Decision: M0 从 `not_started` 推进为 `in_progress`；M1-M10 保持 `not_started`，后续必须通过具体 milestone delta 和 probes 推进。
+- Split Decision: 本轮只做 workflow doctor 与状态模型补齐，不执行 M1 Graphics、M3 裁剪、M6 输入状态机或 M8 Viewport 修复，避免把 workflow gate 与业务能力混在一个 delta。
+- Post-Execution Reflection: 本轮更接近最新工作流目标，因为状态文件不再只靠人工自律，baseline verification 会先检查 milestone/backlog/checkpoint 的机器可检出漂移，为后续 M1-M10 推进提供控制器基础。
+- New Candidate Deltas: 建议新增 M1 Graphics state stack and clip/transform snapshot parity delta（下一轮 REVIEW 后决定正式编号）。
+- Next Step: 回到 REVIEW，选择首个挂 M1-M10 的最小 delta；建议从 M1 Graphics 状态栈与 clip/transform 命令快照开始。
+
 ## 2026-06-10 / AD-019B
 
 - Goal: 按用户要求一次性完成当前可安全调整的 `novadraw-scene` 目录边界，并判断是否创建新 crate。

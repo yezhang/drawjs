@@ -45,7 +45,7 @@
 
 - discover 对某些“需要更广上下文才看得出的薄边界问题”仍然偏弱
 - smoke test 目前仍是文档驱动，尚未形成脚本化回归
-- checkpoint schema 仅完成 v1，没有自动校验工具
+- checkpoint schema 已接入 `agent/workflow-doctor.rb` 初版自动校验，但还需要更多真实轮次验证其误报/漏报边界
 - 状态迁移规则虽写入 README，但还未经过大量真实轮次验证
 
 ## Go / No-Go Checklist
@@ -53,9 +53,9 @@
 在“正式依赖工作流推进架构改进”之前，建议至少满足：
 
 - [ ] 最近一次 smoke test 通过
-- [ ] 当前 checkpoint 满足 `quality-checkpoint-schema.md`
+- [x] 当前 checkpoint 满足 `quality-checkpoint-schema.md`
 - [ ] 当前 backlog 没有明显失焦的大 delta
-- [ ] 当前 baseline debt 已登记，不会误伤本轮判断
+- [x] 当前 baseline debt 已登记，不会误伤本轮判断
 - [ ] README 中的常见场景 prompt 能直接使用，无需大量临时解释
 
 ## Recommended Next Validation

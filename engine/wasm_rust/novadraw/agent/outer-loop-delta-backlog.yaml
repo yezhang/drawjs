@@ -20,6 +20,7 @@ evolution_kind_definitions:
   architecture: 理想架构收敛项，处理职责边界、状态归属、协议时序和依赖方向
   parity: 为实现 g2 等价语义必须补齐的能力缺口
   new_feature: 超出当前理想架构 / g2 等价目标的新能力，默认不进入主线
+  workflow: 工作流控制器、状态校验与治理脚本维护项，不挂 M1-M10 milestone
 
 hard_gates:
   force_split_when:
@@ -34,6 +35,7 @@ hard_gates:
 
 status_definitions:
   candidate: 已发现但尚未进入正式 backlog
+  promoted: 已从候选项提升为正式 delta，并保留在候选区作为迁移记录
   rejected: 已评估但当前不值得进入 backlog
   pending: 已进入正式 backlog，等待执行
   proposed: 已完成根因分析，待实施
@@ -59,6 +61,17 @@ baseline_debts:
       - 全仓存在本轮未修改文件的格式化漂移
       - 当前允许 delta_verification 通过后继续推进，但不能忽略该债务
       - "2026-06-09：本轮执行 `cargo fmt` 后 `cargo fmt --check` 通过，格式化漂移已收敛"
+  - id: BASELINE-002
+    title: Repository-wide clippy needless borrow debt in vello-app
+    status: open
+    impact: low
+    evidence:
+      - ./agent/workflow-verify.sh
+      - apps/vello-app/src/main.rs
+    notes:
+      - "2026-06-11：WF-001 baseline verification 运行到 `cargo clippy -- -D warnings` 时失败"
+      - "失败点为 `apps/vello-app/src/main.rs` 两处 `needless_borrows_for_generic_args`，属于本轮 workflow doctor 之前已存在的 clippy debt"
+      - "不混入 WF-001 修复；后续可用独立 baseline cleanup delta 处理"
 
 candidate_items:
   - id: CAD-001
@@ -869,3 +882,33 @@ items:
       - "保持 `novadraw_scene::*` 既有主要 facade 导出兼容"
       - "不创建新 crate，除非依赖方向已证明不会引入循环依赖"
       - "cargo fmt --check、cargo check --workspace、cargo test -p novadraw-scene 通过"
+
+  - id: WF-001
+    title: Workflow doctor state consistency gate
+    contract: "持续工作流必须能自动检测 milestone、roadmap、backlog、checkpoint 与 baseline debt 的状态漂移"
+    evolution_kind: workflow
+    priority: high
+    status: verified
+    parent_id: M0
+    evidence:
+      - agent/workflow-doctor.rb
+      - agent/workflow-verify.sh
+      - agent/draw2d-core-milestones.yaml
+      - agent/goal-roadmap.md
+      - agent/outer-loop-delta-backlog.yaml
+      - agent/inner-loop-checkpoint.md
+    progress_notes:
+      - "BOOTSTRAP / ASSESS 发现 M1-M10 roadmap 全部 not_started，但代码已有历史能力；这需要用自动化 doctor 区分“代码雏形”和“milestone 验收态”，避免人工状态漂移"
+      - "新增 `agent/workflow-doctor.rb`，校验 M0/M1-M10 必填字段、状态机、companion 文件存在性、goal-roadmap 状态同步、demo matrix 覆盖、backlog id/status/milestone_id、baseline debt 状态、checkpoint schema 与 current delta 可解析性"
+      - "将 `ruby agent/workflow-doctor.rb` 接入 `agent/workflow-verify.sh`，使工作流状态校验进入 baseline verification"
+      - "Doctor 首次运行发现历史 candidate 使用 `promoted` 但状态定义未声明；本轮将 `promoted` 纳入 backlog 状态定义，保持历史记录语义不变"
+      - "验证通过：ruby agent/workflow-doctor.rb"
+      - "Baseline verification：`bash agent/workflow-verify.sh` 在 `cargo clippy -- -D warnings` 失败于既有 `apps/vello-app` needless borrow；已登记 `BASELINE-002`，不混入本轮修复"
+    baseline_debt_refs:
+      - BASELINE-002
+    done_when:
+      - "`agent/workflow-doctor.rb` 可在无外部依赖的前提下运行"
+      - "doctor 能检测 milestone YAML 与 goal-roadmap 状态不一致"
+      - "doctor 能检测新增 architecture/parity delta 缺少 M1-M10 milestone_id"
+      - "doctor 能检测 checkpoint schema 缺失、顺序错误或 current delta 不在 backlog"
+      - "doctor 已接入 `agent/workflow-verify.sh`"

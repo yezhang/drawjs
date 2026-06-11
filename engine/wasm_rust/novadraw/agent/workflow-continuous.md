@@ -48,6 +48,7 @@
    - 读取 `agent/README.md`、`agent/workflow-continuous.md`、`agent/governance-architecture-contracts.md`。
    - 读取 backlog、checkpoint、worklog、coverage、readiness。
    - 读取 `agent/draw2d-core-milestones.yaml`（milestone 编号 SSOT）和 `agent/goal-roadmap.md`（当前进度快照）。
+   - 运行 `ruby agent/workflow-doctor.rb`，先确认 milestone / roadmap / backlog / checkpoint 状态没有机器可检出的漂移。
 
 2. `ASSESS`
    - 校验 checkpoint 是否满足 `quality-checkpoint-schema.md`。

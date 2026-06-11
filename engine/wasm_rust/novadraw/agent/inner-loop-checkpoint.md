@@ -3,16 +3,16 @@
 ## Metadata
 
 - schema_version: 1
-- updated_at: 2026-06-10
+- updated_at: 2026-06-11
 - checkpoint_kind: architecture-loop
 
 ## Current Delta
 
-- AD-019B novadraw-scene domain directory realignment
+- WF-001 Workflow doctor state consistency gate
 
 ## Current Status
 
-- verified（AD-019B 已完成；novadraw-scene 已归位为 figure / graph / runtime / host / container 子域，暂不创建新 crate）
+- verified（最新 workflow 已执行 BOOTSTRAP / ASSESS；M1-M10 达成情况已审计；WF-001 已新增 workflow doctor 并接入 baseline verification）
 
 ## What Was Done
 
@@ -260,6 +260,19 @@
 - **Coverage Decision**：C-03 / C-09 / C-10 保持 aligned，并补充 AD-019B 作为目录边界证据。
 - **验证**：cargo fmt --check ✅，cargo check --workspace ✅，cargo test -p novadraw-scene 146/146 + 3 doctests ✅。
 
+### 2026-06-11 / Milestone Assessment + WF-001（本轮，verified）
+- **BOOTSTRAP**：已读取 `AGENTS.md`、`CLAUDE.md`、`agent/draw2d-core-milestones.yaml`、`agent/goal-roadmap.md`、`agent/workflow-continuous.md`、backlog、checkpoint、coverage、readiness 与 `doc/06-roadmap/`。
+- **Milestone Assessment**：M1-M10 在 YAML 与 roadmap 中全部仍为 `not_started`；代码已有历史能力雏形，但未达到 milestone 的 probes / 产品清单 / demo 三层验收闭环。
+- **关键判断**：M0 `目标与验收框架` 是当前最新 workflow 的前置能力；仓库缺少可自动检测 milestone / backlog / checkpoint / debt 状态漂移的 doctor。
+- **最小修复**：
+  - 新增 `agent/workflow-doctor.rb`。
+  - 校验 M0/M1-M10 必填字段与状态、goal-roadmap 同步、demo matrix 覆盖、backlog id/status/milestone_id、baseline debt 状态、checkpoint schema 与 current delta。
+  - 将 doctor 接入 `agent/workflow-verify.sh`。
+  - 补齐 backlog 中历史 `promoted` candidate 状态定义。
+- **M0 状态**：`agent/draw2d-core-milestones.yaml` 中 M0 从 `not_started` 推进为 `in_progress`；M1-M10 不做乐观升级。
+- **验证**：`ruby agent/workflow-doctor.rb` ✅。
+- **Baseline Verification**：`bash agent/workflow-verify.sh` 在 `cargo clippy -- -D warnings` 失败于既有 `apps/vello-app/src/main.rs` needless borrow；已登记 `BASELINE-002`，不混入本轮修复。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
@@ -291,16 +304,18 @@
 - ⚠️ AD-018 后续视觉验证暂停：Viewport 核心语义已在引擎测试中通过，但 `apps/viewport-app` 的 `clip_to_viewport` 自动截图显示 content 裁剪未生效；恢复时优先查 NdCanvas/Vello clip 与 perform_update repair 路径，不先动渲染主循环。
 - ✅ AD-019A 已完成：`SceneHost` 进入 `host` 子域，facade 导出保持不变；本轮没有触碰 Viewport、runtime、scene->graph 或渲染主循环。
 - ✅ AD-019B 已完成：`novadraw-scene/src` 已收敛为 `figure / graph / runtime / host / container / layout / log / lib.rs`；未创建新 crate，未修改渲染主循环逻辑。
+- ✅ M1-M10 达成情况已按最新 SSOT 审计：全部保持 `not_started`，但 M2/M4/M5/M6/M8/M10 有历史局部实现，后续必须通过各 milestone probes 推进，不按代码存在性直接升级。
+- ✅ WF-001 已完成：workflow doctor 初版可检测 milestone、roadmap、backlog、checkpoint 与 debt 的基础状态漂移，并已接入 `workflow-verify.sh`。
 
 ## Next Small Step
 
-- Viewport 后续开发已暂停；当前不要继续排查 `clip_to_viewport`。
-- 若继续模块拆分，下一步只剩文档和历史路径清扫；代码目录不再需要继续大迁移。crate 拆分应等待 `graph/runtime` 依赖闭环进一步解耦。
+- 当前不要继续排查 Viewport `clip_to_viewport`，该项随 M8 收口。
+- 下一步按最新 workflow 回到 REVIEW：优先创建/选择第一个真正挂 M1-M10 的最小 milestone delta；建议从 M1 Graphics state stack / clip-transform command snapshot 开始，因为 M3 及后续里程碑依赖 M1。
 
 ## Blockers
 
 - BASELINE-001（历史 cargo fmt drift）已通过本轮 `cargo fmt` / `cargo fmt --check` 收敛
-- 当前无新的硬阻塞；注意本地 `master` 仍领先 `origin/master` 1 个未 push 提交
+- 当前无新的硬阻塞；M8 仍有 `INBOX-20260610-01` 暂停项，随 M8 收口。
 
 ## Verification State
 
@@ -334,9 +349,11 @@
 - AD-019B cargo fmt --check: passed ✅
 - AD-019B cargo check --workspace: passed ✅
 - AD-019B cargo test -p novadraw-scene: 146/146 + 3 doctests passed ✅
+- WF-001 ruby agent/workflow-doctor.rb: passed ✅
+- WF-001 baseline verification `bash agent/workflow-verify.sh`: failed on existing BASELINE-002 (`apps/vello-app` clippy needless borrow) ⚠️
 
 ## Resume Prompt
 
 ```text
-AD-019B novadraw-scene domain directory realignment 已完成并通过验证：`novadraw-scene/src` 已收敛为 `figure / graph / runtime / host / container / layout / log / lib.rs`。旧 root facade alias 保持兼容，但内部模块引用已改向新子域路径。未创建新 crate，原因是 `graph/runtime/context/update/mutation` 仍构成内部协作闭环；提前拆 crate 会制造循环依赖或迫使内部协议公开化。Viewport 后续开发仍暂停；不要继续排查 `clip_to_viewport`。
+WF-001 Workflow doctor state consistency gate 已完成并通过 `ruby agent/workflow-doctor.rb`。最新 milestone 审计结论：M1-M10 仍全部保持 `not_started`，历史代码能力不能直接等价为 milestone 验收完成；M0 已进入 `in_progress`。下一轮先 REVIEW 并选择首个挂 M1-M10 的最小 delta，建议从 M1 Graphics state stack / clip-transform command snapshot 开始；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
 ```

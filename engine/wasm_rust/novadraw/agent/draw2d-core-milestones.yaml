@@ -42,7 +42,7 @@ bootstrap:
   id: M0
   title: 目标与验收框架
   type: workflow_prerequisite
-  status: not_started
+  status: in_progress
   goal: >
     Make the Draw2D core target auditable by defining milestone tracking,
     completion gates, workflow doctor checks, and debt classification.

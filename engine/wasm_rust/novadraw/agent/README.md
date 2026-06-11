@@ -37,11 +37,15 @@ title: Solo Coder Architecture Workflow
   - 从产品视角可能像新功能，但仍属于目标范围
 - `new_feature`
   - 超出当前理想架构 / g2 等价目标之外的新能力
+- `workflow`
+  - 工作流控制器、状态校验与治理脚本维护项
+  - 不挂 M1-M10，除非它同时改变 draw2d 核心能力契约
 
 默认规则：
 
 - 工作流默认主动推进 `architecture` 和 `parity`
 - 工作流默认不主动推进 `new_feature`
+- `workflow` 只在工作流门禁或 M0 前置能力不足时推进
 - 若某项属于 `new_feature`，必须在 backlog review 中被显式标记，避免混入主线
 
 ### 如何区分
