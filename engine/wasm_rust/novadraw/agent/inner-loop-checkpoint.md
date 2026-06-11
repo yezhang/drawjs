@@ -8,11 +8,11 @@
 
 ## Current Delta
 
-- AD-018 Viewport Figure-tree integration
+- AD-019B novadraw-scene domain directory realignment
 
 ## Current Status
 
-- verified（AD-018 已完成执行与最小验证；Viewport 已作为 Figure 树坐标根/裁剪容器接入）
+- verified（AD-019B 已完成；novadraw-scene 已归位为 figure / graph / runtime / host / container 子域，暂不创建新 crate）
 
 ## What Was Done
 
@@ -222,7 +222,7 @@
 - **Coverage Decision**：C-08 恢复为 aligned；PendingMutation apply 阶段维护 FigureGraph 树不变量。
 - **验证**：cargo fmt --check ✅，cargo check ✅，cargo test -p novadraw-scene 143/143 + 3 doctests ✅。
 
-### AD-018 Viewport Figure-tree integration（本轮，verified）
+### AD-018 Viewport Figure-tree integration（本轮，verified / visual follow-up paused）
 - **根因分析**：g2 中 `Viewport` / `ScrollPane` 是 draw2d Figure 级组件，GEF 只提供 viewer/helper/policy 集成；Novadraw 当前 `Viewport` 仍是 standalone math helper，尚未通过 Figure 树父链协议参与 render / hit-test / damage repair。
 - **最小修复**：
   - 新增 `ChildTransform`，将普通坐标根和 Viewport 的 child -> parent 变换统一为 Figure 协议。
@@ -231,13 +231,41 @@
   - 新增 Viewport hit-test、render content clip、damage repair origin/zoom 映射回归测试。
 - **Coverage Decision**：C-03 / C-09 保持 aligned；Viewport 核心语义位于 `novadraw-scene`，未回流到 apps/editor 或 SceneHost。
 - **验证**：cargo fmt ✅，cargo check ✅，cargo test -p novadraw-scene 146/146 + 3 doctests ✅。
+- **可视化跟进（暂停）**：
+  - 已新增 `apps/viewport-app` 和 `--screenshot-clip` 自动截图入口，用于验证 `clip_to_viewport`。
+  - 最新截图路径：`apps/viewport-app/screenshot/viewport-app_clip_to_viewport_1781071623.png`。
+  - 截图结论：`clip_to_viewport` 未通过，黄色原点块、蓝/绿网格块出现在黑色 Viewport 边框外，说明 Vello 截图路径中 Viewport content 裁剪未生效。
+  - 用户已要求 Viewport 后续开发暂时搁置；不要继续排查或推进 ScrollPane / Viewport 后续能力。
+  - 恢复时的最小入口：先审查 `NdCanvas::clip_rect` 到 `VelloRenderer::push_clip_layer()` 的状态栈/clip layer 映射，以及 `perform_update -> repair -> render_to_iterative` 调用路径；不要优先修改 `render_recursive.rs` / `render_iterative.rs` 主循环，除非已对标 draw2d 证明主流程不符。
+
+### AD-019A Host boundary directory split（本轮，verified）
+- **根因分析**：`SceneHost` 已被契约定义为极薄平台调度层，但文件仍平铺在 `novadraw-scene/src/scene_host.rs`，目录结构未表达 host 与 graph/runtime/container 的职责边界。
+- **最小修复**：
+  - 新增 `novadraw-scene/src/host/mod.rs`。
+  - 将 `novadraw-scene/src/scene_host.rs` 移动到 `novadraw-scene/src/host/scene_host.rs`。
+  - `novadraw-scene/src/lib.rs` 改为 `pub mod host`，并继续 `pub use host::SceneHost`，保持外部 API 不变。
+- **Coverage Decision**：C-06 保持 aligned，并补充 AD-019A 作为目录边界证据。
+- **验证**：cargo fmt --check ✅，cargo check -p novadraw-scene ✅，cargo test -p novadraw-scene 146/146 + 3 doctests ✅。
+
+### AD-019B novadraw-scene domain directory realignment（本轮，verified）
+- **根因分析**：`novadraw-scene/src` 根层仍平铺 `scene/update/context/event/mutation/system/viewport/border` 等不同职责域，物理目录没有完整表达 `graph/runtime/container/figure` 边界。
+- **最小修复**：
+  - `scene -> graph`。
+  - `context/event/mutation/system/update -> runtime`。
+  - `viewport.rs -> container/viewport.rs`。
+  - `border -> figure/border`。
+  - `lib.rs` 保留 root facade alias，兼容 `novadraw_scene::scene/update/context/event/mutation/system/viewport/border` 旧入口。
+  - 内部模块引用改向新子域路径，避免继续依赖 root re-export facade。
+- **Crate Decision**：暂不创建新 crate；`graph/runtime/context/update/mutation` 仍是内部协作闭环，提前拆 crate 会制造循环依赖或迫使内部协议公开化。
+- **Coverage Decision**：C-03 / C-09 / C-10 保持 aligned，并补充 AD-019B 作为目录边界证据。
+- **验证**：cargo fmt --check ✅，cargo check --workspace ✅，cargo test -p novadraw-scene 146/146 + 3 doctests ✅。
 
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
 - ✅ client area 已统一到 `Bounded::client_area()`，布局与渲染不再各自推导。
 - ✅ `Viewport` 已完成 coordinate-domain audit：API、注释、测试均改为 viewport/content 坐标域，未继续暴露 screen/world 语义。
-- ✅ AD-018 已完成：`ViewportFigure` 作为 Figure 树坐标根和裁剪容器接入 render / hit-test / damage repair。
+- ✅ AD-018 已完成引擎最小验证；⚠️ 后续可视化验证发现 `clip_to_viewport` 截图未通过，Viewport 开发按用户要求暂停。
 - ✅ AD-001C 已完成：调度触发属于组合根 / SceneHost，UpdateManager 不承担平台 redraw 调度。
 - ✅ AD-002 已完成：SceneHost 保持极薄平台调度层，editor/render 策略状态位于组合根。
 - ✅ AD-003 已完成：Figure 回调只记录 pending mutation，结构性改树发生在顶层分发结束后。
@@ -260,12 +288,14 @@
 - ✅ Completion baseline verification 已通过：backlog 无 open/candidate，coverage 无 partially_aligned/unassessed/drifting，`cargo test` 全量通过。
 - ✅ AD-016 Review follow-up 已完成：invalid add/reparent mutation 不再污染图结构。
 - ✅ AD-017 已完成：`apply_reparent_mutation` 在 detach/attach 前拒绝 self reparent 与 descendant reparent，C-08 已恢复 aligned。
-- ✅ AD-018 已完成：Viewport 核心语义位于 `novadraw-scene` Figure 协议；ScrollBar UI / mouse wheel / auto-expose / ScrollPane layout 留作后续独立 delta。
+- ⚠️ AD-018 后续视觉验证暂停：Viewport 核心语义已在引擎测试中通过，但 `apps/viewport-app` 的 `clip_to_viewport` 自动截图显示 content 裁剪未生效；恢复时优先查 NdCanvas/Vello clip 与 perform_update repair 路径，不先动渲染主循环。
+- ✅ AD-019A 已完成：`SceneHost` 进入 `host` 子域，facade 导出保持不变；本轮没有触碰 Viewport、runtime、scene->graph 或渲染主循环。
+- ✅ AD-019B 已完成：`novadraw-scene/src` 已收敛为 `figure / graph / runtime / host / container / layout / log / lib.rs`；未创建新 crate，未修改渲染主循环逻辑。
 
 ## Next Small Step
 
-- 提交 AD-018 相关代码、测试与 workflow 状态；用户此前说明暂不 push。
-- 下一轮如继续迭代，应先回到 discovery/review；ScrollBar UI、mouse wheel、auto-expose、完整 ScrollPane layout 应独立评估，不混入 AD-018。
+- Viewport 后续开发已暂停；当前不要继续排查 `clip_to_viewport`。
+- 若继续模块拆分，下一步只剩文档和历史路径清扫；代码目录不再需要继续大迁移。crate 拆分应等待 `graph/runtime` 依赖闭环进一步解耦。
 
 ## Blockers
 
@@ -297,9 +327,16 @@
 - AD-018 workflow YAML parse: passed ✅
 - AD-018 git diff --check: passed ✅
 - Full cargo clippy -- -D warnings: failed on existing non-AD-018 clippy debt in apps/vello-app and older novadraw-scene modules; not mixed into this delta
+- viewport-app clip_to_viewport visual screenshot: failed / paused ⚠️
+- AD-019A cargo fmt --check: passed ✅
+- AD-019A cargo check -p novadraw-scene: passed ✅
+- AD-019A cargo test -p novadraw-scene: 146/146 + 3 doctests passed ✅
+- AD-019B cargo fmt --check: passed ✅
+- AD-019B cargo check --workspace: passed ✅
+- AD-019B cargo test -p novadraw-scene: 146/146 + 3 doctests passed ✅
 
 ## Resume Prompt
 
 ```text
-AD-018 Viewport Figure-tree integration 已执行并通过最小验证；ViewportFigure 已在 novadraw-scene 中作为 Figure 树坐标根/裁剪容器接入 render、hit-test、damage repair。下一步先提交 AD-018 相关代码、测试与 workflow 状态，暂不 push；若继续迭代，回到 discovery/review 选择新的最小 delta，ScrollBar UI、mouse wheel、auto-expose、完整 ScrollPane layout 不混入本轮。
+AD-019B novadraw-scene domain directory realignment 已完成并通过验证：`novadraw-scene/src` 已收敛为 `figure / graph / runtime / host / container / layout / log / lib.rs`。旧 root facade alias 保持兼容，但内部模块引用已改向新子域路径。未创建新 crate，原因是 `graph/runtime/context/update/mutation` 仍构成内部协作闭环；提前拆 crate 会制造循环依赖或迫使内部协议公开化。Viewport 后续开发仍暂停；不要继续排查 `clip_to_viewport`。
 ```

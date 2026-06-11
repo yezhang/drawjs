@@ -22,6 +22,43 @@
 
 ## Entries
 
+## 2026-06-10 / AD-019B
+
+- Goal: 按用户要求一次性完成当前可安全调整的 `novadraw-scene` 目录边界，并判断是否创建新 crate。
+- Root Cause: `novadraw-scene/src` 根层仍平铺 `scene/update/context/event/mutation/system/viewport/border` 等不同职责域，物理目录没有完整表达 `figure / graph / runtime / host / container` 子域边界。
+- Minimal Fix: 完成 `scene -> graph`、`context/event/mutation/system/update -> runtime`、`viewport.rs -> container/viewport.rs`、`border -> figure/border`；保留 root facade alias 兼容旧外部入口。
+- Crate Decision: 不创建新 crate。依赖扫描显示 `graph/runtime/context/update/mutation` 仍是内部协作闭环，提前拆 crate 会制造循环依赖或迫使 `PendingMutation`、`UpdateManager`、`Context` 等内部协议公开化。
+- Internal Path Decision: 内部模块引用改向新子域路径，避免继续依赖 `lib.rs` root re-export facade；外部 API 通过 `novadraw_scene::*` 保持兼容。
+- Render Guardrail: `render_recursive.rs` 与 `render_iterative.rs` 仅随 `graph/` 移动路径，未修改主循环逻辑。
+- Files: `novadraw-scene/src/figure/border/**`, `novadraw-scene/src/graph/**`, `novadraw-scene/src/runtime/**`, `novadraw-scene/src/container/**`, `novadraw-scene/src/lib.rs`, `agent/outer-loop-delta-backlog.yaml`, `agent/governance-contract-coverage.md`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: cargo fmt --check ✅, cargo check --workspace ✅, cargo test -p novadraw-scene 146/146 + 3 doctests ✅
+- Decision: CAD-010 的代码目录重组已闭环；后续只做文档历史路径清扫，不继续大迁移。
+- Post-Execution Reflection: 本轮更接近理想架构，因为物理目录已经表达 Figure 树核心、运行时服务、宿主边界和容器扩展边界；未来 crate 拆分可以在依赖方向进一步稳定后成为机械迁移。
+
+## 2026-06-10 / AD-019A
+
+- Goal: 以最小风险启动 `novadraw-scene` 目录边界拆分，让平台宿主职责进入 `host` 子域。
+- Root Cause: `SceneHost` 已被契约定义为极薄平台调度层，但文件仍平铺在 `novadraw-scene/src/scene_host.rs`，目录结构未表达 host 与 graph/runtime/container 的职责边界。
+- Minimal Fix: 新增 `novadraw-scene/src/host/mod.rs`，将 `scene_host.rs` 移动到 `host/scene_host.rs`，并保持 `novadraw_scene::SceneHost` facade re-export 不变。
+- Files: `novadraw-scene/src/host/mod.rs`, `novadraw-scene/src/host/scene_host.rs`, `novadraw-scene/src/lib.rs`, `agent/outer-loop-delta-backlog.yaml`, `agent/governance-contract-coverage.md`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: cargo fmt --check ✅, cargo check -p novadraw-scene ✅, cargo test -p novadraw-scene 146/146 + 3 doctests ✅
+- Decision: C-06 保持 aligned，并补充 AD-019A 作为目录边界证据；本轮只移动 host，不拆 crate。
+- Split Decision: 不迁移 runtime，不执行 `scene -> graph` 大迁移，不移动暂停中的 `viewport.rs`，不修改 `render_recursive.rs` / `render_iterative.rs` 主循环。
+- Post-Execution Reflection: 本轮更接近理想架构，因为 `SceneHost` 的物理目录位置与“极薄平台宿主”职责一致，后续 `WinitSceneHost / WebSceneHost / HeadlessSceneHost` 有自然归属。
+- New Candidate Deltas: AD-019B runtime boundary directory split；AD-019C graph boundary directory split；AD-019D container boundary directory split（待 Viewport 恢复后）。
+- Next Step: 如继续模块拆分，优先评估 AD-019B runtime 边界；保持 facade crate `novadraw` 不变。
+
+## 2026-06-10 / Viewport Visual Follow-up Paused
+
+- Goal: 冻结 Viewport 可视化验证现场，按用户要求暂停 Viewport 后续开发。
+- What Was Finished: 已新增 `apps/viewport-app`，包含 `clip_to_viewport`、`origin_scroll`、`zoomed_content`、`nested_viewports` 四个可视化场景；已新增 `--screenshot-clip` 自动截图入口。
+- Visual Verification Result: `cargo run -p viewport-app -- --screenshot-clip` 成功生成 `apps/viewport-app/screenshot/viewport-app_clip_to_viewport_1781071623.png`，但截图未通过，黄色原点块和蓝/绿 content 网格绘制到黑色 Viewport 边框外。
+- Current Hypothesis: 问题不应先归因到 `render_recursive.rs` / `render_iterative.rs` 主循环；恢复时优先审查 `NdCanvas::clip_rect` 到 `VelloRenderer::push_clip_layer()` 的 clip layer / transform 映射，以及 `perform_update -> repair -> render_to_iterative` 截图路径。
+- Guardrail: `render_recursive.rs` 与 `render_iterative.rs` 主循环是保护区，除非已对标 draw2d 证明主流程不符，否则不要改主循环逻辑。
+- Exact Restart Point: 重新运行 `cargo run -p viewport-app -- --screenshot-clip`，打开最新截图，对照黑色 Viewport 边框检查 content 裁剪；然后从 Vello clip 映射和 UpdateManager repair 调用路径开始排查。
+- Decision: 用户要求 Viewport 后续开发暂时搁置；当前不继续修复 `clip_to_viewport`，不推进 ScrollPane / mouse wheel / auto-expose。
+- Next Step: 若继续架构主线，回到 discovery/review，选择非 Viewport 的最小 delta。
+
 ## 2026-06-10 / AD-018
 
 - Goal: 按 draw2d 对标，把 Viewport 从 standalone math helper 推进为 Figure 树中的坐标根和裁剪容器。
