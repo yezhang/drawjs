@@ -962,3 +962,31 @@ items:
       - "`NdCanvas` 不再暴露可变命令 Vec 访问器"
       - "外部只能通过 Graphics API 生成命令，或通过只读命令快照/RenderSubmission 读取录制结果"
       - "cargo fmt --check、cargo test -p novadraw-render、cargo check --workspace 通过且无新增 warning"
+
+  - id: AD-022
+    title: Geometry missing types foundation
+    contract: "M1 geometry substrate must expose Dimension, PointList, and precision comparison primitives as platform-independent value types"
+    evolution_kind: parity
+    milestone_id: M1
+    priority: high
+    status: verified
+    parent_id: null
+    evidence:
+      - novadraw-geometry/src/rect.rs
+      - novadraw-geometry/src/point_list.rs
+      - novadraw-geometry/src/precision.rs
+      - novadraw-geometry/src/lib.rs
+      - agent/goal-roadmap.md
+    progress_notes:
+      - "Root Cause：M1 SSOT 要求 Point、Dimension、Rectangle、Insets、PointList、precision geometry 与 Transform；现有 geometry 只有 Size、Point、Rectangle、Insets、Transform，缺少正式 Dimension 命名、PointList 与统一 precision primitive"
+      - "将正式尺寸类型提升为 `Dimension`，保留 `Size` 作为兼容别名，避免破坏现有调用点"
+      - "新增 `PointList`，封装点序列并提供 bounds、transform、Translatable、iterator 与 serde 语义"
+      - "新增 `Precision`、`DEFAULT_EPSILON` 和 `ApproxEq`，覆盖 f64、Point、Rectangle、Transform 的近似比较"
+      - "新增 geometry 单元测试覆盖 PointList bounds / empty / translate-scale / transform，以及 Precision eq / snap_zero / ApproxEq"
+      - "验证通过：cargo fmt --check、cargo test -p novadraw-geometry、cargo check --workspace"
+    done_when:
+      - "`novadraw_geometry::Dimension` 可作为正式尺寸类型导出，`Size` 保持兼容"
+      - "`novadraw_geometry::PointList` 可表示点序列并支持 bounds、transform、Translatable 与迭代"
+      - "`novadraw_geometry::Precision` 与 `ApproxEq` 可为核心几何类型提供确定性近似比较"
+      - "相关 geometry 单元测试覆盖新增语义"
+      - "cargo fmt --check、cargo test -p novadraw-geometry、cargo check --workspace 通过"

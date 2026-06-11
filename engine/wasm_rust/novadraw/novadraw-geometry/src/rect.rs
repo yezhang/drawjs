@@ -10,16 +10,23 @@ use super::Vec2;
 pub type Point = Vec2;
 
 /// 尺寸类型
+///
+/// 对应 draw2d: org.eclipse.draw2d.geometry.Dimension。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
-#[serde(from = "SizeSerde", into = "SizeSerde")]
-pub struct Size {
+#[serde(from = "DimensionSerde", into = "DimensionSerde")]
+pub struct Dimension {
     /// 宽度
     pub width: f64,
     /// 高度
     pub height: f64,
 }
 
-impl Size {
+/// 尺寸类型兼容别名。
+///
+/// 新代码优先使用 [`Dimension`]；保留 `Size` 是为了兼容现有调用点。
+pub type Size = Dimension;
+
+impl Dimension {
     /// 创建新尺寸
     #[inline]
     pub fn new(width: f64, height: f64) -> Self {
@@ -27,7 +34,7 @@ impl Size {
     }
 
     /// 空尺寸
-    pub const ZERO: Size = Size {
+    pub const ZERO: Dimension = Dimension {
         width: 0.0,
         height: 0.0,
     };
@@ -45,38 +52,38 @@ impl Size {
     }
 }
 
-impl From<(f64, f64)> for Size {
+impl From<(f64, f64)> for Dimension {
     #[inline]
     fn from((width, height): (f64, f64)) -> Self {
-        Size::new(width, height)
+        Dimension::new(width, height)
     }
 }
 
-impl From<Size> for (f64, f64) {
+impl From<Dimension> for (f64, f64) {
     #[inline]
-    fn from(size: Size) -> Self {
-        (size.width, size.height)
+    fn from(dimension: Dimension) -> Self {
+        (dimension.width, dimension.height)
     }
 }
 
-impl std::fmt::Display for Size {
+impl std::fmt::Display for Dimension {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Size({:.4} × {:.4})", self.width, self.height)
+        write!(f, "Dimension({:.4} × {:.4})", self.width, self.height)
     }
 }
 
 #[derive(Serialize, Deserialize)]
-struct SizeSerde(f64, f64);
+struct DimensionSerde(f64, f64);
 
-impl From<SizeSerde> for Size {
-    fn from(val: SizeSerde) -> Self {
-        Size::new(val.0, val.1)
+impl From<DimensionSerde> for Dimension {
+    fn from(val: DimensionSerde) -> Self {
+        Dimension::new(val.0, val.1)
     }
 }
 
-impl From<Size> for SizeSerde {
-    fn from(val: Size) -> Self {
-        SizeSerde(val.width, val.height)
+impl From<Dimension> for DimensionSerde {
+    fn from(val: Dimension) -> Self {
+        DimensionSerde(val.width, val.height)
     }
 }
 

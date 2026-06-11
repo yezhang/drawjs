@@ -8,11 +8,11 @@
 
 ## Current Delta
 
-- AD-021 Seal mutable render command escape hatch
+- AD-022 Geometry missing types foundation
 
 ## Current Status
 
-- verified（AD-021 已移除 `NdCanvas::commands_mut()` 外部可变命令入口，并通过 delta verification）
+- verified（AD-022 已补齐 `Dimension`、`PointList` 和 precision geometry，并通过 delta verification）
 
 ## What Was Done
 
@@ -291,6 +291,15 @@
 - **最小修复**：先收窄为 `pub(crate)`，验证出现 dead_code warning；最终直接移除该接口，只保留 `commands()` 只读快照和 `to_submission()`。
 - **验证**：cargo fmt --check ✅，cargo test -p novadraw-render ✅，cargo check --workspace ✅。
 
+### 2026-06-11 / AD-022 Geometry missing types foundation（本轮，verified）
+- **Milestone**：M1 几何与 Graphics 基础。
+- **根因分析**：M1 要求 `Point, Dimension, Rectangle, Insets, PointList, precision geometry, Transform`；当前 geometry 缺少正式 `Dimension` 命名、点序列封装和统一 precision primitive。
+- **最小修复**：
+  - `Dimension` 成为正式尺寸类型，`Size` 保持兼容别名。
+  - 新增 `PointList`，支持 bounds、transform、Translatable、迭代和 serde。
+  - 新增 `Precision`、`DEFAULT_EPSILON`、`ApproxEq`，覆盖 `f64`、`Point`、`Rectangle`、`Transform`。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-geometry 42/42 ✅，cargo check --workspace ✅。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
@@ -326,11 +335,12 @@
 - ✅ WF-001 已完成：workflow doctor 初版可检测 milestone、roadmap、backlog、checkpoint 与 debt 的基础状态漂移，并已接入 `workflow-verify.sh`。
 - ✅ AD-020 已完成：命令层可验证 Graphics 状态栈嵌套、set/reset transform 快照、clip reset/restore 快照。
 - ✅ AD-021 已完成：`NdCanvas` 不再暴露可变命令 Vec 入口，外部只能通过 Graphics API 生成命令并通过只读快照/提交读取录制结果。
+- ✅ AD-022 已完成：M1 geometry 补齐 `Dimension`、`PointList` 与 precision geometry。
 
 ## Next Small Step
 
 - 当前不要继续排查 Viewport `clip_to_viewport`，该项随 M8 收口。
-- 下一步继续 M1：优先在 `geometry missing types` 与 `Graphics text/image/alpha command support` 中选择一个最小 delta；不要直接跳到 M3 complete。
+- 下一步继续 M1：优先推进 `Graphics text/image/alpha command support`，或做 M1 probes 汇总后判断是否具备 `contract_aligned` 条件；不要直接跳到 M3 complete。
 
 ## Blockers
 
@@ -377,9 +387,12 @@
 - AD-021 cargo fmt --check: passed ✅
 - AD-021 cargo test -p novadraw-render: 3/3 tests passed ✅
 - AD-021 cargo check --workspace: passed ✅
+- AD-022 cargo fmt --check: passed ✅
+- AD-022 cargo test -p novadraw-geometry: 42/42 tests passed ✅
+- AD-022 cargo check --workspace: passed ✅
 
 ## Resume Prompt
 
 ```text
-AD-021 Seal mutable render command escape hatch 已完成并通过验证。`NdCanvas::commands_mut()` 已移除，外部不能直接可变访问命令 Vec；M1 仍为 `in_progress`。下一轮继续 M1，优先选择 geometry missing types 或 Graphics text/image/alpha command support 中的一个最小 delta；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
+AD-022 Geometry missing types foundation 已完成并通过验证。`novadraw-geometry` 已补齐 `Dimension`、`PointList`、`Precision`/`ApproxEq`，`Size` 保持兼容别名；M1 仍为 `in_progress`。下一轮继续 M1，优先推进 Graphics text/image/alpha command support，或先做 M1 probes 汇总判断是否具备 `contract_aligned` 条件；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
 ```

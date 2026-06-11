@@ -6,17 +6,23 @@
 //!
 //! - [`vec2`] - 2D 向量类型
 //! - [`rect`] - 矩形、点、尺寸类型
+//! - [`point_list`] - 点序列类型
+//! - [`precision`] - 几何精度工具
 //! - [`transform`] - 仿射变换
 //! - [`translatable`] - 可变形 Trait 和内边距类型
 
 #![deny(missing_docs)]
 
+pub mod point_list;
+pub mod precision;
 pub mod rect;
 pub mod transform;
 pub mod translatable;
 pub mod vec2;
 
-pub use rect::{Point, Rectangle, Size};
+pub use point_list::PointList;
+pub use precision::{ApproxEq, DEFAULT_EPSILON, Precision};
+pub use rect::{Dimension, Point, Rectangle, Size};
 pub use transform::Transform;
 pub use translatable::{Insets, Translatable};
 pub use vec2::Vec2;

@@ -22,6 +22,22 @@
 
 ## Entries
 
+## 2026-06-11 / AD-022
+
+- Goal: 推进 M1 geometry missing types，补齐 `Dimension`、`PointList` 和 precision geometry 的具体实现与测试。
+- Root Cause: M1 SSOT 要求 `Point, Dimension, Rectangle, Insets, PointList, precision geometry, Transform`；当前 geometry 已有 `Point/Rectangle/Insets/Transform` 和兼容命名 `Size`，但缺少正式 `Dimension` 命名、点序列封装和统一浮点精度比较 primitive。
+- Minimal Fix:
+  - 将正式尺寸类型提升为 `Dimension`，保留 `Size` 作为兼容别名。
+  - 新增 `PointList`，支持 `bounds()`、`transformed()`、`Translatable`、迭代和 serde。
+  - 新增 `Precision`、`DEFAULT_EPSILON`、`ApproxEq`，覆盖 `f64`、`Point`、`Rectangle`、`Transform`。
+- Tests: 新增 `PointList` bounds / empty / translate-scale / transform 测试，新增 Precision eq / snap_zero / ApproxEq 测试。
+- Files: `novadraw-geometry/src/rect.rs`, `novadraw-geometry/src/point_list.rs`, `novadraw-geometry/src/precision.rs`, `novadraw-geometry/src/lib.rs`, `agent/goal-roadmap.md`, `agent/outer-loop-delta-backlog.yaml`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: cargo fmt --check ✅, cargo test -p novadraw-geometry 42/42 ✅, cargo check --workspace ✅
+- Decision: AD-022 挂 M1，状态 `verified`；M1 仍保持 `in_progress`，不升级为 `contract_aligned`。
+- Split Decision: 本轮不处理 Graphics text/image/alpha，也不重命名全仓 `Size` 调用点，避免无价值 churn。
+- Post-Execution Reflection: M1 geometry substrate 更接近 draw2d 命名与基础能力，后续 M2/M3 可以依赖稳定的 Dimension/PointList/Precision 语义。
+- Next Step: 继续 M1，优先补 Graphics text/image/alpha command support，或做 M1 contract probe 汇总后判断是否可推进到 `contract_aligned`。
+
 ## 2026-06-11 / AD-021
 
 - Goal: 收窄 `NdCanvas::commands_mut()` 访问权限，防止外部直接改写命令流破坏 AD-020 引入的 GraphicsState 一致性。

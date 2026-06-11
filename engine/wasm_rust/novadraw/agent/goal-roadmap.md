@@ -42,7 +42,7 @@
 
 | YAML | 标题 | 当前状态 | 备注 |
 |------|------|----------|------|
-| M1 | 几何与 Graphics 基础 | `in_progress` | AD-020 已收口 Graphics state stack / clip-transform command snapshot |
+| M1 | 几何与 Graphics 基础 | `in_progress` | AD-020/021 已收口 Graphics state stack 边界；AD-022 已补 Dimension / PointList / precision geometry |
 | M2 | Figure 树与盒模型 | `not_started` | — |
 | M3 | 绘制遍历与裁剪闭环 | `not_started` | — |
 | M4 | 坐标域与变换闭环 | `not_started` | — |
