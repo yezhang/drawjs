@@ -22,6 +22,19 @@
 
 ## Entries
 
+## 2026-06-11 / AD-021
+
+- Goal: 收窄 `NdCanvas::commands_mut()` 访问权限，防止外部直接改写命令流破坏 AD-020 引入的 GraphicsState 一致性。
+- Root Cause: AD-020 后 `NdCanvas` 开始维护内部 Graphics 状态；公开 `commands_mut()` 会允许外部直接修改 `Vec<RenderCommand>`，却不同步 state/clip_depth/transform，破坏后端替换和录制回放所依赖的命令流确定性。
+- Audit: `commands_mut()` 只有定义自身，没有任何跨 crate 或 crate 内调用。
+- Minimal Fix: 先收窄为 `pub(crate)`，验证出现 dead_code warning；最终直接移除该接口，只保留 `commands()` 只读快照和 `to_submission()`。
+- Files: `novadraw-render/src/context.rs`, `agent/outer-loop-delta-backlog.yaml`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: cargo fmt --check ✅, cargo test -p novadraw-render ✅, cargo check --workspace ✅
+- Decision: AD-021 作为 AD-020 的边界补强，挂 M1，状态 `verified`。
+- Split Decision: 本轮不改命令存储结构、不新增 interpreter conformance tests、不处理 ResetClip 深层语义；只关闭外部可变命令 Vec 入口。
+- Post-Execution Reflection: `NdCanvas` 继续作为 Graphics facade / command recorder，外部无法绕过 Graphics API 篡改命令流，更符合未来后端替换与录制回放设计。
+- Next Step: 继续 M1，优先选择 geometry missing types 或 Graphics text/image/alpha command support 中一个最小 delta。
+
 ## 2026-06-11 / AD-020
 
 - Goal: 启动 M1，补齐 Graphics state stack / clip-transform command snapshot 的最小契约实现与测试。

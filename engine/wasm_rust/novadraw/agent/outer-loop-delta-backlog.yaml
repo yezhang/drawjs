@@ -941,3 +941,24 @@ items:
       - "Vello backend 能解释新增命令并按 clip depth 恢复 scene layer"
       - "新增测试覆盖 state stack nesting 与 clip-transform command snapshot"
       - "cargo fmt --check、cargo test -p novadraw-render、cargo check --workspace 通过"
+
+  - id: AD-021
+    title: Seal mutable render command escape hatch
+    contract: "NdCanvas 内部 Graphics 状态与命令流必须保持一致；外部不能直接可变访问命令 Vec 绕过状态机"
+    evolution_kind: architecture
+    milestone_id: M1
+    priority: high
+    status: verified
+    parent_id: AD-020
+    evidence:
+      - novadraw-render/src/context.rs
+    progress_notes:
+      - "Root Cause：AD-020 后 `NdCanvas` 开始维护内部 GraphicsState；公开的 `commands_mut()` 会允许外部直接改写命令流，却不同步内部 state/clip_depth/transform，破坏录制回放与后端替换所依赖的命令流一致性"
+      - "调用面审计显示 `commands_mut()` 只有定义自身，没有跨 crate 或 crate 内调用"
+      - "先尝试收窄为 `pub(crate)`，验证出现 dead_code warning；最终直接移除该逃生口"
+      - "外部只保留 `commands()` 只读快照与 `to_submission()` 录制回放出口"
+      - "验证通过：cargo fmt --check、cargo test -p novadraw-render、cargo check --workspace"
+    done_when:
+      - "`NdCanvas` 不再暴露可变命令 Vec 访问器"
+      - "外部只能通过 Graphics API 生成命令，或通过只读命令快照/RenderSubmission 读取录制结果"
+      - "cargo fmt --check、cargo test -p novadraw-render、cargo check --workspace 通过且无新增 warning"

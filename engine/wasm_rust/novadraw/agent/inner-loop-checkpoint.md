@@ -8,11 +8,11 @@
 
 ## Current Delta
 
-- AD-020 Graphics state stack and clip-transform command snapshot
+- AD-021 Seal mutable render command escape hatch
 
 ## Current Status
 
-- verified（M1 已启动；AD-020 已完成 Graphics state stack / clip-transform command snapshot，并通过 delta verification）
+- verified（AD-021 已移除 `NdCanvas::commands_mut()` 外部可变命令入口，并通过 delta verification）
 
 ## What Was Done
 
@@ -284,6 +284,13 @@
 - **M1 状态**：`agent/draw2d-core-milestones.yaml` 中 M1 从 `not_started` 推进为 `in_progress`；不标记 `contract_aligned`。
 - **验证**：cargo fmt --check ✅，cargo test -p novadraw-render ✅，cargo check --workspace ✅。
 
+### 2026-06-11 / AD-021 Seal mutable render command escape hatch（本轮，verified）
+- **Milestone**：M1 几何与 Graphics 基础。
+- **根因分析**：AD-020 后 `NdCanvas` 维护内部 GraphicsState；公开 `commands_mut()` 会允许外部直接修改命令流，但不会同步 state/clip_depth/transform，破坏录制回放与后端替换需要的命令流确定性。
+- **调用面审计**：`commands_mut()` 只有定义自身，没有跨 crate 或 crate 内调用。
+- **最小修复**：先收窄为 `pub(crate)`，验证出现 dead_code warning；最终直接移除该接口，只保留 `commands()` 只读快照和 `to_submission()`。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-render ✅，cargo check --workspace ✅。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
@@ -318,6 +325,7 @@
 - ✅ M1 已进入 `in_progress`：AD-020 已收口 Graphics state stack / clip-transform command snapshot；M2-M10 仍保持 `not_started`。
 - ✅ WF-001 已完成：workflow doctor 初版可检测 milestone、roadmap、backlog、checkpoint 与 debt 的基础状态漂移，并已接入 `workflow-verify.sh`。
 - ✅ AD-020 已完成：命令层可验证 Graphics 状态栈嵌套、set/reset transform 快照、clip reset/restore 快照。
+- ✅ AD-021 已完成：`NdCanvas` 不再暴露可变命令 Vec 入口，外部只能通过 Graphics API 生成命令并通过只读快照/提交读取录制结果。
 
 ## Next Small Step
 
@@ -366,9 +374,12 @@
 - AD-020 cargo fmt --check: passed ✅
 - AD-020 cargo test -p novadraw-render: 3/3 tests passed ✅
 - AD-020 cargo check --workspace: passed ✅
+- AD-021 cargo fmt --check: passed ✅
+- AD-021 cargo test -p novadraw-render: 3/3 tests passed ✅
+- AD-021 cargo check --workspace: passed ✅
 
 ## Resume Prompt
 
 ```text
-AD-020 Graphics state stack and clip-transform command snapshot 已完成并通过验证。M1 已从 `not_started` 推进到 `in_progress`；本轮只完成 Graphics 状态栈和 clip/transform 快照，不代表 M1 complete。下一轮继续 M1，优先选择 geometry missing types 或 Graphics text/image/alpha command support 中的一个最小 delta；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
+AD-021 Seal mutable render command escape hatch 已完成并通过验证。`NdCanvas::commands_mut()` 已移除，外部不能直接可变访问命令 Vec；M1 仍为 `in_progress`。下一轮继续 M1，优先选择 geometry missing types 或 Graphics text/image/alpha command support 中的一个最小 delta；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
 ```

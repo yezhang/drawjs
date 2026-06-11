@@ -413,10 +413,6 @@ impl NdCanvas {
         }
     }
 
-    pub fn commands_mut(&mut self) -> &mut Vec<RenderCommand> {
-        &mut self.commands
-    }
-
     pub fn fill_style(&mut self, color: Color) {
         self.state.fill_color = Some(color);
     }
