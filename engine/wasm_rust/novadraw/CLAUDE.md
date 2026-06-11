@@ -30,6 +30,7 @@ apps/editor/       - 编辑器示例
 - **禁止热路径日志**：渲染循环中不打印日志
 - **禁止 magic numbers**：业务代码中不使用硬编码数字
 - **保留渲染模式切换**：`use_iterative_render` 字段和 I 键切换必须保留
+- **保护渲染主循环**：`novadraw-scene/src/scene/render_recursive.rs` 与 `novadraw-scene/src/scene/render_iterative.rs` 是 Draw2D 渲染主流程承载点，通常不应修改主循环逻辑；除非已对标 draw2d 证明当前主流程与 draw2d 不符，否则问题应优先定位到 Figure 协议、坐标转换、NdCanvas 命令、Vello 后端或调用路径
 - **通用机制下沉引擎层**：事件分发、坐标转换、target/source Figure 事件点适配、通用上下文等机制必须位于引擎 crate（如 `novadraw-scene`），`apps/*` 只做平台输入适配与示例编排
 
 ## 提交前检查

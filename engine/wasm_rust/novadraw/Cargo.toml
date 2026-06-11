@@ -15,6 +15,7 @@ members = [
   "apps/style-app",
   "apps/ndcanvas-app",
   "apps/transform-app",
+  "apps/viewport-app",
   "apps/clip-app",
   "apps/layout-app",
   "apps/event-app",

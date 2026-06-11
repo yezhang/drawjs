@@ -11,6 +11,7 @@
 | **shape-app** | 图形类型 | 8 | `cargo run -p shape-app` |
 | **style-app** | 视觉属性 | 7 | `cargo run -p style-app` |
 | **transform-app** | 坐标变换 + 坐标域 | 10 | `cargo run -p transform-app` |
+| **viewport-app** | Viewport Figure 树语义 | 4 | `cargo run -p viewport-app` |
 | **clip-app** | 裁剪机制 | 10 | `cargo run -p clip-app` |
 | **layout-app** | 布局管理 | 8 | `cargo run -p layout-app` |
 | **event-app** | 输入事件 | 10 | `cargo run -p event-app` |
@@ -29,6 +30,7 @@
 | 图形类型 | shape-app | Rectangle, Ellipse, RoundedRect, Polyline, Triangle, Z-Order, Parent-Child |
 | 视觉属性 | style-app | Fill color, Stroke (width/color/cap/join), Alpha, LineJoin, Stroke vs Border |
 | 坐标变换 | transform-app | translate, scale, rotate, 传播, local_coords, 动态 prim_translate |
+| 视口 | viewport-app | ViewportFigure, content 裁剪, origin, zoom, 嵌套 viewport |
 | 裁剪 | clip-app | basic, nested, multi_layer, circle, path, transparent, animation |
 | 布局 | layout-app | XYLayout, FillLayout, FlowLayout, BorderLayout, 嵌套, 约束更新 |
 | 输入事件 | event-app | Mouse, Keyboard, Focus, 事件传播 |
@@ -60,6 +62,7 @@ novadraw/ (workspace)
     ├── shape-app/        ← 图形类型验证
     ├── style-app/        ← 视觉属性验证
     ├── transform-app/    ← 坐标变换验证
+    ├── viewport-app/     ← Viewport Figure 树语义验证
     ├── clip-app/         ← 裁剪验证
     ├── layout-app/       ← 布局验证
     ├── event-app/        ← 事件验证
