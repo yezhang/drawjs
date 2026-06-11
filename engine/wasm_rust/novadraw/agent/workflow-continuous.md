@@ -47,6 +47,7 @@
    - 读取 `AGENTS.md`、`CLAUDE.md`、`doc/理想架构设计.md`。
    - 读取 `agent/README.md`、`agent/workflow-continuous.md`、`agent/governance-architecture-contracts.md`。
    - 读取 backlog、checkpoint、worklog、coverage、readiness。
+   - 读取 `agent/draw2d-core-milestones.yaml`（milestone 编号 SSOT）和 `agent/goal-roadmap.md`（当前进度快照）。
 
 2. `ASSESS`
    - 校验 checkpoint 是否满足 `quality-checkpoint-schema.md`。

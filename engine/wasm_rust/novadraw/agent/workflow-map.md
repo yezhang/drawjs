@@ -77,6 +77,7 @@ flowchart TD
 - 当前进行中的 delta、阻塞点和推荐下一步以 `agent/inner-loop-checkpoint.md` 为准。
 - 状态定义、强制门禁和基线债务以 `agent/outer-loop-delta-backlog.yaml` 为准。
 - 工作流可用等级以 `agent/quality-workflow-readiness.md` 为准。
+- Milestone 编号（M1-M10）、契约与依赖以 `agent/draw2d-core-milestones.yaml` 为准；进度快照与三方文件同步规则以 `agent/goal-roadmap.md` 为准；产品视图与 demo 矩阵以 `doc/06-roadmap/` 为准。
 
 ## 5. 持续运行控制层
 

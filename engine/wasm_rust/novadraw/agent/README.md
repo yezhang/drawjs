@@ -91,6 +91,14 @@ title: Solo Coder Architecture Workflow
 - `agent/workflow-run-once.sh`: 单轮启动器，输出本轮推荐 prompt
 - `agent/workflow-run-continuous.sh`: 持续运行启动器，输出带预算的连续闭环 prompt
 
+### Roadmap
+
+- `agent/draw2d-core-milestones.yaml`: Draw2D 核心 milestone 编号 SSOT（M1-M10），机器可读，持有契约 + probes + 依赖
+- `agent/goal-roadmap.md`: 当前进度快照、阻塞项、三方文件同步规则
+- `doc/06-roadmap/00-index.md`: 三方职能边界说明（YAML 协议 / doc 产品+demo / agent 状态）
+- `doc/06-roadmap/product-deliverables.md`: 每个 milestone 下的产品策略层清单
+- `doc/06-roadmap/demo-matrix.md`: 每个 milestone 配套的 demo + 验证矩阵 + GEF 层探索附录
+
 ## 命名约定
 
 - `governance-*`: 约束、覆盖率、治理视角的文件
@@ -625,6 +633,7 @@ title: Solo Coder Architecture Workflow
 - 如果还不能确定是否值得执行，先作为 `candidate`
 - 若一个 delta 的 `Next Step` 已经分叉成多个独立子问题，必须转为 `split`
 - 判断是否拆分时，优先看“独立根因数量”和“职责边界数量”，代码行数只作辅助参考
+- 自 2026-06-11 起新增的 `architecture` 或 `parity` delta 必须挂 `milestone_id` 字段，引用 `agent/draw2d-core-milestones.yaml` 中的 M1-M10；旧 delta（AD-001 ~ AD-019B 及其 CAD-NNN 前身）免补（祖父条款，详见 `outer-loop-delta-backlog.yaml` 顶层 `milestone_id_policy`）
 
 ## 候选项进入 backlog 的标准
 
@@ -635,6 +644,7 @@ title: Solo Coder Architecture Workflow
 - 不只是一次性观察或模糊抱怨
 - discover 输出若为 `0 个 candidate`，也必须同时说明已审计范围和未审计范围
 - 能明确判定其 `evolution_kind`
+- 能明确该 candidate 关联的 milestone（M1-M10），引用 `agent/draw2d-core-milestones.yaml`；若不属于 M1-M10 范围需在 reject reason 或 notes 中显式说明（如属于 GEF 层早期探索）
 
 ## 状态迁移表
 
