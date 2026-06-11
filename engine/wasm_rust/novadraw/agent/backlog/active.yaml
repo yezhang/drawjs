@@ -160,3 +160,33 @@ items:
   - "历史 done/verified/rejected/promoted 条目进入 archive，不在热路径默认读取"
   - "baseline debt、candidate、schema 独立成文件"
   - "`workflow-doctor.rb` 能跨 manifest 指向的多文件检查 ID 唯一性、状态合法性、milestone_id 与 checkpoint current delta"
+- id: AD-023
+  title: Graphics text image alpha command support
+  contract: M1 Graphics API must record text, image, and alpha semantics into replayable backend-independent commands
+  evolution_kind: parity
+  milestone_id: M1
+  priority: high
+  status: verified
+  parent_id: null
+  evidence:
+  - novadraw-render/src/context.rs
+  - novadraw-render/src/command.rs
+  - agent/backlog/active.yaml
+  - agent/goal-roadmap.md
+  progress_notes:
+  - Root Cause：M1 要求 Graphics draw/fill/text/image/clip/transform/state stack 与 alpha 状态；`NdCanvas`
+    虽已有 `font`、`fill_text`、`stroke_text`、`draw_image`、`global_alpha` API，但这些入口仍是 no-op 或不进入命令流，导致录制回放与后端替换无法验证 text/image/alpha 语义。
+  - "`GraphicsState` 新增 font、font_size、global_alpha，并随 push/restore/pop 一起作用域化。"
+  - "`RenderCommandKind` 新增 `SetGlobalAlpha`；`FillText` / `StrokeText` 携带 font、font_size、color；`Image` 携带 alpha。"
+  - "`NdCanvas::fill_text` / `stroke_text` / `draw_image` / `draw_image_with_size` / `global_alpha` 现在产生可回放命令。"
+  - 形状、路径、文字命令在录制时应用当前 global alpha；透明 alpha 会跳过文字和图像命令。
+  - 新增 render 单元测试覆盖 alpha 作用域、text snapshot、image destination/alpha snapshot、measure_text 字体大小语义。
+  - 验证通过：cargo fmt --check、cargo test -p novadraw-render、cargo check --workspace、cargo check -p
+    novadraw-render --features vello。
+  done_when:
+  - "`NdCanvas::global_alpha` 进入 Graphics state，并输出可回放的 `SetGlobalAlpha` 命令"
+  - "`fill_text` / `stroke_text` 生成携带 font、font_size、color 的命令"
+  - "`draw_image` / `draw_image_with_size` 生成携带 dest_rect、src_rect、alpha 的命令"
+  - "push/restore/pop 能恢复 font 与 alpha 状态"
+  - "新增单元测试覆盖 text/image/alpha command snapshot"
+  - "cargo fmt --check、cargo test -p novadraw-render、cargo check --workspace、cargo check -p novadraw-render --features vello 通过"

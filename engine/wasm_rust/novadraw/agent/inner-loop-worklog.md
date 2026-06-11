@@ -22,6 +22,23 @@
 
 ## Entries
 
+## 2026-06-11 / AD-023
+
+- Goal: 继续 M1，补齐 Graphics text / image / alpha command support。
+- Root Cause: M1 scope 要求 Graphics draw/fill/text/image/clip/transform/state stack 与 alpha 状态；`NdCanvas` 已有 `font`、`fill_text`、`stroke_text`、`draw_image`、`global_alpha` API，但这些入口仍是 no-op 或不进入命令流，导致录制回放与后端替换无法验证 text/image/alpha 语义。
+- Minimal Fix:
+  - `GraphicsState` 新增 `font`、`font_size`、`global_alpha`，随 push/restore/pop 一起作用域化。
+  - `RenderCommandKind` 新增 `SetGlobalAlpha`；`FillText` / `StrokeText` 携带 font、font_size、color；`Image` 携带 alpha。
+  - `NdCanvas::fill_text`、`stroke_text`、`draw_image`、`draw_image_with_size`、`global_alpha` 生成可回放命令。
+  - 形状、路径、文字命令在录制时应用当前 global alpha。
+- Tests: 新增 alpha 作用域、text snapshot、image destination/alpha snapshot、measure_text 字体大小语义测试。
+- Files: `novadraw-render/src/context.rs`, `novadraw-render/src/command.rs`, `agent/backlog/active.yaml`, `agent/backlog/index.yaml`, `agent/goal-roadmap.md`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: cargo fmt --check ✅, cargo test -p novadraw-render 7/7 ✅, cargo check --workspace ✅, cargo check -p novadraw-render --features vello ✅
+- Decision: AD-023 挂 M1，状态 `verified`；M1 仍保持 `in_progress`，下一步先做 M1 probes 汇总判断是否可推进到 `contract_aligned`。
+- Split Decision: 本轮不实现真实 Vello text/image rasterization，不引入 font/image resource manager；只收口 command snapshot 与 Graphics state 语义。
+- Post-Execution Reflection: M1 的 geometry、state stack、clip/transform、text/image/alpha 命令层 probes 已基本具备，可进入 contract probes summary。
+- Next Step: 执行 `M1 contract probes summary`，检查 YAML M1 probes 是否都已有对应测试与证据，再决定是否把 M1 推进到 `contract_aligned`。
+
 ## 2026-06-11 / WF-002
 
 - Goal: 拆分过长的 `agent/outer-loop-delta-backlog.yaml`，降低 Agent 每轮读取 backlog 时的上下文污染。

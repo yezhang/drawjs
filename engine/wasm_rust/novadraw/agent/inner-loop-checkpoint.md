@@ -8,11 +8,11 @@
 
 ## Current Delta
 
-- WF-002 Backlog manifest split
+- AD-023 Graphics text image alpha command support
 
 ## Current Status
 
-- verified（WF-002 已将 backlog 拆分为 manifest / index / active / candidates / debts / archive，并通过 workflow doctor）
+- verified（AD-023 已补齐 Graphics text/image/alpha 命令层语义，并通过 delta verification）
 
 ## What Was Done
 
@@ -309,6 +309,16 @@
   - workflow 启动脚本和说明文档改为默认读取 index/active，archive 仅审计追溯时读取。
 - **验证**：ruby -c agent/workflow-doctor.rb ✅，ruby agent/workflow-doctor.rb ✅，backlog YAML parse ✅，git diff --check ✅。
 
+### 2026-06-11 / AD-023 Graphics text image alpha command support（本轮，verified）
+- **Milestone**：M1 几何与 Graphics 基础。
+- **根因分析**：M1 scope 要求 Graphics text/image/alpha；`NdCanvas` 已有 `font`、`fill_text`、`stroke_text`、`draw_image`、`global_alpha` API，但这些入口仍是 no-op 或不进入命令流，无法用于录制回放和后端替换验证。
+- **最小修复**：
+  - `GraphicsState` 新增 `font`、`font_size`、`global_alpha`，随 push/restore/pop 一起作用域化。
+  - `RenderCommandKind` 新增 `SetGlobalAlpha`；`FillText` / `StrokeText` 携带 font、font_size、color；`Image` 携带 alpha。
+  - `NdCanvas::fill_text`、`stroke_text`、`draw_image`、`draw_image_with_size`、`global_alpha` 生成可回放命令。
+  - 形状、路径、文字命令在录制时应用当前 global alpha。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-render 7/7 ✅，cargo check --workspace ✅，cargo check -p novadraw-render --features vello ✅。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
@@ -346,11 +356,12 @@
 - ✅ AD-021 已完成：`NdCanvas` 不再暴露可变命令 Vec 入口，外部只能通过 Graphics API 生成命令并通过只读快照/提交读取录制结果。
 - ✅ AD-022 已完成：M1 geometry 补齐 `Dimension`、`PointList` 与 precision geometry。
 - ✅ WF-002 已完成：backlog 热路径已拆为 manifest / index / active，冷历史进入 archive，doctor 仍可全量校验。
+- ✅ AD-023 已完成：M1 Graphics text/image/alpha 进入命令层快照，`NdCanvas` 不再把相关 API 保持为 no-op。
 
 ## Next Small Step
 
 - 当前不要继续排查 Viewport `clip_to_viewport`，该项随 M8 收口。
-- 下一步继续 M1：优先推进 `Graphics text/image/alpha command support`，或做 M1 probes 汇总后判断是否具备 `contract_aligned` 条件；不要直接跳到 M3 complete。
+- 下一步继续 M1：执行 `M1 contract probes summary`，检查 YAML M1 probes 是否都已有测试与证据，再决定是否推进到 `contract_aligned`；不要直接跳到 M3 complete。
 
 ## Blockers
 
@@ -404,9 +415,13 @@
 - WF-002 ruby agent/workflow-doctor.rb: passed ✅
 - WF-002 backlog YAML parse: passed ✅
 - WF-002 git diff --check: passed ✅
+- AD-023 cargo fmt --check: passed ✅
+- AD-023 cargo test -p novadraw-render: 7/7 tests passed ✅
+- AD-023 cargo check --workspace: passed ✅
+- AD-023 cargo check -p novadraw-render --features vello: passed ✅
 
 ## Resume Prompt
 
 ```text
-WF-002 Backlog manifest split 已完成并通过验证。`agent/outer-loop-delta-backlog.yaml` 现在只是 manifest；默认恢复工作读取 `agent/backlog/index.yaml` 和 `agent/backlog/active.yaml`，历史条目位于 `agent/backlog/archive/2026-06.yaml`，仅审计追溯时读取。下一轮回到 M1，优先推进 Graphics text/image/alpha command support，或先做 M1 probes 汇总判断是否具备 `contract_aligned` 条件；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
+AD-023 Graphics text image alpha command support 已完成并通过验证。`NdCanvas` 的 `font`、`fill_text`、`stroke_text`、`draw_image`、`global_alpha` 已进入可回放命令流；M1 仍为 `in_progress`。下一轮执行 M1 contract probes summary，检查 geometry operation、Graphics state stack nesting、clip/transform command snapshots、text/image/alpha command snapshots 是否证据齐全，再决定是否推进到 `contract_aligned`；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
 ```

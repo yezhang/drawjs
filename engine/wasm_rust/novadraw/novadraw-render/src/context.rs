@@ -9,6 +9,10 @@ use novadraw_geometry::Transform;
 use crate::command::{Path, RenderCommand, RenderCommandKind};
 use crate::submission::{DamageSet, RenderSubmission};
 
+const DEFAULT_FONT: &str = "sans-serif";
+const DEFAULT_FONT_SIZE: f64 = 12.0;
+const AVERAGE_GLYPH_WIDTH_RATIO: f64 = 0.5;
+
 #[derive(Clone, Debug)]
 struct GraphicsState {
     fill_color: Option<Color>,
@@ -16,6 +20,9 @@ struct GraphicsState {
     stroke_width: f64,
     line_cap: crate::command::LineCap,
     line_join: crate::command::LineJoin,
+    font: String,
+    font_size: f64,
+    global_alpha: f64,
     transform: Transform,
     clip_depth: usize,
 }
@@ -28,6 +35,9 @@ impl Default for GraphicsState {
             stroke_width: 1.0,
             line_cap: crate::command::LineCap::Butt,
             line_join: crate::command::LineJoin::Miter,
+            font: DEFAULT_FONT.to_string(),
+            font_size: DEFAULT_FONT_SIZE,
+            global_alpha: 1.0,
             transform: Transform::IDENTITY,
             clip_depth: 0,
         }
@@ -63,6 +73,14 @@ impl NdCanvas {
     fn create_command(&mut self, kind: RenderCommandKind) {
         let command = RenderCommand { kind };
         self.commands.push(command);
+    }
+
+    fn color_with_global_alpha(&self, color: Color) -> Color {
+        color.with_alpha((color.a * self.state.global_alpha).clamp(0.0, 1.0))
+    }
+
+    fn current_font(&self) -> (String, f64) {
+        (self.state.font.clone(), self.state.font_size)
     }
 
     /// 保存当前状态（压栈）
@@ -142,11 +160,13 @@ impl NdCanvas {
 
     pub fn clear_rect(&mut self, x: f64, y: f64, width: f64, height: f64, color: Color) {
         let rect = [DVec2::new(x, y), DVec2::new(x + width, y + height)];
+        let color = self.color_with_global_alpha(color);
         self.create_command(RenderCommandKind::ClearRect { rect, color });
     }
 
     pub fn fill_rect(&mut self, x: f64, y: f64, width: f64, height: f64, color: Color) {
         let rect = [DVec2::new(x, y), DVec2::new(x + width, y + height)];
+        let color = self.color_with_global_alpha(color);
         self.create_command(RenderCommandKind::FillRect { rect, color });
     }
 
@@ -163,6 +183,7 @@ impl NdCanvas {
         join: crate::command::LineJoin,
     ) {
         let rect = [DVec2::new(x, y), DVec2::new(x + width, y + height)];
+        let color = self.color_with_global_alpha(color);
         self.create_command(RenderCommandKind::StrokeRect {
             rect,
             color,
@@ -188,6 +209,8 @@ impl NdCanvas {
         cap: crate::command::LineCap,
         join: crate::command::LineJoin,
     ) {
+        let fill_color = fill_color.map(|color| self.color_with_global_alpha(color));
+        let stroke_color = stroke_color.map(|color| self.color_with_global_alpha(color));
         self.create_command(RenderCommandKind::Ellipse {
             cx,
             cy,
@@ -213,6 +236,7 @@ impl NdCanvas {
         cap: crate::command::LineCap,
         join: crate::command::LineJoin,
     ) {
+        let color = self.color_with_global_alpha(color);
         self.create_command(RenderCommandKind::Line {
             p1,
             p2,
@@ -237,6 +261,7 @@ impl NdCanvas {
         if points.len() < 2 {
             return;
         }
+        let color = self.color_with_global_alpha(color);
         self.create_command(RenderCommandKind::Polyline {
             points: points.to_vec(),
             color,
@@ -328,6 +353,7 @@ impl NdCanvas {
     pub fn fill(&mut self) {
         if let Some(path) = self.current_path.take() {
             if let Some(color) = self.state.fill_color {
+                let color = self.color_with_global_alpha(color);
                 // 跳过完全透明的颜色
                 if color.a > 0.0 {
                     self.create_command(RenderCommandKind::FillPath { path, color });
@@ -341,6 +367,7 @@ impl NdCanvas {
     pub fn stroke(&mut self) {
         if let Some(path) = self.current_path.take() {
             if let Some(color) = self.state.stroke_color {
+                let color = self.color_with_global_alpha(color);
                 let width = self.state.stroke_width;
                 let line_cap = self.state.line_cap;
                 let line_join = self.state.line_join;
@@ -359,12 +386,14 @@ impl NdCanvas {
     pub fn fill_and_stroke(&mut self) {
         if let Some(path) = self.current_path.take() {
             if let Some(color) = self.state.fill_color {
+                let color = self.color_with_global_alpha(color);
                 self.create_command(RenderCommandKind::FillPath {
                     path: path.clone(),
                     color,
                 });
             }
             if let Some(color) = self.state.stroke_color {
+                let color = self.color_with_global_alpha(color);
                 let width = self.state.stroke_width;
                 let line_cap = self.state.line_cap;
                 let line_join = self.state.line_join;
@@ -439,33 +468,88 @@ impl NdCanvas {
 
     pub fn miter_limit(&mut self, _limit: f64) {}
 
-    pub fn font(&mut self, _font: &str) {}
+    pub fn font(&mut self, font: &str) {
+        self.state.font = font.to_string();
+        self.state.font_size = parse_font_size(font).unwrap_or(DEFAULT_FONT_SIZE);
+    }
 
     pub fn text_align(&mut self, _align: &str) {}
 
     pub fn text_baseline(&mut self, _baseline: &str) {}
 
-    pub fn fill_text(&mut self, _text: &str, _x: f64, _y: f64) {}
-
-    pub fn stroke_text(&mut self, _text: &str, _x: f64, _y: f64) {}
-
-    pub fn measure_text(&mut self, _text: &str) -> f64 {
-        0.0
+    pub fn fill_text(&mut self, text: &str, x: f64, y: f64) {
+        let Some(color) = self.state.fill_color else {
+            return;
+        };
+        let color = self.color_with_global_alpha(color);
+        if color.a <= 0.0 {
+            return;
+        }
+        let (font, font_size) = self.current_font();
+        self.create_command(RenderCommandKind::FillText {
+            text: text.to_string(),
+            position: DVec2::new(x, y),
+            font,
+            font_size,
+            color,
+            max_width: None,
+        });
     }
 
-    pub fn draw_image(&mut self, _image: &crate::command::ImageData, _x: f64, _y: f64) {}
+    pub fn stroke_text(&mut self, text: &str, x: f64, y: f64) {
+        let Some(color) = self.state.stroke_color else {
+            return;
+        };
+        let color = self.color_with_global_alpha(color);
+        if color.a <= 0.0 {
+            return;
+        }
+        let (font, font_size) = self.current_font();
+        self.create_command(RenderCommandKind::StrokeText {
+            text: text.to_string(),
+            position: DVec2::new(x, y),
+            font,
+            font_size,
+            color,
+            max_width: None,
+        });
+    }
+
+    pub fn measure_text(&mut self, text: &str) -> f64 {
+        text.chars().count() as f64 * self.state.font_size * AVERAGE_GLYPH_WIDTH_RATIO
+    }
+
+    pub fn draw_image(&mut self, image: &crate::command::ImageData, x: f64, y: f64) {
+        let width = image.width as f64 / image.scale;
+        let height = image.height as f64 / image.scale;
+        self.draw_image_with_size(image, x, y, width, height);
+    }
 
     pub fn draw_image_with_size(
         &mut self,
-        _image: &crate::command::ImageData,
-        _x: f64,
-        _y: f64,
-        _width: f64,
-        _height: f64,
+        image: &crate::command::ImageData,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
     ) {
+        if self.state.global_alpha <= 0.0 {
+            return;
+        }
+        let dest_rect = [DVec2::new(x, y), DVec2::new(x + width, y + height)];
+        self.create_command(RenderCommandKind::Image {
+            image: image.clone(),
+            dest_rect,
+            src_rect: None,
+            alpha: self.state.global_alpha,
+        });
     }
 
-    pub fn global_alpha(&mut self, _alpha: f64) {}
+    pub fn global_alpha(&mut self, alpha: f64) {
+        let alpha = alpha.clamp(0.0, 1.0);
+        self.state.global_alpha = alpha;
+        self.create_command(RenderCommandKind::SetGlobalAlpha { alpha });
+    }
 
     pub fn global_composite_operation(&mut self, _op: &str) {}
 
@@ -488,6 +572,13 @@ impl NdCanvas {
     pub fn clip_depth(&self) -> usize {
         self.state.clip_depth
     }
+}
+
+fn parse_font_size(font: &str) -> Option<f64> {
+    font.split_whitespace().find_map(|part| {
+        let value = part.strip_suffix("px")?;
+        value.parse::<f64>().ok()
+    })
 }
 
 #[cfg(test)]
@@ -599,5 +690,124 @@ mod tests {
         assert!(matches!(kinds[4], RenderCommandKind::RestoreState));
         assert!(matches!(kinds[5], RenderCommandKind::ResetClip));
         assert!(matches!(kinds[6], RenderCommandKind::PopState));
+    }
+
+    #[test]
+    fn global_alpha_is_scoped_and_applied_to_text_and_shapes() {
+        let mut canvas = NdCanvas::new();
+
+        canvas.fill_style(Color::rgba(1.0, 0.0, 0.0, 0.8));
+        canvas.global_alpha(0.5);
+        canvas.font("20px sans-serif");
+        canvas.fill_text("hello", 10.0, 20.0);
+
+        canvas.push_state();
+        canvas.global_alpha(0.25);
+        canvas.fill_rect(0.0, 0.0, 10.0, 10.0, Color::rgba(0.0, 1.0, 0.0, 0.8));
+        canvas.pop_state();
+
+        canvas.fill_text("restored", 30.0, 40.0);
+
+        let commands = canvas.commands();
+        assert!(matches!(
+            commands[0].kind,
+            RenderCommandKind::SetGlobalAlpha { alpha } if alpha == 0.5
+        ));
+
+        let RenderCommandKind::FillText {
+            ref text,
+            font_size,
+            color,
+            ..
+        } = commands[1].kind
+        else {
+            panic!("expected FillText");
+        };
+        assert_eq!(text, "hello");
+        assert_eq!(font_size, 20.0);
+        assert_eq!(color.a, 0.4);
+
+        let RenderCommandKind::FillRect { color, .. } = commands[4].kind else {
+            panic!("expected FillRect");
+        };
+        assert_eq!(color.a, 0.2);
+
+        let RenderCommandKind::FillText { color, .. } = commands[6].kind else {
+            panic!("expected restored FillText");
+        };
+        assert_eq!(color.a, 0.4);
+    }
+
+    #[test]
+    fn stroke_text_uses_stroke_style_and_current_font_snapshot() {
+        let mut canvas = NdCanvas::new();
+
+        canvas.stroke_style(Color::rgba(0.0, 0.0, 1.0, 0.6));
+        canvas.global_alpha(0.5);
+        canvas.font("18px serif");
+        canvas.stroke_text("outline", 3.0, 4.0);
+
+        let RenderCommandKind::StrokeText {
+            ref text,
+            position,
+            ref font,
+            font_size,
+            color,
+            max_width,
+        } = canvas.commands()[1].kind
+        else {
+            panic!("expected StrokeText");
+        };
+
+        assert_eq!(text, "outline");
+        assert_eq!(position, DVec2::new(3.0, 4.0));
+        assert_eq!(font, "18px serif");
+        assert_eq!(font_size, 18.0);
+        assert_eq!(color.a, 0.3);
+        assert_eq!(max_width, None);
+    }
+
+    #[test]
+    fn draw_image_records_destination_and_alpha_snapshot() {
+        let mut canvas = NdCanvas::new();
+        let image = crate::command::ImageData::from_rgba(20, 10, vec![255; 20 * 10 * 4], 2.0);
+
+        canvas.global_alpha(0.5);
+        canvas.draw_image(&image, 4.0, 5.0);
+        canvas.draw_image_with_size(&image, 10.0, 20.0, 30.0, 40.0);
+
+        let RenderCommandKind::Image {
+            ref image,
+            dest_rect,
+            src_rect,
+            alpha,
+        } = canvas.commands()[1].kind
+        else {
+            panic!("expected Image");
+        };
+        assert_eq!(image.width, 20);
+        assert_eq!(dest_rect, [DVec2::new(4.0, 5.0), DVec2::new(14.0, 10.0)]);
+        assert_eq!(src_rect, None);
+        assert_eq!(alpha, 0.5);
+
+        let RenderCommandKind::Image {
+            dest_rect, alpha, ..
+        } = canvas.commands()[2].kind
+        else {
+            panic!("expected second Image");
+        };
+        assert_eq!(dest_rect, [DVec2::new(10.0, 20.0), DVec2::new(40.0, 60.0)]);
+        assert_eq!(alpha, 0.5);
+    }
+
+    #[test]
+    fn measure_text_uses_current_font_size() {
+        let mut canvas = NdCanvas::new();
+
+        assert_eq!(canvas.measure_text("abcd"), 24.0);
+
+        canvas.font("20px sans-serif");
+
+        assert_eq!(canvas.measure_text("abcd"), 40.0);
     }
 }

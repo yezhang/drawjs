@@ -52,6 +52,12 @@ pub enum RenderCommandKind {
     /// 清空当前裁剪区域
     ResetClip,
 
+    /// 设置全局透明度
+    SetGlobalAlpha {
+        /// 透明度，范围 [0.0, 1.0]
+        alpha: f64,
+    },
+
     /// 清除矩形区域
     ClearRect {
         rect: [glam::DVec2; 2],
@@ -179,6 +185,8 @@ pub enum RenderCommandKind {
         dest_rect: [glam::DVec2; 2],
         /// 源矩形 [左上角, 右下角]，None 表示整个图像
         src_rect: Option<[glam::DVec2; 2]>,
+        /// 绘制透明度
+        alpha: f64,
     },
 
     /// 绘制文字
@@ -203,6 +211,9 @@ pub enum RenderCommandKind {
     FillText {
         text: String,
         position: glam::DVec2,
+        font: String,
+        font_size: f64,
+        color: Color,
         max_width: Option<f64>,
     },
 
@@ -210,6 +221,9 @@ pub enum RenderCommandKind {
     StrokeText {
         text: String,
         position: glam::DVec2,
+        font: String,
+        font_size: f64,
+        color: Color,
         max_width: Option<f64>,
     },
 }

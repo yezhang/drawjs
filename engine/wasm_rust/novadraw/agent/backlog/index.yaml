@@ -1,8 +1,8 @@
 ---
 version: 1
 last_updated: '2026-06-11'
-current_delta: WF-002
-next_recommended_delta: M1 Graphics text/image/alpha command support
+current_delta: AD-023
+next_recommended_delta: M1 contract probes summary
 read_order:
 - agent/backlog/index.yaml
 - agent/backlog/active.yaml
