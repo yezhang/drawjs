@@ -1,5 +1,5 @@
 version: 1
-last_updated: "2026-06-10"
+last_updated: "2026-06-11"
 
 purpose: >
   Track the Draw2D core capability milestones that guide Novadraw toward its
@@ -12,6 +12,18 @@ source_of_truth:
   - doc/01-architecture/ideal-architecture-static.md
   - doc/01-architecture/ideal-architecture-dynamic.md
   - /Users/bytedance/Documents/code/GitHub/gef-classic/org.eclipse.draw2d
+
+companion_views:
+  product_view: doc/06-roadmap/product-deliverables.md
+  demo_view: doc/06-roadmap/demo-matrix.md
+  status_snapshot: agent/goal-roadmap.md
+  view_index: doc/06-roadmap/00-index.md
+
+milestone_id_authority: >
+  This file is the single source of truth for milestone identifiers (M1-M10).
+  Companion views must reference milestone ids defined here and must not invent
+  their own numbering. Any delta, PR, or commit referring to "M{n}" refers to
+  the M{n} defined in this YAML.
 
 status_definitions:
   not_started: Milestone has not been planned into concrete deltas.
@@ -401,14 +413,27 @@ excluded_gef_capabilities:
 
 workflow_integration:
   delta_required_fields:
-    - milestone_id
     - evolution_kind
     - contract
     - done_when
     - verification
-  milestone_id_rule: >
-    Every architecture or parity delta should reference one of M1-M10 unless it
-    is pure workflow maintenance or baseline debt cleanup.
+  delta_conditionally_required_fields:
+    milestone_id:
+      applies_to: "Deltas created on or after 2026-06-11"
+      rule: >
+        Every architecture or parity delta created on or after 2026-06-11 must
+        reference one of M1-M10 defined in this file, unless it is pure
+        workflow maintenance or baseline debt cleanup.
+      grandfathered: >
+        Deltas created before 2026-06-11 (AD-001 through AD-019B and their
+        CAD-NNN predecessors) are not required to backfill milestone_id. They
+        may add it opportunistically when revisited for new work, but missing
+        milestone_id on a pre-2026-06-11 delta is not a workflow blocker.
+      rationale: >
+        The milestone registry (M1-M10) was finalized on 2026-06-11. Earlier
+        deltas were authored without milestone awareness and back-classifying
+        them would risk inaccurate associations. The grandfather rule preserves
+        accuracy while still enforcing milestone_id on all future work.
   completion_audit_layers:
     - Architecture contract coverage
     - Draw2D core milestone coverage
