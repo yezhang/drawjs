@@ -28,6 +28,9 @@ VALID_DELTA_STATUSES = %w[
 ].freeze
 
 VALID_DEBT_STATUSES = %w[open accepted resolved].freeze
+ACTIVE_BACKLOG_STATUSES = %w[pending proposed in_progress blocked split].freeze
+TERMINAL_DELTA_STATUSES = %w[verified done rejected promoted].freeze
+ACTIVE_BACKLOG_MAX_ITEMS = 10
 REQUIRED_CHECKPOINT_SECTIONS = [
   "# Session Checkpoint",
   "## Metadata",
@@ -81,6 +84,7 @@ def load_backlog_manifest
     fail_check("backlog manifest missing entrypoint: #{key}") unless entrypoints[key]
     require_file(entrypoints[key]) if entrypoints[key]
   end
+  require_file(entrypoints["recent"]) if entrypoints["recent"]
 
   archives = Array(manifest["archives"])
   fail_check("backlog manifest archives must not be empty") if archives.empty?
@@ -92,6 +96,7 @@ def load_backlog_manifest
     "schema" => load_yaml(entrypoints["schema"]),
     "index" => load_yaml(entrypoints["index"]),
     "active" => load_yaml(entrypoints["active"]),
+    "recent" => entrypoints["recent"] ? load_yaml(entrypoints["recent"]) : {},
     "candidates" => load_yaml(entrypoints["candidates"]),
     "baseline_debts" => load_yaml(entrypoints["baseline_debts"]),
     "archives" => archives.map { |relative| load_yaml(relative) },
@@ -201,8 +206,31 @@ def check_backlog
       fail_check("backlog schema missing #{field}") if value.nil? || (value.respond_to?(:empty?) && value.empty?)
     end
 
+    active_items = Array(data.dig("active", "items"))
+    if active_items.length > ACTIVE_BACKLOG_MAX_ITEMS
+      fail_check("active backlog has #{active_items.length} items, max #{ACTIVE_BACKLOG_MAX_ITEMS}")
+    end
+    active_items.each do |item|
+      status = item["status"]
+      id = item["id"] || "<missing id>"
+      if TERMINAL_DELTA_STATUSES.include?(status)
+        fail_check("#{id} is terminal but still in active backlog")
+      end
+      unless ACTIVE_BACKLOG_STATUSES.include?(status)
+        fail_check("#{id} has invalid active backlog status: #{status}")
+      end
+    end
+
+    recent_items = Array(data.dig("recent", "items"))
+    fail_check("recent backlog summary has more than 5 items") if recent_items.length > 5
+    recent_items.each do |item|
+      status = item["status"]
+      id = item["id"] || "<missing id>"
+      fail_check("#{id} in recent must be terminal, got #{status}") unless TERMINAL_DELTA_STATUSES.include?(status)
+    end
+
     all_items = Array(data.dig("candidates", "candidate_items")) +
-                Array(data.dig("active", "items")) +
+                active_items +
                 data["archives"].flat_map { |archive| Array(archive["candidate_items"]) + Array(archive["items"]) }
     debts = Array(data.dig("baseline_debts", "baseline_debts"))
 

@@ -1,12 +1,14 @@
 ---
 version: 1
 last_updated: '2026-06-11'
-current_delta: AD-024
+current_delta: WF-003
 next_recommended_delta: M1 product-layer existence checks or M2 kickoff
 read_order:
 - agent/backlog/index.yaml
 - agent/backlog/active.yaml
+- agent/backlog/recent.yaml
 - agent/backlog/candidates.yaml
 notes:
-- Agent resume should read index and active before archive.
+- Agent resume should read index, active, and recent before archive.
+- active.yaml must contain only non-terminal work; terminal deltas move to archive immediately.
 - Archive files are cold history and should be read only for audit or conflict resolution.

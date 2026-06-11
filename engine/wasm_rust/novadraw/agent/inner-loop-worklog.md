@@ -22,6 +22,23 @@
 
 ## Entries
 
+## 2026-06-11 / WF-003
+
+- Goal: 收敛 `active.yaml` 生命周期，避免 backlog 拆分后热路径文件继续因终态条目增长而污染 Agent 上下文。
+- Root Cause: WF-002 只完成物理拆分，未定义 active 的生命周期边界；`verified` 终态 delta 仍滞留在 `agent/backlog/active.yaml`，导致恢复工作时默认读取冷历史。
+- Minimal Fix:
+  - 将 `active.yaml` 压缩为只保存非终态工作，当前 `items: []`。
+  - 将原 active 终态条目迁入 `agent/backlog/archive/2026-06.yaml`。
+  - 新增 `agent/backlog/recent.yaml`，保留最近 5 个终态 delta 摘要。
+  - 更新 `workflow-doctor.rb`，禁止终态条目滞留 active，限制 active 最大 10 项，并校验 recent 只包含终态摘要。
+  - 更新 workflow 文档与启动脚本，使默认热路径读取 `index.yaml`、`active.yaml`、`recent.yaml`，archive 仅用于审计追溯。
+- Files: `agent/outer-loop-delta-backlog.yaml`, `agent/backlog/index.yaml`, `agent/backlog/active.yaml`, `agent/backlog/recent.yaml`, `agent/backlog/archive/2026-06.yaml`, `agent/workflow-doctor.rb`, `agent/workflow-continuous.md`, `agent/README.md`, `agent/workflow-run-continuous.sh`, `agent/workflow-run-once.sh`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: ruby -c agent/workflow-doctor.rb ✅, ruby agent/workflow-doctor.rb ✅, backlog YAML parse ✅, git diff --check ✅
+- Decision: WF-003 状态 `verified`；active backlog 的语义从“当前和近期”收窄为“仅非终态工作”，recent 是短摘要，不是完整历史 SSOT。
+- Split Decision: 本轮不重写 archive 中的历史条目结构，不按月重分旧 archive；只修正热路径生命周期和机器门禁。
+- Post-Execution Reflection: 本轮从根因上解决 active 文件继续膨胀的问题，后续 Agent 恢复只需要读取热路径和 recent 摘要，冷历史不会默认进入上下文。
+- Next Step: 继续 M1 product-layer existence checks 以准备 `behavior_verified`，或在依赖允许的前提下启动 M2。
+
 ## 2026-06-11 / AD-024
 
 - Goal: 生成 M1 contract probes summary，判断 M1 是否可以从 `in_progress` 推进到 `contract_aligned`。

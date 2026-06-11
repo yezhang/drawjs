@@ -67,9 +67,10 @@ title: Solo Coder Architecture Workflow
 
 ### Outer Loop
 
-- `agent/outer-loop-delta-backlog.yaml`: backlog manifest，只保存 schema / index / active / candidates / baseline debts / archive 入口
+- `agent/outer-loop-delta-backlog.yaml`: backlog manifest，只保存 schema / index / active / recent / candidates / baseline debts / archive 入口
 - `agent/backlog/index.yaml`: Agent 热路径入口，记录当前 delta、下一步建议和默认读取顺序
-- `agent/backlog/active.yaml`: 当前和近期 delta；恢复工作时优先读取，避免历史噪音污染上下文
+- `agent/backlog/active.yaml`: 当前非终态 delta；只允许 `pending` / `proposed` / `in_progress` / `blocked` / `split`
+- `agent/backlog/recent.yaml`: 最近 5 个终态 delta 的极简摘要；用于快速了解刚完成的工作，完整历史仍以 archive 为准
 - `agent/backlog/candidates.yaml`: 尚未评估或待提升的候选项
 - `agent/backlog/baseline-debts.yaml`: baseline verification 债务
 - `agent/backlog/archive/*.yaml`: 已完成、已拒绝、已提升的冷历史；只在审计、追溯或冲突排查时读取
@@ -238,6 +239,13 @@ title: Solo Coder Architecture Workflow
 - `verified`: 已通过验证
 - `done`: 已完成并回写状态
 
+### Active 生命周期
+
+- `active.yaml` 只保存非终态工作：`pending`、`proposed`、`in_progress`、`blocked`、`split`。
+- `verified`、`done`、`rejected`、`promoted` 属于终态，完成记录后必须迁入 `agent/backlog/archive/YYYY-MM.yaml`。
+- `recent.yaml` 只保留最近 5 个终态 delta 的极简摘要，帮助恢复上下文；它不是完整历史 SSOT。
+- `workflow-doctor.rb` 会拒绝终态条目滞留 `active.yaml`，并在 active 条目超过 10 个时失败。
+
 ## 契约覆盖视图
 
 为了确认代码在整体上持续逼近理想架构，不只跟踪 delta，还要跟踪契约收敛状态。
@@ -266,6 +274,7 @@ title: Solo Coder Architecture Workflow
 - `agent/outer-loop-delta-backlog.yaml`
 - `agent/backlog/index.yaml`
 - `agent/backlog/active.yaml`
+- `agent/backlog/recent.yaml`
 - `agent/backlog/candidates.yaml`
 - `agent/governance-contract-coverage.md`
 - `agent/quality-discover-smoke-test.md`
@@ -312,6 +321,7 @@ title: Solo Coder Architecture Workflow
 - `agent/outer-loop-delta-backlog.yaml`
 - `agent/backlog/index.yaml`
 - `agent/backlog/active.yaml`
+- `agent/backlog/recent.yaml`
 - `agent/inner-loop-checkpoint.md`
 
 然后输出：
@@ -338,7 +348,8 @@ title: Solo Coder Architecture Workflow
 - 先说明根因
 - 给最小修改方案
 - 修改代码并验证
-- 更新 `agent/backlog/active.yaml` / `agent/backlog/candidates.yaml` / `agent/backlog/baseline-debts.yaml`
+- 更新 `agent/backlog/active.yaml` / `agent/backlog/recent.yaml` / `agent/backlog/candidates.yaml` / `agent/backlog/baseline-debts.yaml`
+- 终态 delta 必须从 `active.yaml` 迁入 `agent/backlog/archive/YYYY-MM.yaml`，并刷新 `recent.yaml`
 - 更新 `inner-loop-checkpoint.md`
 - 追加 `inner-loop-worklog.md`
 - 更新 `governance-contract-coverage.md`

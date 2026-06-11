@@ -46,7 +46,7 @@
 1. `BOOTSTRAP`
    - 读取 `AGENTS.md`、`CLAUDE.md`、`doc/理想架构设计.md`。
    - 读取 `agent/README.md`、`agent/workflow-continuous.md`、`agent/governance-architecture-contracts.md`。
-   - 读取 `agent/outer-loop-delta-backlog.yaml` manifest、`agent/backlog/index.yaml`、`agent/backlog/active.yaml`、checkpoint、worklog、coverage、readiness；仅在审计或冲突排查时读取 `agent/backlog/archive/*.yaml`。
+   - 读取 `agent/outer-loop-delta-backlog.yaml` manifest、`agent/backlog/index.yaml`、`agent/backlog/active.yaml`、`agent/backlog/recent.yaml`、checkpoint、worklog、coverage、readiness；仅在审计或冲突排查时读取 `agent/backlog/archive/*.yaml`。
    - 读取 `agent/draw2d-core-milestones.yaml`（milestone 编号 SSOT）和 `agent/goal-roadmap.md`（当前进度快照）。
    - 运行 `ruby agent/workflow-doctor.rb`，先确认 milestone / roadmap / backlog / checkpoint 状态没有机器可检出的漂移。
 
@@ -83,7 +83,8 @@
    - 失败必须分类为本轮回归或既有基线债务。
 
 8. `RECORD`
-   - 更新 `agent/backlog/active.yaml` / `agent/backlog/candidates.yaml` / `agent/backlog/baseline-debts.yaml`，必要时更新 manifest 或 archive。
+   - 更新 `agent/backlog/active.yaml` / `agent/backlog/recent.yaml` / `agent/backlog/candidates.yaml` / `agent/backlog/baseline-debts.yaml`，必要时更新 manifest 或 archive。
+   - 已进入 `verified` / `done` / `rejected` / `promoted` 的终态 delta 必须立即从 `active.yaml` 迁入 `archive/YYYY-MM.yaml`，并刷新 `recent.yaml` 的最近 5 个终态摘要。
    - 更新 `inner-loop-checkpoint.md`。
    - 追加 `inner-loop-worklog.md`。
    - 更新 `governance-contract-coverage.md`。

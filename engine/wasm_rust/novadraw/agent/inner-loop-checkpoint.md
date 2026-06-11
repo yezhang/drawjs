@@ -8,11 +8,11 @@
 
 ## Current Delta
 
-- AD-024 M1 contract probes summary
+- WF-003 Active backlog lifecycle compaction
 
 ## Current Status
 
-- verified（AD-024 已生成 M1 probes summary，并将 M1 推进到 contract_aligned）
+- verified（WF-003 已将 active backlog 收敛为只保存非终态工作，终态历史进入 archive，并由 recent 提供短摘要）
 
 ## What Was Done
 
@@ -330,6 +330,16 @@
 - **边界判断**：不推进到 `behavior_verified` 或 `complete`；产品层 existence checks 尚未建立。
 - **验证**：cargo test -p novadraw-geometry 42/42 ✅，cargo test -p novadraw-render 7/7 ✅。
 
+### 2026-06-11 / WF-003 Active backlog lifecycle compaction（本轮，verified）
+- **根因分析**：WF-002 已把单体 backlog 拆为 manifest / active / archive，但 `active.yaml` 仍保留大量 `verified` 终态条目，导致热路径文件继续增长，仍会污染 Agent 默认上下文。
+- **最小修复**：
+  - `agent/backlog/active.yaml` 只保留非终态工作，当前已压缩为 `items: []`。
+  - 原 active 终态条目迁入 `agent/backlog/archive/2026-06.yaml`，并追加 WF-003 归档记录。
+  - 新增 `agent/backlog/recent.yaml`，只保留最近 5 个终态 delta 摘要。
+  - `workflow-doctor.rb` 新增 active lifecycle 校验：active 禁止终态、active 最大 10 项、recent 最多 5 项且必须为终态。
+  - workflow 文档和启动脚本默认读取 `index.yaml` / `active.yaml` / `recent.yaml`，archive 继续作为冷历史。
+- **验证**：ruby -c agent/workflow-doctor.rb ✅，ruby agent/workflow-doctor.rb ✅，backlog YAML parse ✅，git diff --check ✅。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
@@ -369,6 +379,7 @@
 - ✅ WF-002 已完成：backlog 热路径已拆为 manifest / index / active，冷历史进入 archive，doctor 仍可全量校验。
 - ✅ AD-023 已完成：M1 Graphics text/image/alpha 进入命令层快照，`NdCanvas` 不再把相关 API 保持为 no-op。
 - ✅ AD-024 已完成：M1 contract probes summary 确认 YAML probes 全部有自动化证据，M1 状态已推进到 `contract_aligned`。
+- ✅ WF-003 已完成：`active.yaml` 只保存非终态工作，终态 delta 进入 archive，`recent.yaml` 提供最近 5 个终态摘要，doctor 强制校验该生命周期。
 
 ## Next Small Step
 
@@ -433,9 +444,13 @@
 - AD-023 cargo check -p novadraw-render --features vello: passed ✅
 - AD-024 cargo test -p novadraw-geometry: 42/42 tests passed ✅
 - AD-024 cargo test -p novadraw-render: 7/7 tests passed ✅
+- WF-003 ruby -c agent/workflow-doctor.rb: passed ✅
+- WF-003 ruby agent/workflow-doctor.rb: passed ✅
+- WF-003 backlog YAML parse: passed ✅
+- WF-003 git diff --check: passed ✅
 
 ## Resume Prompt
 
 ```text
-AD-024 M1 contract probes summary 已完成并通过验证。`agent/m1-contract-probes-summary.md` 已确认 M1 YAML probes 均有自动化证据，M1 已从 `in_progress` 推进到 `contract_aligned`；但不能推进到 `behavior_verified` 或 `complete`，因为产品层 existence checks 尚未建立。下一轮可选择继续 M1 product-layer existence checks，或在依赖允许的前提下启动 M2；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
+WF-003 Active backlog lifecycle compaction 已完成并通过验证。`agent/backlog/active.yaml` 现在只保存非终态工作，终态 delta 迁入 `agent/backlog/archive/2026-06.yaml`，`agent/backlog/recent.yaml` 只保留最近 5 个终态摘要；`workflow-doctor.rb` 已强制校验 active/recent 生命周期。下一轮可选择继续 M1 product-layer existence checks，或在依赖允许的前提下启动 M2；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
 ```

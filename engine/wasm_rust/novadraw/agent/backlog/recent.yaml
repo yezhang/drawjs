@@ -1,0 +1,31 @@
+---
+version: 1
+last_updated: '2026-06-11'
+description: Short human-readable summary of latest terminal deltas. Full history
+  lives in archive files.
+items:
+- id: AD-022
+  title: Geometry missing types foundation
+  status: verified
+  evolution_kind: parity
+  milestone_id: M1
+- id: WF-002
+  title: Backlog manifest split
+  status: verified
+  evolution_kind: workflow
+  parent_id: M0
+- id: AD-023
+  title: Graphics text image alpha command support
+  status: verified
+  evolution_kind: parity
+  milestone_id: M1
+- id: AD-024
+  title: M1 contract probes summary
+  status: verified
+  evolution_kind: workflow
+  parent_id: M1
+- id: WF-003
+  title: Active backlog lifecycle compaction
+  status: verified
+  evolution_kind: workflow
+  parent_id: M0

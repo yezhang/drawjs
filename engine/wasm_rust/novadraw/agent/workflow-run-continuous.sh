@@ -19,6 +19,7 @@ Required files:
   - ${ROOT_DIR}/agent/outer-loop-delta-backlog.yaml
   - ${ROOT_DIR}/agent/backlog/index.yaml
   - ${ROOT_DIR}/agent/backlog/active.yaml
+  - ${ROOT_DIR}/agent/backlog/recent.yaml
   - ${ROOT_DIR}/agent/backlog/candidates.yaml
   - ${ROOT_DIR}/agent/backlog/baseline-debts.yaml
   - ${ROOT_DIR}/agent/inner-loop-checkpoint.md
