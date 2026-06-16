@@ -46,6 +46,7 @@ REQUIRED_CHECKPOINT_SECTIONS = [
   "## Next Small Step",
   "## Blockers",
   "## Verification State",
+  "## Interruptions",
   "## Resume Prompt"
 ].freeze
 

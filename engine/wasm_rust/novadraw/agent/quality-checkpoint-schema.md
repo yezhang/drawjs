@@ -19,7 +19,8 @@
 7. `## Next Small Step`
 8. `## Blockers`
 9. `## Verification State`
-10. `## Resume Prompt`
+10. `## Interruptions`
+11. `## Resume Prompt`
 
 ## Metadata Fields
 
@@ -75,6 +76,12 @@
 
 - 区分 `delta_verification` 与 `baseline_verification`
 - 如果失败，必须说明是否属于本轮引入
+
+### Interruptions
+
+- 记录当前 active interruption
+- 无中断时明确写 `当前无 active interruption`
+- 突发任务只在阻塞主线或需要恢复上下文时登记，不再维护独立 inbox 文件
 
 ### Resume Prompt
 

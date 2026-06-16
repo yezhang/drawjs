@@ -80,25 +80,18 @@ title: Solo Coder Architecture Workflow
 - `agent/inner-loop-checkpoint.md`: 当前主线、下一步、阻塞点与恢复入口
 - `agent/inner-loop-worklog.md`: 每轮执行记录，包括验证、反思和拆分决策
 
-### Interruptions
-
-- `agent/interruptions-inbox.md`: 突发任务收纳箱，避免打乱主线 backlog
-
 ### Quality
 
 - `agent/architecture-review-agent.md`: 架构 Review Agent 规范，用于直接比对理想架构、架构契约、代码实现与必要的 g2 参考语义
 - `agent/quality-checkpoint-schema.md`: checkpoint 的稳定结构定义与兼容规则
-- `agent/quality-workflow-readiness.md`: 当前工作流稳定性等级与 go/no-go 检查
 - `agent/quality-discover-smoke-test.md`: discover 能力自测用例
 - `agent/quality-testing-strategy.md`: 自动测试生成原则、验证层级与契约映射
 
 ### Workflow
 
 - `agent/workflow-history.md`: 工作流为什么演进成当前形态
-- `agent/workflow-map.md`: 工作流总览图、状态机图和中断决策图
 - `agent/workflow-continuous.md`: 持续运行控制层，定义循环调度、终局判定和防失控门禁
 - `agent/workflow-verify.sh`: 固定验证脚本
-- `agent/workflow-run-once.sh`: 单轮启动器，输出本轮推荐 prompt
 - `agent/workflow-run-continuous.sh`: 持续运行启动器，输出带预算的连续闭环 prompt
 
 ### Roadmap
@@ -114,9 +107,8 @@ title: Solo Coder Architecture Workflow
 - `governance-*`: 约束、覆盖率、治理视角的文件
 - `outer-loop-*`: 外循环，负责发现问题、整理 backlog
 - `inner-loop-*`: 内循环，负责恢复、执行、记录当前主线
-- `interruptions-*`: 中断处理与突发任务入口
-- `quality-*`: 质量门禁、自测、schema、readiness 检查
-- `workflow-*`: 工作流本身的总览、历史、地图和辅助脚本
+- `quality-*`: 质量门禁、自测、schema 与测试策略
+- `workflow-*`: 工作流本身的历史、持续控制层和可执行辅助脚本
 - `README.md`: 保持固定入口，不参与前缀化，避免破坏默认导航习惯
 
 ## 五个 Skill
@@ -136,8 +128,6 @@ title: Solo Coder Architecture Workflow
 
 只有两个循环都存在，工作流才是完整闭环。
 
-如果你想先看图，再读规则，直接查看 `agent/workflow-map.md`。
-
 ## 稳定性阶段
 
 在正式长期依赖这套工作流之前，先看它处于哪个稳定性阶段。
@@ -147,7 +137,7 @@ title: Solo Coder Architecture Workflow
 - `Level 2 / Stable Enough`: 可以开始承载真实工作，但仍需持续观察
 - `Level 3 / Trusted`: 多轮真实使用后已足够稳定
 
-当前等级以 `agent/quality-workflow-readiness.md` 为准。
+当前可用性以 `./agent/workflow-verify.sh --gate=ready` 的退出码为准；等级定义只作为解释，不再维护独立 readiness 文档。
 
 ## 外循环：发现与整理
 
@@ -346,9 +336,9 @@ title: Solo Coder Architecture Workflow
 
 如果你准备开始真正依赖这套工作流推进代码，而不是继续调 workflow 本身，先执行一次稳定性检查：
 
-- 查看 `agent/quality-workflow-readiness.md`
-- 校验 `agent/inner-loop-checkpoint.md` 是否满足 `agent/quality-checkpoint-schema.md`
-- 跑一次 smoke test
+```bash
+./agent/workflow-verify.sh --gate=ready
+```
 
 ### 推进一轮
 
@@ -369,26 +359,17 @@ title: Solo Coder Architecture Workflow
 
 让 Agent 执行 `capture-interruption`，要求：
 
-- 把突发任务写入 `agent/interruptions-inbox.md`
-- 把当前主线状态写入 `agent/inner-loop-checkpoint.md`
+- 把突发任务写入 `agent/inner-loop-checkpoint.md` 的 `Interruptions` 小节
+- 同步冻结当前主线状态
 - 明确下一步最小动作
 
-### 单轮启动器
-
-可以先运行：
+### 持续运行启动器
 
 ```bash
-./agent/workflow-run-once.sh discover
-./agent/workflow-run-once.sh review
-./agent/workflow-run-once.sh resume
-./agent/workflow-run-once.sh execute
-./agent/workflow-run-once.sh smoke
-./agent/workflow-run-once.sh stabilize
 ./agent/workflow-run-continuous.sh 3
 ```
 
-它不会直接调用模型，而是输出本轮推荐 prompt 和所需上下文文件，方便你复制给 Agent。
-`workflow-run-continuous.sh` 同样不直接调用模型；它输出一个带循环预算的持续运行 prompt。
+它不会直接调用模型，而是输出一个带循环预算的持续运行 prompt。
 
 ## 推荐提问模板
 
@@ -417,8 +398,8 @@ title: Solo Coder Architecture Workflow
 
 ### 稳定性检查
 
-```text
-请执行 resume-architecture-work 和 review-delta-backlog 的稳定性检查。先验证 inner-loop-checkpoint.md 是否满足 quality-checkpoint-schema.md，再结合 quality-workflow-readiness.md 判断当前工作流是否已经达到可用于真实架构推进的等级。
+```bash
+./agent/workflow-verify.sh --gate=ready
 ```
 
 ### 整理 backlog
@@ -465,14 +446,10 @@ title: Solo Coder Architecture Workflow
 
 ### 场景 1a：暂时不想继续改代码，只想继续打磨 workflow
 
-- 先用：`resume-architecture-work`
-- 再用：`review-delta-backlog`
-- 结合 `quality-workflow-readiness.md` 判断还缺什么
+- 先跑固定 ready gate
 
-推荐提示词：
-
-```text
-请先检查当前工作流稳定性：验证 checkpoint schema 是否健康、当前 backlog 门禁是否足够、discover smoke test 是否已通过；然后告诉我还差哪些条件，工作流才能进入更稳定的使用阶段。
+```bash
+./agent/workflow-verify.sh --gate=ready
 ```
 
 ### 场景 2：感觉 backlog 已经过时，或者做了一轮后优先级不清楚
@@ -544,7 +521,7 @@ title: Solo Coder Architecture Workflow
 推荐提示词：
 
 ```text
-请执行 capture-interruption，把当前主线冻结到 checkpoint，并把这个突发任务登记到 inbox，明确下次恢复时的第一步。
+请执行 capture-interruption，把当前主线和突发任务冻结到 checkpoint 的 Interruptions 小节，明确下次恢复时的第一步。
 ```
 
 ### 场景 7：当前问题太大，不适合一轮做完
@@ -603,7 +580,7 @@ title: Solo Coder Architecture Workflow
 
 1. `workflow-continuous` 的 `BOOTSTRAP`
 2. `ASSESS`
-3. 按 gate 选择 `discover` / `review` / `resume` / `execute` / `test`
+3. 按 gate 选择 `discover` / `review` / `resume` / `execute`
 4. `VERIFY`
 5. `RECORD`
 6. `REFLECT`
@@ -615,35 +592,9 @@ title: Solo Coder Architecture Workflow
 
 适合你当前这种“先把 workflow 打磨稳，再正式使用”的阶段：
 
-1. `resume-architecture-work`
-2. `discover-architecture-deltas` smoke test
-3. `review-delta-backlog`
-4. 检查 `quality-workflow-readiness.md`
-5. 只在满足 go/no-go 条件后再进入 `execute-architecture-delta`
-
-## 脚本化辅助
-
-如果你不想每次手写 prompt，可以先运行脚本再复制输出：
-
 ```bash
-./agent/workflow-run-once.sh discover
-./agent/workflow-run-once.sh review
-./agent/workflow-run-once.sh resume
-./agent/workflow-run-once.sh execute
-./agent/workflow-run-once.sh smoke
-./agent/workflow-run-once.sh stabilize
-./agent/workflow-run-continuous.sh 3
+./agent/workflow-verify.sh --gate=ready
 ```
-
-对应关系：
-
-- `discover`: 发现候选问题
-- `review`: 整理 backlog
-- `resume`: 恢复主线
-- `execute`: 推进一轮
-- `smoke`: 验证 discover 是否真的能发现已知问题
-- `stabilize`: 检查 workflow 是否已达到可用等级
-- `workflow-run-continuous.sh <max_cycles>`: 输出持续运行 prompt，默认最多 3 轮
 
 ### 持续运行启动器
 
@@ -800,17 +751,15 @@ title: Solo Coder Architecture Workflow
 - contract coverage 能显示整体契约状态不是随机波动，而是在逐步收敛
 - checkpoint 能在中断后恢复主线，不需要重新建模全部上下文
 
-## Go / No-Go
+## Ready Gate
 
-在“正式把主要精力转到代码架构改进，而不是继续打磨 workflow”之前，建议至少满足：
+在“正式把主要精力转到代码架构改进，而不是继续打磨 workflow”之前，运行：
 
-- 最近一次 smoke test 通过
-- 当前 checkpoint 满足 `quality-checkpoint-schema.md`
-- 当前 backlog 没有明显失焦的大 delta
-- 当前 baseline debt 已登记
-- `quality-workflow-readiness.md` 的当前等级至少达到 `Stable Enough`
+```bash
+./agent/workflow-verify.sh --gate=ready
+```
 
-如果以上条件仍不满足，优先继续优化 workflow，而不是盲目推进新 delta。
+该命令失败时，优先修复输出的 gate violation，而不是盲目推进新 delta。
 
 ## 完成标准
 

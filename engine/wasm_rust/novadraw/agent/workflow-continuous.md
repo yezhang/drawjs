@@ -15,7 +15,7 @@
 1. `agent/governance-contract-coverage.md` 中所有契约状态均为 `aligned`。
 2. `agent/backlog/active.yaml` 中不存在 `architecture` 或 `parity` 类型的 `pending`、`proposed`、`in_progress`、`split`、`blocked` 条目。
 3. 最近一次 `discover-architecture-deltas` 对 `unassessed`、`drifting`、`partially_aligned` 契约重新审计后，没有发现新的可执行 candidate。
-4. `agent/quality-workflow-readiness.md` 至少达到 `Level 2 / Stable Enough`，且 Go / No-Go checklist 无阻塞项。
+4. `./agent/workflow-verify.sh --gate=ready` 通过。
 5. 当前基线债务已关闭，或已被显式接受且不影响理想架构语义。
 6. `cargo check`、相关 crate 测试与当前定义的 baseline verification 通过，或失败项均有基线债务记录。
 7. `doc/理想架构设计.md`、`agent/governance-architecture-contracts.md`、`agent/governance-contract-coverage.md` 与代码现状互相一致。
@@ -46,7 +46,7 @@
 1. `BOOTSTRAP`
    - 读取 `AGENTS.md`、`CLAUDE.md`、`doc/理想架构设计.md`。
    - 读取 `agent/README.md`、`agent/workflow-continuous.md`、`agent/governance-architecture-contracts.md`。
-   - 读取 `agent/outer-loop-delta-backlog.yaml` manifest、`agent/backlog/index.yaml`、`agent/backlog/active.yaml`、`agent/backlog/recent.yaml`、checkpoint、worklog、coverage、readiness；仅在审计或冲突排查时读取 `agent/backlog/archive/*.yaml`。
+   - 读取 `agent/outer-loop-delta-backlog.yaml` manifest、`agent/backlog/index.yaml`、`agent/backlog/active.yaml`、`agent/backlog/recent.yaml`、checkpoint、worklog、coverage；仅在审计或冲突排查时读取 `agent/backlog/archive/*.yaml`。
    - 读取 `agent/draw2d-core-milestones.yaml`（milestone 编号 SSOT）和 `agent/goal-roadmap.md`（当前进度快照）。
    - 运行 `ruby agent/workflow-doctor.rb`，先确认 milestone / roadmap / backlog / checkpoint 状态没有机器可检出的漂移。
 
@@ -135,11 +135,10 @@
 
 | Condition | Mode |
 |---|---|
-| checkpoint 缺 section 或状态不一致 | `stabilize` |
 | coverage 存在 `unassessed` 或 backlog 明显过时 | `discover` |
 | candidate 很多或当前 delta 分叉 | `review` |
 | 当前 delta 明确且未触发门禁 | `execute` |
-| 验证策略不清楚 | `test` |
+| 验证策略不清楚 | `review` |
 | 突发任务插入 | `capture-interruption` |
 | 所有终局条件满足 | `complete` |
 
@@ -169,7 +168,7 @@
 
 要求：
 1. 先执行 BOOTSTRAP 和 ASSESS，不要直接改代码。
-2. 根据 gate 自动选择 discover / review / resume / execute / test。
+2. 根据 gate 自动选择 discover / review / resume / execute。
 3. 每轮只执行一个最小 delta。
 4. 每轮结束必须更新 backlog、checkpoint、worklog、contract coverage。
 5. 如果达到停止条件，立即停止并输出 Current State、Stop Reason、Next Restart Prompt。
@@ -180,6 +179,4 @@
 
 - `agent/README.md`: 单轮工作流与日常操作 SSOT。
 - `agent/workflow-continuous.md`: 持续运行控制层 SSOT。
-- `agent/workflow-map.md`: 图示导航，应同步展示持续循环。
-- `agent/workflow-run-once.sh`: 单轮 prompt 启动器。
 - `agent/workflow-run-continuous.sh`: 持续运行 prompt 启动器。
