@@ -1,8 +1,8 @@
 ---
 version: 1
 last_updated: '2026-06-16'
-current_delta: AD-035
-next_recommended_delta: M3 product visual verification via shapes-demo
+current_delta: AD-036
+next_recommended_delta: M4 coordinate-domain and transform contract audit
 read_order:
 - agent/backlog/index.yaml
 - agent/backlog/active.yaml

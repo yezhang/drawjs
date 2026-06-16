@@ -2,7 +2,10 @@
 //!
 //! 验证父子裁剪关系的正确性。
 
-use novadraw_apps::run_demo_app;
+use novadraw_apps::{
+    run_demo_app, run_demo_app_with_scene_screenshot, run_demo_app_with_screenshot,
+};
+use std::io::Write;
 
 const WINDOW_WIDTH: f64 = 800.0;
 const WINDOW_HEIGHT: f64 = 600.0;
@@ -51,8 +54,8 @@ fn create_scene_1_nested_clip() -> novadraw::FigureGraph {
     let child = novadraw::RectangleFigure::new_with_color(
         200.0,
         150.0,
-        250.0,
-        200.0,
+        350.0,
+        260.0,
         novadraw::Color::rgba(0.2, 0.8, 0.4, 1.0),
     );
     let _child_id = scene.add_child_to(parent_id, Box::new(child));
@@ -254,34 +257,81 @@ fn create_scene_9_inverted_clip() -> novadraw::FigureGraph {
     scene
 }
 
+type SceneEntry = (&'static str, Box<dyn FnMut() -> novadraw::FigureGraph>);
+
+fn scenes() -> Vec<SceneEntry> {
+    vec![
+        ("basic_clip", Box::new(create_scene_0_basic_clip)),
+        ("nested_clip", Box::new(create_scene_1_nested_clip)),
+        (
+            "multi_layer_clip",
+            Box::new(create_scene_2_multi_layer_clip),
+        ),
+        ("circle_clip", Box::new(create_scene_3_circle_clip)),
+        ("path_clip", Box::new(create_scene_4_path_clip)),
+        (
+            "clip_with_events",
+            Box::new(create_scene_5_clip_with_events),
+        ),
+        (
+            "transparent_clip",
+            Box::new(create_scene_6_transparent_clip),
+        ),
+        ("clip_animation", Box::new(create_scene_7_clip_animation)),
+        (
+            "clip_performance",
+            Box::new(create_scene_8_clip_performance),
+        ),
+        ("inverted_clip", Box::new(create_scene_9_inverted_clip)),
+    ]
+}
+
 fn main() {
-    run_demo_app(
-        "Clip App - 裁剪验证 (按数字键 0-9 切换场景)",
-        "clip-app",
-        vec![
-            ("basic_clip", Box::new(create_scene_0_basic_clip)),
-            ("nested_clip", Box::new(create_scene_1_nested_clip)),
-            (
-                "multi_layer_clip",
-                Box::new(create_scene_2_multi_layer_clip),
-            ),
-            ("circle_clip", Box::new(create_scene_3_circle_clip)),
-            ("path_clip", Box::new(create_scene_4_path_clip)),
-            (
-                "clip_with_events",
-                Box::new(create_scene_5_clip_with_events),
-            ),
-            (
-                "transparent_clip",
-                Box::new(create_scene_6_transparent_clip),
-            ),
-            ("clip_animation", Box::new(create_scene_7_clip_animation)),
-            (
-                "clip_performance",
-                Box::new(create_scene_8_clip_performance),
-            ),
-            ("inverted_clip", Box::new(create_scene_9_inverted_clip)),
-        ],
-    )
-    .expect("Failed to run app");
+    let args: Vec<String> = std::env::args().collect();
+    let title = "Clip App - 裁剪验证 (按数字键 0-9 切换场景)";
+    let app_name = "clip-app";
+
+    if args.len() > 1 {
+        match args[1].as_str() {
+            "--screenshot-all" => {
+                println!("截图所有场景...");
+                std::io::stdout().flush().ok();
+                run_demo_app_with_screenshot(title, app_name, scenes(), true)
+                    .expect("Failed to run app with screenshot");
+            }
+            arg if arg.starts_with("--screenshot=") => {
+                let scene_idx = arg
+                    .strip_prefix("--screenshot=")
+                    .and_then(|s| s.parse::<usize>().ok());
+                match scene_idx {
+                    Some(idx) => {
+                        run_demo_app_with_scene_screenshot(title, app_name, scenes(), idx)
+                            .expect("Failed to run app with scene screenshot");
+                    }
+                    None => {
+                        eprintln!("无效的场景索引: {}", &arg[13..]);
+                        eprintln!(
+                            "用法: cargo run -p clip-app -- --screenshot=<0-9> 或 --screenshot-all"
+                        );
+                        std::process::exit(1);
+                    }
+                }
+            }
+            "--help" | "-h" => {
+                println!("用法: cargo run -p clip-app -- [选项]");
+                println!("选项:");
+                println!("  --screenshot-all    截图所有场景");
+                println!("  --screenshot=<N>   截图指定场景 (0-9)");
+                println!("  --help, -h         显示帮助");
+                std::process::exit(0);
+            }
+            _ => {
+                eprintln!("未知参数: {}", args[1]);
+                eprintln!("用法: cargo run -p clip-app -- --screenshot=<0-9> 或 --screenshot-all");
+                std::process::exit(1);
+            }
+        }
+    } else {
+        run_demo_app(title, app_name, scenes()).expect("Failed to run app");
+    }
 }

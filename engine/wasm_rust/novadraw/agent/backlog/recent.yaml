@@ -4,11 +4,6 @@ last_updated: '2026-06-16'
 description: Short human-readable summary of latest terminal deltas. Full history
   lives in archive files.
 items:
-- id: WF-004
-  title: Execution momentum gate
-  status: verified
-  evolution_kind: workflow
-  parent_id: M0
 - id: AD-033
   title: M3 iterative render client-area state equivalence
   status: verified
@@ -26,6 +21,11 @@ items:
   parent_id: M0
 - id: AD-035
   title: M3 paint versus hit-test consistency tests
+  status: verified
+  evolution_kind: parity
+  milestone_id: M3
+- id: AD-036
+  title: M3 clip-app visual verification
   status: verified
   evolution_kind: parity
   milestone_id: M3

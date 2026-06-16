@@ -1405,6 +1405,50 @@ items:
   - cargo test -p novadraw-scene passes
   - cargo clippy -p novadraw-scene -- -D warnings passes
   - ruby agent/workflow-doctor.rb passes
+- id: AD-036
+  title: M3 clip-app visual verification
+  contract: M3 behavior verification requires an executable visual path for the
+    nested clipping contract, with screenshot capture and review evidence that
+    child content does not bleed outside the parent clientArea.
+  evolution_kind: parity
+  milestone_id: M3
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - apps/clip-app/src/main.rs
+  - novadraw-render/src/backend/vello/mod.rs
+  - agent/visual-regression.yaml
+  - agent/visual-verify.rb
+  - agent/draw2d-core-milestones.yaml
+  - agent/backlog/index.yaml
+  - agent/backlog/recent.yaml
+  - agent/backlog/archive/2026-06.yaml
+  - agent/goal-roadmap.md
+  - agent/inner-loop-checkpoint.md
+  - agent/inner-loop-worklog.md
+  - doc/06-roadmap/demo-matrix.md
+  progress_notes:
+  - Root Cause：AD-035 已闭合 M3 契约层 probes，但 M3 仍缺少可执行的产品视觉验证入口；旧恢复提示误指向 `shapes-demo`，实际当前可用的 M3 裁剪 demo 是 `clip-app`。
+  - "`clip-app` 增加 `--screenshot=<N>` / `--screenshot-all` 参数，复用 demo app 截图入口。"
+  - "`agent/visual-regression.yaml` 启用 `m3-nested-clip-scene`，绑定 `cargo run -p clip-app -- --screenshot=1`。"
+  - "`agent/visual-verify.rb` 显式设置 UTF-8 编码，避免中文 review panel 读取漂移。"
+  - Vello retained texture 创建后清成默认背景色，避免截图链路读取未初始化纹理内容。
+  - 视觉验证生成 `apps/clip-app/screenshot/clip-app_nested_clip_*.png`；复核结果为绿色 child 未越过橙色 parent clientArea，未见 content bleed。
+  - M3 从 `contract_aligned` 推进到 `behavior_verified`；不推进到 `complete`。
+  done_when:
+  - clip-app supports deterministic scene screenshot capture
+  - M3 visual-regression suite is enabled
+  - visual verifier captures the nested clip screenshot
+  - generated screenshot passes manual/agent semantic review
+  - M3 status is behavior_verified
+  - cargo check -p clip-app passes
+  - cargo clippy -p clip-app -- -D warnings passes
+  - cargo check/test/clippy -p novadraw-render passes
+  - cargo fmt --check passes
+  - ruby agent/visual-verify.rb --manifest agent/visual-regression.yaml --output target/visual-verification passes
+  - ruby agent/workflow-doctor.rb passes
+  - bash agent/workflow-verify.sh --fast passes
 - id: WF-004
   title: Execution momentum gate
   contract: Workflow governance must prevent consecutive documentation-only

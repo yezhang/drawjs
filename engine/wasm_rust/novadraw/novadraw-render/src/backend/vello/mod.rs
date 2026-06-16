@@ -20,6 +20,14 @@ use crate::traits::{RenderBackend, WindowProxy};
 pub mod winit;
 pub use winit::{WinitWindowProxy, WinitWindowProxyInner};
 
+const DEFAULT_BACKGROUND_COMPONENT: f64 = 238.0 / 255.0;
+const DEFAULT_BACKGROUND_COLOR: vello::wgpu::Color = vello::wgpu::Color {
+    r: DEFAULT_BACKGROUND_COMPONENT,
+    g: DEFAULT_BACKGROUND_COMPONENT,
+    b: DEFAULT_BACKGROUND_COMPONENT,
+    a: 1.0,
+};
+
 /// 渲染状态
 #[derive(Clone, Debug, Default)]
 struct RenderState {
@@ -112,6 +120,34 @@ impl VelloRenderer {
         (texture, view, width, height)
     }
 
+    fn clear_texture_to_background(&self, view: &vello::wgpu::TextureView) {
+        let device_handle = &self.render_context.devices[self.surface.dev_id];
+        let mut encoder =
+            device_handle
+                .device
+                .create_command_encoder(&vello::wgpu::CommandEncoderDescriptor {
+                    label: Some("Clear Retained Texture"),
+                });
+        {
+            let _pass = encoder.begin_render_pass(&vello::wgpu::RenderPassDescriptor {
+                label: Some("Clear Retained Texture Pass"),
+                color_attachments: &[Some(vello::wgpu::RenderPassColorAttachment {
+                    view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: vello::wgpu::Operations {
+                        load: vello::wgpu::LoadOp::Clear(DEFAULT_BACKGROUND_COLOR),
+                        store: vello::wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                occlusion_query_set: None,
+                timestamp_writes: None,
+            });
+        }
+        device_handle.queue.submit([encoder.finish()]);
+    }
+
     /// 确保保留纹理存在
     fn ensure_retained_texture(&mut self) {
         let (width, height) = self.current_surface_size();
@@ -123,7 +159,9 @@ impl VelloRenderer {
             }
         }
 
-        self.retained_texture = Some(self.create_offscreen_texture("Retained Texture"));
+        let texture = self.create_offscreen_texture("Retained Texture");
+        self.clear_texture_to_background(&texture.1);
+        self.retained_texture = Some(texture);
     }
 
     /// 确保临时渲染纹理存在

@@ -22,6 +22,24 @@
 
 ## Entries
 
+## 2026-06-16 / AD-036
+
+- Goal: M3 clip-app visual verification
+- Root Cause: AD-035 已闭合 M3 契约层 probes，但 M3 仍缺少可执行的产品视觉验证入口；旧恢复提示误指向 `shapes-demo`，实际当前可用的 M3 裁剪 demo 是 `clip-app`。
+- Minimal Fix:
+  - `clip-app` 增加 `--screenshot=<N>` / `--screenshot-all` 参数，复用 demo app 截图入口。
+  - `agent/visual-regression.yaml` 启用 `m3-nested-clip-scene`，绑定 `cargo run -p clip-app -- --screenshot=1`。
+  - `agent/visual-verify.rb` 显式设置 UTF-8 编码，避免中文 review panel 读取漂移。
+  - Vello retained texture 创建后清成默认背景色，避免截图链路读取未初始化纹理内容。
+  - 执行视觉验证并复核截图：绿色 child 未越过橙色 parent clientArea，未见 content bleed。
+- Files: `apps/clip-app/src/main.rs`, `novadraw-render/src/backend/vello/mod.rs`, `agent/visual-regression.yaml`, `agent/visual-verify.rb`, `agent/draw2d-core-milestones.yaml`, `agent/backlog/index.yaml`, `agent/backlog/recent.yaml`, `agent/backlog/archive/2026-06.yaml`, `agent/goal-roadmap.md`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`, `doc/06-roadmap/demo-matrix.md`
+- Delta Verification: cargo check -p clip-app ✅, cargo clippy -p clip-app -- -D warnings ✅, cargo check/test/clippy -p novadraw-render ✅, cargo fmt --check ✅, ruby agent/visual-verify.rb --manifest agent/visual-regression.yaml --output target/visual-verification ✅
+- Baseline Verification: ruby agent/workflow-doctor.rb ✅, bash agent/workflow-verify.sh --fast ✅, git diff --check ✅
+- Decision: AD-036 状态 `verified`；M3 状态推进到 `behavior_verified`，不推进到 `complete`。
+- Split Decision: 本轮只闭合 M3 visual behavior evidence；不启动 M4 代码审计。
+- Post-Execution Reflection: 当前视觉检查是语义/人工复核，不是 pixel baseline 精确比对；足以支撑 `behavior_verified`，但 `complete` 仍需要更严格端到端完成判据。
+- Next Step: M4 coordinate-domain and transform contract audit。
+
 ## 2026-06-16 / AD-035
 
 - Goal: 回到 M3 代码主线，闭合 paint clipping 与 hit-test/mouse-target descent 的一致性测试。

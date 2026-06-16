@@ -8,11 +8,11 @@
 
 ## Current Delta
 
-- AD-035 M3 paint versus hit-test consistency tests
+- AD-036 M3 clip-app visual verification
 
 ## Current Status
 
-- verified（AD-035 已补齐 paint clip、hit-test descent 与 mouse event target descent 共享 border-inset clientArea 的契约测试；M3 已推进到 `contract_aligned`）
+- verified（AD-036 已启用并执行 clip-app nested clip 视觉验证；M3 已推进到 `behavior_verified`，但不标记 `complete`）
 
 ## Context Boundary
 
@@ -20,6 +20,18 @@
 - 已剥离主题不得作为每轮 next step、阻塞项或残余风险反复带出。
 
 ## What Was Done
+
+### AD-036 M3 clip-app visual verification（本轮，verified）
+- **根因分析**：AD-035 已闭合 M3 契约层 probes，但 M3 仍缺少可执行的产品视觉验证入口；旧恢复提示误指向 `shapes-demo`，实际当前可用的 M3 裁剪 demo 是 `clip-app`。
+- **最小修复**：
+  - `clip-app` 增加 `--screenshot=<N>` / `--screenshot-all` 参数，复用 demo app 截图入口。
+  - `agent/visual-regression.yaml` 启用 `m3-nested-clip-scene`，绑定 `cargo run -p clip-app -- --screenshot=1`。
+  - `agent/visual-verify.rb` 显式设置 UTF-8 编码，避免中文 review panel 读取漂移。
+  - Vello retained texture 创建后清成默认背景色，避免截图链路读取未初始化纹理内容。
+  - 执行视觉验证并人工复核截图：绿色 child 未越过橙色 parent clientArea，未见 content bleed。
+- **验证**：cargo check -p clip-app ✅，cargo clippy -p clip-app -- -D warnings ✅，cargo check/test/clippy -p novadraw-render ✅，cargo fmt --check ✅，ruby agent/visual-verify.rb --manifest agent/visual-regression.yaml --output target/visual-verification ✅，bash agent/workflow-verify.sh --fast ✅，截图复核 ✅
+- **状态推进**：M3 从 `contract_aligned` 推进到 `behavior_verified`；不推进到 `complete`。
+- **下一步**：M4 coordinate-domain and transform contract audit。
 
 ### AD-035 M3 paint versus hit-test consistency tests（本轮，verified）
 - **根因分析**：AD-034 已让 Border insets 进入 render clientArea clip，但 M3 仍缺少同一 clientArea 同时约束 paint、hit-test 与 mouse event target descent 的契约测试。

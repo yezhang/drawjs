@@ -1,5 +1,5 @@
 version: 1
-last_updated: "2026-06-12"
+last_updated: "2026-06-16"
 
 purpose: >
   Define the visual verification workflow for Draw2D core milestones. The
@@ -69,23 +69,23 @@ suites:
   - id: m3-nested-clip-scene
     milestone_id: M3
     app: clip-app
-    enabled: false
+    enabled: true
     required: true
-    command: cargo run -p clip-app -- --screenshot=0
+    command: cargo run -p clip-app -- --screenshot=1
     screenshot_glob: apps/clip-app/screenshot/*.png
     timeout_seconds: 180
     review_panel:
       coordinate_system: "image pixel coordinates, origin at top-left"
       expected_layout:
-        - 父容器裁剪区域应清晰可见。
-        - 子内容只允许出现在父 clientArea 和子 bounds 的交集内。
+        - 父容器裁剪区域应清晰可见，主体应位于画布左上到中部区域。
+        - nested_clip 场景中，绿色子内容只允许出现在橙色父容器 clientArea 和自身 bounds 的交集内。
       expected_colors:
-        - 被裁剪内容与背景应有明显颜色差异。
-        - 裁剪边界附近不应出现残留像素带。
+        - 父容器为橙色系，子内容为绿色系，背景应保持默认浅色。
+        - 裁剪边界附近不应出现绿色内容越界或残留像素带。
       expected_regions:
         - id: parent_client_area
-          bounds: [0, 0, 0, 0]
-          expectation: "待具体场景稳定后补充准确 bounds"
+          bounds: [150, 100, 450, 350]
+          expectation: "绿色 child 不应绘制到橙色 parent clientArea 之外"
       questions:
         - 子内容是否有越过父 clientArea？
         - 裁剪边界是否与可见边框对齐？
