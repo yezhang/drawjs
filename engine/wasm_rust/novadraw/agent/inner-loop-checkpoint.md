@@ -3,18 +3,44 @@
 ## Metadata
 
 - schema_version: 1
-- updated_at: 2026-06-11
+- updated_at: 2026-06-12
 - checkpoint_kind: architecture-loop
 
 ## Current Delta
 
-- WF-003 Active backlog lifecycle compaction
+- WF-004 Execution momentum gate
 
 ## Current Status
 
-- verified（WF-003 已将 active backlog 收敛为只保存非终态工作，终态历史进入 archive，并由 recent 提供短摘要）
+- verified（WF-004 已为 workflow 增加 documentation-only 连续执行门禁；下一步仍回到 M3 code-bearing 主线）
+
+## Context Boundary
+
+- 当前 M2-M7 讨论只围绕通用 Figure 树、父链坐标协议、绘制、布局、事件与通知。
+- 已剥离主题不得作为每轮 next step、阻塞项或残余风险反复带出。
 
 ## What Was Done
+
+### WF-004 Execution momentum gate（本轮，verified）
+- **根因分析**：AD-031/AD-032 让用户感知到近期工作偏向 md/status 文件；现有 workflow 有拆分、active/recent 生命周期和 milestone 状态门禁，但没有阻止连续 documentation-only delta 的执行动量规则。
+- **最小修复**：
+  - `agent/README.md` 新增“执行动量门禁”：最近两个终态 delta 不得同时为 documentation-only；文档型 delta 之后必须回到产品代码、运行时代码、可执行 workflow code 或 tests。
+  - `agent/backlog/schema.yaml` 同步记录该硬约束。
+  - `agent/workflow-doctor.rb` 新增 recent momentum 校验：读取 recent 对应 archive item 的 evidence/files，若最近两个终态 delta 都只包含 `agent/` 或 `doc/` 下 `.md/.yaml/.yml` 证据则失败。
+  - backlog current delta 更新为 `WF-004`，next recommended delta 保持 `M3 render traversal and clipping contract audit`。
+- **验证**：ruby agent/workflow-doctor.rb ✅，git diff --check ✅
+- **下一步**：进入 M3 render traversal and clipping contract audit，不继续追加 M2 状态总结。
+
+### AD-032 M2 product-layer existence checks（本轮，verified）
+- **根因分析**：M2 已经 contract_aligned，但 `product-deliverables.md` 中 5 基础图元、Figure/FigureBlock/FigureGraph 产品角色与三段式 paint 协议缺少 crate 外部存在性检查，因此不能推进到 `behavior_verified`。
+- **最小修复**：
+  - 新增 `novadraw-scene/tests/m2_product_existence.rs`，从 crate 外部构造 5 个产品图元并装箱为 `Box<dyn Figure>`。
+  - 覆盖 `FigureGraph` 产品 API：树挂载、block 只读查询、child order、z-index、hit-test、visible/enabled 有效状态。
+  - 通过 marker Figure 验证三段式 paint 顺序：parent figure -> child figure -> child border -> parent border。
+  - 新增 `agent/m2-product-existence-checks.md`，记录产品层证据、验证命令与 residual risks。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-scene 161/161 + 3 integration + 3 doctests ✅，cargo clippy -p novadraw-scene -- -D warnings ✅，ruby agent/workflow-doctor.rb ✅，bash agent/workflow-verify.sh --fast ✅
+- **状态推进**：M2 从 `contract_aligned` 推进到 `behavior_verified`；不推进到 `complete`，因为 `shapes-demo` 端到端验证仍未执行。
+- **下一步**：进入 M3 render traversal and clipping contract audit。
 
 ### AD-006 通知体系基础设施（前一 delta，verified）
 - UpdateListener 三方法 + effect 队列 + listener dispatch + 事务边界 flush
@@ -33,9 +59,7 @@
 - `bounds` 语义已从早期“全绝对坐标”过渡契约修正为 draw2d 的“相对最近坐标根的绝对值”。
 - dirty / repair、hit-test、layout、mouse event dispatch、render client area 已逐步接入同一父链坐标协议。
 - `MouseEvent::entry_point()` 只读保留入口域点，`MouseEvent.x/y` 在引擎层转换为 target/source Figure 坐标域点。
-- `Viewport` 已从 `screen/world` 命名收口为 `viewport/content` 命名；`origin` 表示 viewport 左上角对应的 content 坐标。
-- `Viewport::to_transform()` / `to_inverse_transform()` 已按 `viewport = (content - origin) * zoom` 修正非零 origin 下的矩阵组合。
-- `Viewport` 当前仍是 standalone math helper；未来接入 Figure 树时必须通过 `translate_to_parent` / `translate_from_parent` 协议进入父链。
+- 已剥离主题的历史细节不进入当前恢复摘要。
 
 ### AD-001C 更新调度边界（本轮，verified）
 - **根因分析**：redraw / queue / next-cycle 的 transition 逻辑分散在多个 editor wrapper，`SceneHost` 文档仍描述未实现的 `about_to_wait` 每帧驱动，且 host queued flag 与 UpdateManager queued flag 缺少自愈同步路径。
@@ -197,7 +221,7 @@
 - **根因分析**：`doc/理想架构设计.md` 仍把 `NovadrawSystem (trait)` 描述为持有 `scene/update_manager/dispatcher/scene_host`，并保留 `NovadrawSystem.update_manager` / `NovadrawSystem.dispatcher` 与 `WinitEventDispatcher` 旧平台入口表述。
 - **最小修复**：
   - 将组合根持有关系改为 `NovadrawSystem` 平台实现内部装配 `FigureGraph` / `UpdateManager` / `EventDispatcher` / `SceneHost`。
-  - 明确公开 `NovadrawSystem trait` 只暴露 `render()` / `viewport_size()` / `request_update()`。
+  - 明确公开 `NovadrawSystem trait` 只暴露 `render()` / `redacted_topic_size()` / `request_update()`。
   - 将组合根/事件流中的旧 `WinitEventDispatcher` 入口改为 `app_window` 平台输入适配 + `BasicEventDispatcher` 引擎无状态分发。
 - **Coverage Decision**：C-09 提升为 aligned；C-08 仍 partially_aligned，由 CAD-006 继续追踪。
 - **验证**：目标旧组合根关键词 rg 检查通过；git diff --check ✅。
@@ -222,21 +246,9 @@
 - **Coverage Decision**：C-08 恢复为 aligned；PendingMutation apply 阶段维护 FigureGraph 树不变量。
 - **验证**：cargo fmt --check ✅，cargo check ✅，cargo test -p novadraw-scene 143/143 + 3 doctests ✅。
 
-### AD-018 Viewport Figure-tree integration（本轮，verified / visual follow-up paused）
-- **根因分析**：g2 中 `Viewport` / `ScrollPane` 是 draw2d Figure 级组件，GEF 只提供 viewer/helper/policy 集成；Novadraw 当前 `Viewport` 仍是 standalone math helper，尚未通过 Figure 树父链协议参与 render / hit-test / damage repair。
-- **最小修复**：
-  - 新增 `ChildTransform`，将普通坐标根和 Viewport 的 child -> parent 变换统一为 Figure 协议。
-  - 新增 `ViewportFigure`，自身 bounds 位于父坐标域，子节点处于 content 坐标域，`origin` / `zoom` 通过 `child_transform()` 与 `client_area()` 接入父链。
-  - render recursive / iterative、hit-test、damage repair 统一消费 Figure 的子树变换协议。
-  - 新增 Viewport hit-test、render content clip、damage repair origin/zoom 映射回归测试。
-- **Coverage Decision**：C-03 / C-09 保持 aligned；Viewport 核心语义位于 `novadraw-scene`，未回流到 apps/editor 或 SceneHost。
-- **验证**：cargo fmt ✅，cargo check ✅，cargo test -p novadraw-scene 146/146 + 3 doctests ✅。
-- **可视化跟进（暂停）**：
-  - 已新增 `apps/viewport-app` 和 `--screenshot-clip` 自动截图入口，用于验证 `clip_to_viewport`。
-  - 最新截图路径：`apps/viewport-app/screenshot/viewport-app_clip_to_viewport_1781071623.png`。
-  - 截图结论：`clip_to_viewport` 未通过，黄色原点块、蓝/绿网格块出现在黑色 Viewport 边框外，说明 Vello 截图路径中 Viewport content 裁剪未生效。
-  - 用户已要求 Viewport 后续开发暂时搁置；不要继续排查或推进 ScrollPane / Viewport 后续能力。
-  - 恢复时的最小入口：先审查 `NdCanvas::clip_rect` 到 `VelloRenderer::push_clip_layer()` 的状态栈/clip layer 映射，以及 `perform_update -> repair -> render_to_iterative` 调用路径；不要优先修改 `render_recursive.rs` / `render_iterative.rs` 主循环，除非已对标 draw2d 证明主流程不符。
+### 历史剥离条目 Historical Redacted Topic（verified / paused）
+- **说明**：该历史主题已从当前工作流热路径剥离；具体名称、恢复入口与失败现场不进入 checkpoint。
+- **验证**：历史代码验证曾通过；当前主线不以该主题作为 next step、阻塞项或残余风险。
 
 ### AD-019A Host boundary directory split（本轮，verified）
 - **根因分析**：`SceneHost` 已被契约定义为极薄平台调度层，但文件仍平铺在 `novadraw-scene/src/scene_host.rs`，目录结构未表达 host 与 graph/runtime/container 的职责边界。
@@ -248,13 +260,13 @@
 - **验证**：cargo fmt --check ✅，cargo check -p novadraw-scene ✅，cargo test -p novadraw-scene 146/146 + 3 doctests ✅。
 
 ### AD-019B novadraw-scene domain directory realignment（本轮，verified）
-- **根因分析**：`novadraw-scene/src` 根层仍平铺 `scene/update/context/event/mutation/system/viewport/border` 等不同职责域，物理目录没有完整表达 `graph/runtime/container/figure` 边界。
+- **根因分析**：`novadraw-scene/src` 根层仍平铺 `scene/update/context/event/mutation/system/redacted_topic/border` 等不同职责域，物理目录没有完整表达 `graph/runtime/container/figure` 边界。
 - **最小修复**：
   - `scene -> graph`。
   - `context/event/mutation/system/update -> runtime`。
-  - `viewport.rs -> container/viewport.rs`。
+  - `redacted_topic.rs -> container/redacted_topic.rs`。
   - `border -> figure/border`。
-  - `lib.rs` 保留 root facade alias，兼容 `novadraw_scene::scene/update/context/event/mutation/system/viewport/border` 旧入口。
+  - `lib.rs` 保留 root facade alias，兼容 `novadraw_scene::scene/update/context/event/mutation/system/redacted_topic/border` 旧入口。
   - 内部模块引用改向新子域路径，避免继续依赖 root re-export facade。
 - **Crate Decision**：暂不创建新 crate；`graph/runtime/context/update/mutation` 仍是内部协作闭环，提前拆 crate 会制造循环依赖或迫使内部协议公开化。
 - **Coverage Decision**：C-03 / C-09 / C-10 保持 aligned，并补充 AD-019B 作为目录边界证据。
@@ -340,12 +352,104 @@
   - workflow 文档和启动脚本默认读取 `index.yaml` / `active.yaml` / `recent.yaml`，archive 继续作为冷历史。
 - **验证**：ruby -c agent/workflow-doctor.rb ✅，ruby agent/workflow-doctor.rb ✅，backlog YAML parse ✅，git diff --check ✅。
 
+### 2026-06-11 / AD-025 M1 product-layer existence checks（本轮，verified）
+- **Milestone**：M1 几何与 Graphics 基础。
+- **根因分析**：M1 已经 `contract_aligned`，但 `product-deliverables.md` 的 M1 几何类型清单与 Graphics API 清单缺少独立存在性检查，不能推进到 `behavior_verified`。
+- **最小修复**：
+  - 新增 `PrecisionPoint`、`PrecisionRectangle`、`PrecisionDimension`、`Vector`、`AffineTransform` 兼容别名。
+  - 新增 M1 geometry product existence 集成测试，覆盖产品层类型导入、PointList、Insets 与 ApproxEq 兼容语义。
+  - 新增 Graphics product-layer snake_case 入口，覆盖 rectangle、oval、polygon、text/string、clip、alpha 与 style setters。
+  - 新增 `LineStyle` 并录入 stroke command snapshot，使线型状态成为可回放命令语义。
+  - 新增 M1 render product existence 集成测试，覆盖 shape/style、text/image/clip/alpha 命令输出。
+  - 新增 `agent/m1-product-existence-checks.md`，将 M1 从 `contract_aligned` 推进到 `behavior_verified`。
+- **边界判断**：不推进到 `complete`；M1 无独立 demo，但仍需后续路线图/文档闭环后再判断 complete。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-geometry 44/44 ✅，cargo test -p novadraw-render 9/9 ✅，cargo check --workspace ✅，cargo clippy -p novadraw-geometry -p novadraw-render -- -D warnings ✅，cargo check -p novadraw-render --features vello ✅。
+
+### 2026-06-11 / BASELINE-002 cleanup（本轮，verified）
+- **根因分析**：`workflow-verify.sh` 原先在 `cargo clippy -- -D warnings` 阶段失败；直接登记点是 `apps/vello-app/src/main.rs` 两处 `needless_borrows_for_generic_args`，修复后又继续暴露 scene 与 demo apps 的既有 clippy style debt。
+- **最小修复**：
+  - `vello-app` 移除 `scene.fill()` 颜色参数的不必要引用。
+  - `novadraw-scene` 清理 Copy 类型 clone、derive Default、collapsible-if、needless-borrow 与 Copy event clone。
+  - demo apps 清理冗余零参闭包、复杂 scene entry 类型别名、无效 cast、无效 return、range loop；示例函数参数过多处保留局部 allow。
+- **边界判断**：本轮只清理 clippy 基线债务，不改变 M1 状态机，不继续 已剥离主题 视觉验证。
+- **验证**：cargo fmt ✅，cargo fmt --check ✅，cargo clippy -- -D warnings ✅，bash agent/workflow-verify.sh ✅。
+
+### 2026-06-11 / AD-026 M2 topology add entry guard（本轮，verified）
+- **Milestone**：M2 Figure 树与盒模型。
+- **根因分析**：M2 要求 Figure tree 是 ownership 与 topology 的运行时骨架；延迟 add/reparent 路径已有 invalid-parent 防御，但公开直接 add 入口仍通过 `self.blocks[parent_id]` 访问 parent，parent 无效时会 panic，且与 pending mutation 路径的无副作用契约不一致。
+- **最小修复**：
+  - `add_child_to` 改为复用 `try_add_child_to`，无效 parent 时返回 `BlockId::null()`，不分配 block、不写 uuid_map、不修改 validation path。
+  - 新增显式可失败入口 `try_add_child_to(parent, figure) -> Option<BlockId>`。
+  - `add_child_with_bounds` 与交互式 `add_child` 同步接入无效 parent 防御。
+  - 交互式 `add_child` 无效 parent 时不触发 layout/repaint queue。
+  - 新增 invalid-parent 定向测试，覆盖 pending add、直接 add、try add 与 update-manager add。
+- **边界判断**：不处理 remove dispose 语义、不做 z-order API、不做 visible/enabled effective propagation、不接入 border insets。
+- **验证**：cargo fmt ✅，cargo test -p novadraw-scene invalid_parent 5/5 ✅，cargo test -p novadraw-scene 149/149 + 3 doctests ✅，cargo clippy -p novadraw-scene -- -D warnings ✅，bash agent/workflow-verify.sh ✅。
+
+### 2026-06-12 / AD-027 M2 effective visible/enabled propagation（本轮，verified）
+- **Milestone**：M2 Figure 树与盒模型。
+- **根因分析**：`FigureBlock.is_visible` / `is_enabled` 只是节点本地状态；render 和 hit-test 通过父节点遍历能自然跳过隐藏子树，但 repaint 与 validation 可直接以 child id 作为入口，仍只检查目标节点本地标志，导致隐藏/禁用祖先下的 child 仍可能进入更新语义。
+- **最小修复**：
+  - `FigureGraph` 新增本地查询 `is_visible` / `is_enabled`。
+  - `FigureGraph` 新增父链查询 `is_effectively_visible` / `is_effectively_enabled`。
+  - 新增 `set_enabled`，并让 `set_visible(false)` / `set_enabled(false)` 清理子树交互状态。
+  - `repaint` 改为按有效可见性过滤；validation phase 改为按有效可见性与有效启用状态过滤。
+  - 新增 M2 定向测试覆盖父链传播、隐藏祖先 repaint、隐藏/禁用祖先 validation queue drain。
+- **边界判断**：不处理 z-order API、不做 remove dispose 语义、不推进 M3 绘制裁剪闭环。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-scene 154/154 + 3 doctests ✅，cargo clippy -p novadraw-scene -- -D warnings ✅，ruby agent/workflow-doctor.rb ✅，bash agent/workflow-verify.sh ✅。
+
+### 2026-06-12 / AD-028 M2 child order and z-order contract audit（本轮，verified）
+- **Milestone**：M2 Figure 树与盒模型。
+- **根因分析**：`children` 存储顺序已被 render 正向遍历与 hit-test 反向遍历隐式使用，但 crate 外没有图级命名 API 查询或调整 sibling z-order；继续依赖内部 `children` 字段会破坏 FigureGraph 封装与树不变量。
+- **最小修复**：
+  - 对标 Draw2D：children 正序绘制，reverse children 优先用于 findFigureAt / findMouseEventTargetAt。
+  - `FigureGraph` 新增 `child_order` / `child_z_index` 只读查询，明确 index 越大越靠顶层。
+  - `FigureGraph` 新增 `move_child_to_index` / `bring_child_to_front` / `send_child_to_back`。
+  - 重排 API 只允许直接 child；非法 parent、非直接 child、越界 index 与 no-op 均无副作用返回 false。
+  - 新增 M2 契约测试覆盖 add append 顺序、z-index 查询、重排后 topmost hit-test 变化，以及非法重排无副作用。
+- **边界判断**：不处理 bounds/insets/clientArea 一致性、不做 remove dispose 语义、不推进 M3 绘制裁剪闭环。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-scene z_order ✅，cargo test -p novadraw-scene 157/157 + 3 doctests ✅，cargo clippy -p novadraw-scene -- -D warnings ✅，ruby agent/workflow-doctor.rb ✅，bash agent/workflow-verify.sh ✅。
+
+### 2026-06-12 / AD-029 M2 bounds/insets/clientArea consistency audit（本轮，verified）
+- **Milestone**：M2 Figure 树与盒模型。
+- **根因分析**：`Bounded::client_area()` 与 render/layout 已大体对齐 Draw2D，但 hit-test 与 mouse target 子树下降只检查父 Figure bounds，未按 Draw2D `findDescendantAtExcluding` / `findMouseEventTargetInDescendantsAt` 先用父 clientArea 过滤 children 搜索。
+- **最小修复**：
+  - 对标 Draw2D：`getClientArea()` 基于 bounds shrink insets；`useLocalCoordinates()` 时原点重置为 `(0,0)`。
+  - `hit_test_from` 在父 Figure 自身按 bounds 命中后，只在转换后的点落入父 clientArea 时继续搜索 children。
+  - `find_mouse_event_target_from` 同步采用父 clientArea 门禁；父自身是否作为 target 仍由 `wants_mouse_events()` 决定。
+  - 新增 M2 契约测试覆盖点位于父 bounds 但落在 clientArea 外时不会命中 child，进入 clientArea 后正常命中 child / mouse target。
+  - 顺手修复 `workflow-doctor.rb` 默认外部/内部编码为 UTF-8，避免普通 `ruby agent/workflow-doctor.rb` 在中文 roadmap 上触发 US-ASCII 读取错误。
+- **边界判断**：不处理 remove dispose 语义、不扩大到 M3 绘制裁剪闭环、不改 recursive / iterative render 主流程。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-scene parent_client_area ✅，cargo test -p novadraw-scene bounds_test 26/26 ✅，cargo test -p novadraw-scene 159/159 + 3 doctests ✅，cargo clippy -p novadraw-scene -- -D warnings ✅，ruby agent/workflow-doctor.rb ✅，bash agent/workflow-verify.sh --fast ✅。
+
+### 2026-06-12 / AD-030 M2 remove and reparent lifecycle contract audit（本轮，verified）
+- **Milestone**：M2 Figure 树与盒模型。
+- **根因分析**：`apply_reparent_mutation` 已拒绝 invalid parent、self reparent 与 descendant reparent，但 detach 旧父发生在 attach 新父之前；若新父已异常持有 child，attach 会失败并留下 orphan，违反 remove/reparent no partial write 契约。
+- **最小修复**：
+  - 对标 Draw2D：add/reparent 会先保证不会形成 cycle，remove 会只接受真实 direct child，并触发重绘/重验证。
+  - `FigureGraph` 新增 `contains_direct_child` 内部查询。
+  - `apply_reparent_mutation` 在任何 detach/attach 写入前校验旧父确实持有 child、新父尚未持有 child。
+  - 新增 wrong-parent remove 无副作用测试：不 detach child、不清交互状态、不排队 invalid/dirty。
+  - 新增 duplicate-new-parent reparent 无副作用测试：不 detach 旧父、不改 parent、不排队 invalid/dirty。
+- **边界判断**：不新增公开 remove/reparent API，不改变 pending mutation 时序，不处理 M3 绘制闭环。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-scene apply_pending 9/9 ✅，cargo test -p novadraw-scene 161/161 + 3 doctests ✅，cargo clippy -p novadraw-scene -- -D warnings ✅，ruby agent/workflow-doctor.rb ✅，bash agent/workflow-verify.sh --fast ✅。
+
+### 2026-06-12 / AD-031 M2 contract alignment summary（本轮，verified）
+- **Milestone**：M2 Figure 树与盒模型。
+- **根因分析**：M2 已完成多个局部 delta，但 milestone 状态仍停留在 `in_progress`；需要将 add/remove/reparent、z-order、bounds/clientArea、visible/enabled 四类 YAML probes 与自动化证据逐项对齐，避免状态推进依赖口头判断。
+- **最小修复**：
+  - 新增 `agent/m2-contract-alignment-summary.md`，逐项登记 M2 scope、contracts、probes、delta evidence、verification 与 residual risks。
+  - 确认 AD-026 到 AD-030 已覆盖 M2 YAML probes。
+  - 将 M2 从 `in_progress` 推进到 `contract_aligned`。
+  - 明确本轮不推进 `behavior_verified` 或 `complete`，产品层存在性检查留到下一步。
+- **边界判断**：不新增代码能力，不启动 M3，不做 M2 product-layer checks。
+- **验证**：cargo test -p novadraw-scene ✅，cargo clippy -p novadraw-scene -- -D warnings ✅，ruby agent/workflow-doctor.rb ✅，bash agent/workflow-verify.sh --fast ✅。
+
 ## Current Hypothesis
 
 - ✅ 核心坐标模型主干已闭合：bounds / dirty / hit-test / layout / render / mouse event 均遵守相对最近坐标根语义。
 - ✅ client area 已统一到 `Bounded::client_area()`，布局与渲染不再各自推导。
-- ✅ `Viewport` 已完成 coordinate-domain audit：API、注释、测试均改为 viewport/content 坐标域，未继续暴露 screen/world 语义。
-- ✅ AD-018 已完成引擎最小验证；⚠️ 后续可视化验证发现 `clip_to_viewport` 截图未通过，Viewport 开发按用户要求暂停。
+- ✅ 当前核心工作流只保留通用 Figure runtime 主线；已剥离主题不参与恢复摘要。
 - ✅ AD-001C 已完成：调度触发属于组合根 / SceneHost，UpdateManager 不承担平台 redraw 调度。
 - ✅ AD-002 已完成：SceneHost 保持极薄平台调度层，editor/render 策略状态位于组合根。
 - ✅ AD-003 已完成：Figure 回调只记录 pending mutation，结构性改树发生在顶层分发结束后。
@@ -368,10 +472,11 @@
 - ✅ Completion baseline verification 已通过：backlog 无 open/candidate，coverage 无 partially_aligned/unassessed/drifting，`cargo test` 全量通过。
 - ✅ AD-016 Review follow-up 已完成：invalid add/reparent mutation 不再污染图结构。
 - ✅ AD-017 已完成：`apply_reparent_mutation` 在 detach/attach 前拒绝 self reparent 与 descendant reparent，C-08 已恢复 aligned。
-- ⚠️ AD-018 后续视觉验证暂停：Viewport 核心语义已在引擎测试中通过，但 `apps/viewport-app` 的 `clip_to_viewport` 自动截图显示 content 裁剪未生效；恢复时优先查 NdCanvas/Vello clip 与 perform_update repair 路径，不先动渲染主循环。
-- ✅ AD-019A 已完成：`SceneHost` 进入 `host` 子域，facade 导出保持不变；本轮没有触碰 Viewport、runtime、scene->graph 或渲染主循环。
+- ✅ 历史暂停上下文不作为当前 M2-M7 的阻塞项、next step 或残余风险。
+- ✅ AD-019A 已完成：`SceneHost` 进入 `host` 子域，facade 导出保持不变；本轮没有触碰 已剥离主题、runtime、scene->graph 或渲染主循环。
 - ✅ AD-019B 已完成：`novadraw-scene/src` 已收敛为 `figure / graph / runtime / host / container / layout / log / lib.rs`；未创建新 crate，未修改渲染主循环逻辑。
-- ✅ M1 已进入 `in_progress`：AD-020 已收口 Graphics state stack / clip-transform command snapshot；M2-M10 仍保持 `not_started`。
+- ✅ M1 已进入 `behavior_verified`：契约层 probes 与产品层 existence checks 均有自动化证据。
+- ✅ M2 已进入 `in_progress`：AD-026 已收口公开 add 入口的无效 parent 防御；M3-M10 仍保持 `not_started`。
 - ✅ WF-001 已完成：workflow doctor 初版可检测 milestone、roadmap、backlog、checkpoint 与 debt 的基础状态漂移，并已接入 `workflow-verify.sh`。
 - ✅ AD-020 已完成：命令层可验证 Graphics 状态栈嵌套、set/reset transform 快照、clip reset/restore 快照。
 - ✅ AD-021 已完成：`NdCanvas` 不再暴露可变命令 Vec 入口，外部只能通过 Graphics API 生成命令并通过只读快照/提交读取录制结果。
@@ -380,16 +485,22 @@
 - ✅ AD-023 已完成：M1 Graphics text/image/alpha 进入命令层快照，`NdCanvas` 不再把相关 API 保持为 no-op。
 - ✅ AD-024 已完成：M1 contract probes summary 确认 YAML probes 全部有自动化证据，M1 状态已推进到 `contract_aligned`。
 - ✅ WF-003 已完成：`active.yaml` 只保存非终态工作，终态 delta 进入 archive，`recent.yaml` 提供最近 5 个终态摘要，doctor 强制校验该生命周期。
+- ✅ AD-025 已完成：M1 product-layer existence checks 覆盖几何类型清单与 Graphics API 清单，M1 状态已推进到 `behavior_verified`。
+- ✅ AD-026 已完成：M2 topology add entry guard 覆盖直接 add / try add / update-manager add 的 invalid-parent 无副作用契约。
+- ✅ AD-027 已完成：M2 effective visible/enabled propagation 覆盖本地状态查询、父链有效状态查询、repaint 过滤与 validation 过滤。
+- ✅ AD-028 已完成：M2 child order / z-order 覆盖 sibling 顺序查询、z-index 查询、重排 API 与 topmost hit-test 契约。
+- ✅ AD-029 已完成：M2 bounds/insets/clientArea 覆盖 hit-test / mouse target 子树下降的父 clientArea 门禁。
+- ✅ AD-030 已完成：M2 remove/reparent 覆盖 wrong-parent remove 与 duplicate-new-parent reparent 的无副作用契约。
+- ✅ AD-031 已完成：M2 contract summary 确认 YAML probes 全部有自动化证据，M2 已推进到 `contract_aligned`。
 
 ## Next Small Step
 
-- 当前不要继续排查 Viewport `clip_to_viewport`，该项随 M8 收口。
-- 下一步二选一：继续 M1 product-layer existence checks 以准备 `behavior_verified`，或在依赖允许的前提下启动 M2；不要直接跳到 M3 complete。
+- 下一步：继续 M2 product-layer existence checks；不要直接跳到 M3 complete。
 
 ## Blockers
 
 - BASELINE-001（历史 cargo fmt drift）已通过本轮 `cargo fmt` / `cargo fmt --check` 收敛
-- 当前无新的硬阻塞；M8 仍有 `INBOX-20260610-01` 暂停项，随 M8 收口。
+- 当前无新的硬阻塞。
 
 ## Verification State
 
@@ -410,13 +521,13 @@
 - AD-017 cargo fmt --check: passed ✅
 - AD-017 cargo check: passed ✅
 - AD-017 cargo test -p novadraw-scene: 143/143 + 3 doctests passed ✅
-- AD-018 cargo fmt: passed ✅
-- AD-018 cargo check: passed ✅
-- AD-018 cargo test -p novadraw-scene: 146/146 + 3 doctests passed ✅
-- AD-018 workflow YAML parse: passed ✅
-- AD-018 git diff --check: passed ✅
-- Full cargo clippy -- -D warnings: failed on existing non-AD-018 clippy debt in apps/vello-app and older novadraw-scene modules; not mixed into this delta
-- viewport-app clip_to_viewport visual screenshot: failed / paused ⚠️
+- 历史剥离条目 cargo fmt: passed ✅
+- 历史剥离条目 cargo check: passed ✅
+- 历史剥离条目 cargo test -p novadraw-scene: 146/146 + 3 doctests passed ✅
+- 历史剥离条目 workflow YAML parse: passed ✅
+- 历史剥离条目 git diff --check: passed ✅
+- Full cargo clippy -- -D warnings: failed on existing non-历史剥离条目 clippy debt in apps/vello-app and older novadraw-scene modules; not mixed into this delta
+- Historical paused visual follow-up: not part of current recovery path
 - AD-019A cargo fmt --check: passed ✅
 - AD-019A cargo check -p novadraw-scene: passed ✅
 - AD-019A cargo test -p novadraw-scene: 146/146 + 3 doctests passed ✅
@@ -448,9 +559,54 @@
 - WF-003 ruby agent/workflow-doctor.rb: passed ✅
 - WF-003 backlog YAML parse: passed ✅
 - WF-003 git diff --check: passed ✅
+- AD-025 cargo fmt --check: passed ✅
+- AD-025 cargo test -p novadraw-geometry: 44/44 tests passed ✅
+- AD-025 cargo test -p novadraw-render: 9/9 tests passed ✅
+- AD-025 cargo check --workspace: passed ✅
+- AD-025 cargo clippy -p novadraw-geometry -p novadraw-render -- -D warnings: passed ✅
+- AD-025 cargo check -p novadraw-render --features vello: passed ✅
+- AD-025 ruby agent/workflow-doctor.rb: passed ✅
+- AD-025 git diff --check: passed ✅
+- AD-025 baseline verification `bash agent/workflow-verify.sh`: failed on existing BASELINE-002 (`apps/vello-app` clippy needless borrow) ⚠️
+- BASELINE-002 cargo fmt --check: passed ✅
+- BASELINE-002 cargo clippy -- -D warnings: passed ✅
+- BASELINE-002 bash agent/workflow-verify.sh: passed ✅
+- AD-026 cargo fmt: passed ✅
+- AD-026 cargo test -p novadraw-scene invalid_parent: 5/5 tests passed ✅
+- AD-026 cargo test -p novadraw-scene: 149/149 + 3 doctests passed ✅
+- AD-026 cargo clippy -p novadraw-scene -- -D warnings: passed ✅
+- AD-026 bash agent/workflow-verify.sh: passed ✅
+- AD-027 cargo fmt --check: passed ✅
+- AD-027 cargo test -p novadraw-scene: 154/154 + 3 doctests passed ✅
+- AD-027 cargo clippy -p novadraw-scene -- -D warnings: passed ✅
+- AD-027 ruby agent/workflow-doctor.rb: passed ✅
+- AD-027 bash agent/workflow-verify.sh: passed ✅
+- AD-028 cargo fmt --check: passed ✅
+- AD-028 cargo test -p novadraw-scene z_order: passed ✅
+- AD-028 cargo test -p novadraw-scene: 157/157 + 3 doctests passed ✅
+- AD-028 cargo clippy -p novadraw-scene -- -D warnings: passed ✅
+- AD-028 ruby agent/workflow-doctor.rb: passed ✅
+- AD-028 bash agent/workflow-verify.sh: passed ✅
+- AD-029 cargo fmt --check: passed ✅
+- AD-029 cargo test -p novadraw-scene parent_client_area: passed ✅
+- AD-029 cargo test -p novadraw-scene bounds_test: 26/26 passed ✅
+- AD-029 cargo test -p novadraw-scene: 159/159 + 3 doctests passed ✅
+- AD-029 cargo clippy -p novadraw-scene -- -D warnings: passed ✅
+- AD-029 ruby agent/workflow-doctor.rb: passed ✅
+- AD-029 bash agent/workflow-verify.sh --fast: passed ✅
+- AD-030 cargo fmt --check: passed ✅
+- AD-030 cargo test -p novadraw-scene apply_pending: 9/9 passed ✅
+- AD-030 cargo test -p novadraw-scene: 161/161 + 3 doctests passed ✅
+- AD-030 cargo clippy -p novadraw-scene -- -D warnings: passed ✅
+- AD-030 ruby agent/workflow-doctor.rb: passed ✅
+- AD-030 bash agent/workflow-verify.sh --fast: passed ✅
+- AD-031 cargo test -p novadraw-scene: passed ✅
+- AD-031 cargo clippy -p novadraw-scene -- -D warnings: passed ✅
+- AD-031 ruby agent/workflow-doctor.rb: passed ✅
+- AD-031 bash agent/workflow-verify.sh --fast: passed ✅
 
 ## Resume Prompt
 
 ```text
-WF-003 Active backlog lifecycle compaction 已完成并通过验证。`agent/backlog/active.yaml` 现在只保存非终态工作，终态 delta 迁入 `agent/backlog/archive/2026-06.yaml`，`agent/backlog/recent.yaml` 只保留最近 5 个终态摘要；`workflow-doctor.rb` 已强制校验 active/recent 生命周期。下一轮可选择继续 M1 product-layer existence checks，或在依赖允许的前提下启动 M2；Viewport 后续开发仍暂停，不要继续排查 `clip_to_viewport`。
+AD-031 M2 contract alignment summary 已完成并通过完整 `workflow-verify.sh --fast` 验证。M1 保持 `behavior_verified`，M2 已推进到 `contract_aligned`；`agent/backlog/active.yaml` 仍为空。下一轮建议继续 M2 product-layer existence checks。
 ```

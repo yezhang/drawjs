@@ -4,6 +4,9 @@
 require "set"
 require "yaml"
 
+Encoding.default_external = Encoding::UTF_8
+Encoding.default_internal = Encoding::UTF_8
+
 ROOT = File.expand_path("..", __dir__)
 
 VALID_MILESTONE_STATUSES = %w[
@@ -31,6 +34,8 @@ VALID_DEBT_STATUSES = %w[open accepted resolved].freeze
 ACTIVE_BACKLOG_STATUSES = %w[pending proposed in_progress blocked split].freeze
 TERMINAL_DELTA_STATUSES = %w[verified done rejected promoted].freeze
 ACTIVE_BACKLOG_MAX_ITEMS = 10
+DOC_ONLY_PATH_PREFIXES = %w[agent/ doc/].freeze
+DOC_ONLY_PATH_EXTENSIONS = %w[.md .yaml .yml].freeze
 REQUIRED_CHECKPOINT_SECTIONS = [
   "# Session Checkpoint",
   "## Metadata",
@@ -113,6 +118,35 @@ def future_delta?(id)
     Regexp.last_match(1).to_i >= 11
   else
     true
+  end
+end
+
+def doc_only_path?(relative)
+  return true if relative.nil? || relative.empty?
+
+  normalized = relative.delete_prefix("./")
+  DOC_ONLY_PATH_PREFIXES.any? { |prefix| normalized.start_with?(prefix) } &&
+    DOC_ONLY_PATH_EXTENSIONS.include?(File.extname(normalized))
+end
+
+def documentation_only_delta?(item)
+  paths = Array(item["evidence"]) + Array(item["files"])
+  return false if paths.empty?
+
+  paths.all? { |relative| doc_only_path?(relative.to_s) }
+end
+
+def check_execution_momentum(recent_items, all_items_by_id)
+  terminal_items = recent_items.map { |item| all_items_by_id[item["id"]] || item }.compact
+  latest_two = terminal_items.last(2)
+  return if latest_two.length < 2
+
+  if latest_two.all? { |item| documentation_only_delta?(item) }
+    ids = latest_two.map { |item| item["id"] || "<missing id>" }.join(", ")
+    fail_check(
+      "execution momentum stalled: latest two terminal deltas are documentation-only (#{ids}); " \
+      "next delta must touch product/runtime code or executable tests"
+    )
   end
 end
 
@@ -233,6 +267,11 @@ def check_backlog
                 active_items +
                 data["archives"].flat_map { |archive| Array(archive["candidate_items"]) + Array(archive["items"]) }
     debts = Array(data.dig("baseline_debts", "baseline_debts"))
+
+    all_items_by_id = all_items.each_with_object({}) do |item, index|
+      index[item["id"]] = item if item["id"]
+    end
+    check_execution_momentum(recent_items, all_items_by_id)
 
     current_delta = data.dig("index", "current_delta")
     fail_check("backlog index missing current_delta") if current_delta.nil? || current_delta.empty?

@@ -25,6 +25,11 @@ hard_gates:
   - 同一 delta 连续 2 轮仍未明显收敛
   - Post-Execution Reflection 出现 2 个或以上独立子问题
   - Next Step 已分叉成多个独立职责边界问题
+  execution_momentum:
+  - 最近两个终态 delta 不得同时为 documentation-only delta
+  - documentation-only delta 只能用于 contract summary、状态迁移、backlog/checkpoint 修复等治理收口
+  - documentation-only delta 之后的下一轮必须回到产品代码、运行时代码、可执行 workflow code 或 tests
+  - product-layer existence check 必须有 crate 外部测试或可执行验证证据，否则不能推动 behavior_verified
   return_to_outer_loop_when:
   - 当前 delta 已触发 split
   - backlog 优先级可能失真

@@ -1,8 +1,8 @@
 ---
 version: 1
-last_updated: '2026-06-11'
-current_delta: WF-003
-next_recommended_delta: M1 product-layer existence checks or M2 kickoff
+last_updated: '2026-06-12'
+current_delta: WF-004
+next_recommended_delta: M3 render traversal and clipping contract audit
 read_order:
 - agent/backlog/index.yaml
 - agent/backlog/active.yaml

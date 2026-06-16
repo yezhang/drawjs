@@ -1,31 +1,31 @@
 ---
 version: 1
-last_updated: '2026-06-11'
+last_updated: '2026-06-12'
 description: Short human-readable summary of latest terminal deltas. Full history
   lives in archive files.
 items:
-- id: AD-022
-  title: Geometry missing types foundation
+- id: AD-029
+  title: M2 bounds/insets/clientArea consistency audit
   status: verified
   evolution_kind: parity
-  milestone_id: M1
-- id: WF-002
-  title: Backlog manifest split
-  status: verified
-  evolution_kind: workflow
-  parent_id: M0
-- id: AD-023
-  title: Graphics text image alpha command support
+  milestone_id: M2
+- id: AD-030
+  title: M2 remove and reparent lifecycle contract audit
   status: verified
   evolution_kind: parity
-  milestone_id: M1
-- id: AD-024
-  title: M1 contract probes summary
+  milestone_id: M2
+- id: AD-031
+  title: M2 contract alignment summary
   status: verified
-  evolution_kind: workflow
-  parent_id: M1
-- id: WF-003
-  title: Active backlog lifecycle compaction
+  evolution_kind: parity
+  milestone_id: M2
+- id: AD-032
+  title: M2 product-layer existence checks
+  status: verified
+  evolution_kind: parity
+  milestone_id: M2
+- id: WF-004
+  title: Execution momentum gate
   status: verified
   evolution_kind: workflow
   parent_id: M0

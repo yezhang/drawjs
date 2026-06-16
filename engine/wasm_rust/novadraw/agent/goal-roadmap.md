@@ -28,34 +28,33 @@
 
 **编号规则**：本文及任何 delta、PR、commit 信息引用 milestone 编号一律写 `M{n}`，指 YAML M{n}。不允许出现"本文 M{n}"或"MD M{n}"的歧义说法。
 
-## 状态快照（2026-06-11）
+## 状态快照（2026-06-12）
 
 ### 总览
 
 | 维度 | 当前 | 目标 |
 |------|------|------|
 | 完成 milestone 数 | 0 / 10 | 10 / 10 |
-| 总测试数 | 146 | ~1,250 |
+| 总测试数 | 165 | ~1,250 |
 | 已 verify demo 数 | 0 / 11 | 11 / 11 |
 
 ### Milestone 状态
 
 | YAML | 标题 | 当前状态 | 备注 |
 |------|------|----------|------|
-| M1 | 几何与 Graphics 基础 | `contract_aligned` | M1 probes summary 已确认 geometry operation、Graphics state stack、clip/transform snapshot、text/image/alpha snapshot 均有自动化证据；尚未进入 `behavior_verified` |
-| M2 | Figure 树与盒模型 | `not_started` | — |
+| M1 | 几何与 Graphics 基础 | `behavior_verified` | M1 probes summary 已确认契约层自动化证据；M1 product existence checks 已覆盖几何类型清单与 Graphics API 清单；尚未进入 `complete` |
+| M2 | Figure 树与盒模型 | `behavior_verified` | AD-026 至 AD-031 已覆盖 M2 YAML probes 与契约对齐；AD-032 product existence checks 已覆盖 5 基础图元、FigureGraph 产品 API 与三段式 paint 顺序；尚未进入 `complete` |
 | M3 | 绘制遍历与裁剪闭环 | `not_started` | — |
 | M4 | 坐标域与变换闭环 | `not_started` | — |
 | M5 | Layout + Validation + UpdateManager | `not_started` | — |
 | M6 | 事件分发与交互状态机 | `not_started` | — |
 | M7 | 通知语义分层 | `not_started` | — |
-| M8 | Viewport / Scroll / Zoom | `not_started` | AD-018 视觉验证暂停，需随本 milestone 收口 |
+| M8 | Viewport / Scroll / Zoom | `not_started` | 规划层保留；不作为当前 M2 恢复热路径 |
 | M9 | Connection / Anchor / Router | `not_started` | — |
 | M10 | 常用 Figure 与文本/控件 | `not_started` | — |
 
 ### 阻塞项
 
-- **INBOX-20260610-01**：`apps/viewport-app` 视觉验证暂停 → 收口入 M8
 - 其他无
 
 ## 废弃说明（迁移记录）

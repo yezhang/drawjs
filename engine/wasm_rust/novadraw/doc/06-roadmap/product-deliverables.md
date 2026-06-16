@@ -219,9 +219,9 @@
 - `ScalableLayeredPane`
 - Zoom transform 集成
 
-### 阻塞收口
+### 收口要求
 
-- AD-018 暂停的 `apps/viewport-app` 4 场景视觉验证必须随本 milestone 关闭
+- 历史暂停项不阻塞当前 M2 恢复热路径；仅在执行 M8 时纳入验收。
 
 ### 测试增量预期
 

@@ -283,7 +283,7 @@
 ### Phase 4：补齐更新深水区
 
 - S7：Damage 父链传播
-- 后续视项目进度再考虑 viewport / scroll / router / connection 的专项场景
+- 后续视项目进度再考虑保留扩展、router / connection 的专项场景
 
 ## 9. 验收标准
 

@@ -60,7 +60,7 @@ milestones:
   - id: M1
     title: 几何与 Graphics 基础
     layer: Foundation
-    status: contract_aligned
+    status: behavior_verified
     goal: >
       Establish the geometry and drawing substrate required by all higher-level
       Draw2D protocols.
@@ -88,7 +88,7 @@ milestones:
   - id: M2
     title: Figure 树与盒模型
     layer: Figure Runtime
-    status: not_started
+    status: behavior_verified
     goal: >
       Implement the lightweight Figure tree as the single runtime backbone for
       ownership, z-order, visibility, coordinates, validation, and hit testing.
@@ -100,7 +100,7 @@ milestones:
     non_scope:
       - Full layout algorithm set
       - Full event state machine
-      - Viewport and scroll semantics
+      - Reserved extension semantics
     contracts:
       - Draw2D A1 lightweight Figure tree axiom
       - Draw2D A2 tree as runtime backbone axiom
@@ -165,7 +165,7 @@ milestones:
       - Insets-aware clientArea origin
       - Entry-domain to target-domain input points
     non_scope:
-      - ScrollPane UI
+      - Reserved extension UI
       - Zoom policy
       - Connection routing
     contracts:
@@ -202,7 +202,7 @@ milestones:
       - UpdateManager update phase notifications
     non_scope:
       - Completing every Draw2D layout algorithm in one step
-      - Viewport scroll policy
+      - Reserved extension policy
       - GEF command stack
     contracts:
       - Draw2D A6 geometry change protocol axiom

@@ -1,6 +1,6 @@
 ---
 version: 1
-last_updated: '2026-06-11'
+last_updated: '2026-06-12'
 candidate_items:
 - id: CAD-001
   title: Update listener responsibility audit
@@ -1125,3 +1125,354 @@ items:
   - recent.yaml exists and keeps at most five terminal summaries
   - workflow-doctor checks the active lifecycle rules
   - workflow docs describe active-to-archive compaction after delta completion
+- id: AD-025
+  title: M1 product-layer existence checks
+  contract: M1 can only advance to behavior_verified after product-layer geometry
+    type names and Graphics API entries have repeatable existence checks.
+  evolution_kind: parity
+  milestone_id: M1
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - novadraw-geometry/src/lib.rs
+  - novadraw-geometry/tests/m1_product_existence.rs
+  - novadraw-render/src/context.rs
+  - novadraw-render/src/command.rs
+  - novadraw-render/src/lib.rs
+  - novadraw-render/tests/m1_product_existence.rs
+  - agent/m1-product-existence-checks.md
+  - agent/draw2d-core-milestones.yaml
+  - agent/goal-roadmap.md
+  progress_notes:
+  - Root Cause：M1 已经 contract_aligned，但 product-deliverables.md 的几何类型清单与
+    Graphics API 清单缺少独立存在性检查，不能推进到 behavior_verified。
+  - 新增 `PrecisionPoint`、`PrecisionRectangle`、`PrecisionDimension`、`Vector`
+    与 `AffineTransform` 兼容别名；Novadraw 几何值默认使用 f64，所以 precision 命名映射到同一底层类型。
+  - 新增 M1 geometry product existence 集成测试，覆盖几何类型导入、PointList bounds、Insets
+    与 ApproxEq 兼容语义。
+  - 新增 Graphics product-layer snake_case 入口，包括 rectangle、oval、polygon、text/string、clip、alpha
+    与 style setters。
+  - 新增 `LineStyle` 并将其录入 stroke command snapshot；Vello backend 当前忽略 dash/dot
+    渲染细节，但不会丢失命令层语义。
+  - 新增 M1 render product existence 集成测试，覆盖 shape/style、text/image/clip/alpha 命令输出。
+  - M1 从 `contract_aligned` 推进到 `behavior_verified`；不推进到 `complete`。
+  done_when:
+  - M1 product existence summary 文件存在，并说明 status decision
+  - 几何产品层类型名可从 `novadraw-geometry` 导入并参与基础语义测试
+  - Graphics 产品层 API 入口可生成 backend-independent RenderCommand
+  - cargo fmt --check、cargo test -p novadraw-geometry、cargo test -p novadraw-render、cargo
+    check --workspace、目标 crate clippy 与 vello feature check 通过
+  - "`agent/draw2d-core-milestones.yaml` 与 `agent/goal-roadmap.md` 的 M1 状态同步为 `behavior_verified`"
+- id: BASELINE-002
+  title: Repository-wide clippy baseline cleanup
+  contract: The repository-wide verification gate must pass without allowing stale
+    clippy debt to block future milestone work.
+  evolution_kind: workflow
+  milestone_id:
+  priority: high
+  status: verified
+  parent_id: M0
+  evidence:
+  - apps/vello-app/src/main.rs
+  - novadraw-scene/src/figure/triangle.rs
+  - novadraw-scene/src/figure/border/mod.rs
+  - novadraw-scene/src/graph/render_iterative.rs
+  - novadraw-scene/src/layout/border_layout.rs
+  - novadraw-scene/src/layout/flow_layout.rs
+  - novadraw-scene/src/runtime/update/deferred.rs
+  - novadraw-apps/src/app.rs
+  - apps/editor/src/scene_manager/interactive_figure.rs
+  - apps/*-app/src/main.rs
+  - agent/backlog/baseline-debts.yaml
+  - agent/inner-loop-checkpoint.md
+  - agent/inner-loop-worklog.md
+  progress_notes:
+  - Root Cause：`workflow-verify.sh` 在 `cargo clippy -- -D warnings` 阶段失败；直接登记点是
+    `apps/vello-app/src/main.rs` 两处 needless borrow，修复后继续暴露 scene 与 demo apps
+    的旧 clippy style debt。
+  - 清理 vello-app 的 needless borrow，使直接登记点消失。
+  - 清理 novadraw-scene 的 Copy clone、derive Default、collapsible-if、needless-borrow 与 Copy
+    event clone。
+  - 清理 demo apps 的 redundant closure、type complexity、unnecessary cast、needless return
+    与 needless range loop；示例 helper 的参数数量保留局部 allow。
+  - 完整 `workflow-verify.sh` 已恢复全绿。
+  done_when:
+  - "`agent/backlog/baseline-debts.yaml` 中 BASELINE-002 状态为 resolved"
+  - cargo fmt --check passes
+  - cargo clippy -- -D warnings passes
+  - bash agent/workflow-verify.sh passes
+- id: AD-026
+  title: M2 topology add entry guard
+  contract: M2 FigureGraph add-entry topology operations must not panic or leave
+    partial blocks/uuid mappings when parent ids are invalid.
+  evolution_kind: parity
+  milestone_id: M2
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - novadraw-scene/src/graph/mod.rs
+  - novadraw-scene/src/graph/update_integration_test.rs
+  - agent/draw2d-core-milestones.yaml
+  - agent/goal-roadmap.md
+  - agent/backlog/index.yaml
+  - agent/backlog/recent.yaml
+  - agent/backlog/archive/2026-06.yaml
+  - agent/inner-loop-checkpoint.md
+  - agent/inner-loop-worklog.md
+  progress_notes:
+  - Root Cause：M2 要求 Figure tree 是 ownership 与 topology 的运行时骨架；延迟
+    add/reparent 路径已有 invalid-parent 防御，但公开直接 add 入口仍通过 `self.blocks[parent_id]`
+    访问 parent，parent 无效时会 panic，且与 pending mutation 路径的无副作用契约不一致。
+  - "`add_child_to` 现在复用 `try_add_child_to`，无效 parent 时返回 `BlockId::null()` 且不分配 block、不写 uuid_map、不修改 validation path。"
+  - "新增显式可失败入口 `try_add_child_to`，为后续调用方逐步迁移到清晰拓扑契约提供 API。"
+  - "`add_child_with_bounds` 与交互式 `add_child` 同步接入无效 parent 防御；交互式 add 无效时不触发 layout/repaint queue。"
+  - 新增 invalid-parent 定向测试，覆盖 pending add、直接 add、try add 与 update-manager add。
+  - M2 从 `not_started` 推进到 `in_progress`。
+  done_when:
+  - direct add invalid parent returns null without side effects
+  - try add invalid parent returns none without side effects
+  - update-manager add invalid parent returns null without layout/repaint side effects
+  - cargo test -p novadraw-scene invalid_parent passes
+  - cargo test -p novadraw-scene passes
+  - cargo clippy -p novadraw-scene -- -D warnings passes
+  - bash agent/workflow-verify.sh passes
+- id: AD-028
+  title: M2 child order and z-order contract audit
+  contract: M2 FigureGraph child order must match Draw2D semantics where children
+    are painted in stored order and searched for hit testing in reverse order;
+    graph-level APIs must expose safe sibling order queries and z-order reordering
+    without exposing mutable child storage.
+  evolution_kind: parity
+  milestone_id: M2
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - novadraw-scene/src/graph/mod.rs
+  - agent/workflow-doctor.rb
+  - agent/backlog/index.yaml
+  - agent/backlog/recent.yaml
+  - agent/backlog/archive/2026-06.yaml
+  - agent/goal-roadmap.md
+  - agent/inner-loop-checkpoint.md
+  - agent/inner-loop-worklog.md
+  progress_notes:
+  - Root Cause：`children` 存储顺序已被 render 正向遍历与 hit-test 反向遍历隐式使用，但 crate 外没有图级命名 API 查询或调整 sibling z-order；若继续依赖内部 `children` 字段会破坏 FigureGraph 封装与树不变量。
+  - "对标 Draw2D：children 正序绘制，reverse children 优先用于 findFigureAt / findMouseEventTargetAt。"
+  - "新增 `child_order` / `child_z_index` 只读查询，明确 index 越大越靠顶层。"
+  - "新增 `move_child_to_index` / `bring_child_to_front` / `send_child_to_back`，只允许重排直接 child，非法 parent、非直接 child、越界 index 与 no-op 均无副作用返回 false。"
+  - 新增 M2 契约测试覆盖 add append 顺序、z-index 查询、重排后 topmost hit-test 变化，以及非法重排无副作用。
+  done_when:
+  - child order appends children back-to-front
+  - z-order query reports sibling index
+  - z-order reorder changes topmost hit-test target
+  - invalid z-order operations have no side effects
+  - cargo fmt --check passes
+  - cargo test -p novadraw-scene passes
+  - cargo clippy -p novadraw-scene -- -D warnings passes
+  - bash agent/workflow-verify.sh passes
+- id: AD-032
+  title: M2 product-layer existence checks
+  contract: M2 can move from contract_aligned to behavior_verified only when
+    product-layer Figure types, FigureGraph runtime APIs, and three-phase paint
+    protocol are covered by crate-external repeatable checks.
+  evolution_kind: parity
+  milestone_id: M2
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - novadraw-scene/tests/m2_product_existence.rs
+  - agent/m2-product-existence-checks.md
+  - agent/draw2d-core-milestones.yaml
+  - agent/backlog/index.yaml
+  - agent/backlog/recent.yaml
+  - agent/backlog/archive/2026-06.yaml
+  - agent/goal-roadmap.md
+  - agent/inner-loop-checkpoint.md
+  - agent/inner-loop-worklog.md
+  progress_notes:
+  - Root Cause：M2 已经 contract_aligned，但产品层 5 基础图元、Figure/FigureBlock/FigureGraph
+    角色与三段式 paint 协议缺少 crate 外部存在性检查，不能推进到 `behavior_verified`。
+  - 新增 `novadraw-scene/tests/m2_product_existence.rs`，覆盖 5 个产品图元可构造为 `Box<dyn Figure>`。
+  - 覆盖 FigureGraph 产品 API：set contents、add child、block 只读查询、child order、z-index、hit-test、visible/enabled 有效状态。
+  - 覆盖三段式 paint 顺序：parent figure -> child figure -> child border -> parent border。
+  - 新增 `agent/m2-product-existence-checks.md` 并将 M2 推进到 `behavior_verified`；不推进到 `complete`。
+  done_when:
+  - five M2 product figures are importable and constructible from outside the crate
+  - FigureGraph product API covers tree, box, z-order, hit-test, and effective state roles
+  - three-phase paint order is observable through RenderCommand snapshots
+  - M2 status is behavior_verified
+  - cargo fmt --check passes
+  - cargo test -p novadraw-scene passes
+  - cargo clippy -p novadraw-scene -- -D warnings passes
+  - ruby agent/workflow-doctor.rb passes
+  - bash agent/workflow-verify.sh --fast passes
+- id: WF-004
+  title: Execution momentum gate
+  contract: Workflow governance must prevent consecutive documentation-only
+    deltas from replacing code-bearing progress toward the milestone roadmap.
+  evolution_kind: workflow
+  parent_id: M0
+  priority: high
+  status: verified
+  evidence:
+  - agent/workflow-doctor.rb
+  - agent/README.md
+  - agent/backlog/schema.yaml
+  - agent/backlog/index.yaml
+  - agent/backlog/recent.yaml
+  - agent/backlog/archive/2026-06.yaml
+  - agent/inner-loop-checkpoint.md
+  - agent/inner-loop-worklog.md
+  progress_notes:
+  - Root Cause：最近的 contract summary 与 product-layer 状态推进让用户感知到工作流可能被 md 文件牵引；现有 workflow 只有 active/recent 生命周期和拆分门禁，没有检测连续 documentation-only delta 的执行动量门禁。
+  - 在 `agent/README.md` 与 `agent/backlog/schema.yaml` 中新增执行动量硬约束：最近两个终态 delta 不得同时为 documentation-only；documentation-only delta 之后必须回到产品代码、运行时代码、可执行 workflow code 或 tests。
+  - 在 `workflow-doctor.rb` 中新增 recent momentum 校验，根据 archive/recent 的 evidence/files 判断 documentation-only streak。
+  - 保持下一步为 M3 render traversal and clipping contract audit，避免继续围绕 M2 做状态总结。
+  done_when:
+  - README documents the execution momentum gate
+  - backlog schema records documentation-only delta constraints
+  - workflow doctor rejects two consecutive documentation-only terminal deltas in recent
+  - current next recommended delta remains M3 code-bearing work
+  - ruby agent/workflow-doctor.rb passes
+  - git diff --check passes
+- id: AD-029
+  title: M2 bounds/insets/clientArea consistency audit
+  contract: M2 bounds, insets, and clientArea semantics must match Draw2D where
+    clientArea is the child-search and child-painting area; parent bounds can hit
+    the parent itself, but descendants must only be searched when the translated
+    point is inside the parent's clientArea.
+  evolution_kind: parity
+  milestone_id: M2
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - novadraw-scene/src/graph/mod.rs
+  - agent/backlog/index.yaml
+  - agent/backlog/recent.yaml
+  - agent/backlog/archive/2026-06.yaml
+  - agent/goal-roadmap.md
+  - agent/inner-loop-checkpoint.md
+  - agent/inner-loop-worklog.md
+  progress_notes:
+  - Root Cause：`Bounded::client_area()` 与 render/layout 已大体对齐 Draw2D，但 hit-test 与 mouse target 子树下降只检查父 Figure bounds，未按 Draw2D `findDescendantAtExcluding` / `findMouseEventTargetInDescendantsAt` 先用父 clientArea 过滤 children 搜索。
+  - "对标 Draw2D：`getClientArea()` 基于 bounds shrink insets；`useLocalCoordinates()` 时原点重置为 `(0,0)`。"
+  - "在 `hit_test_from` 与 `find_mouse_event_target_from` 中，父 Figure 自身仍按 bounds 命中；children 只有在转换后的点落入父 clientArea 时才继续搜索。"
+  - 新增 M2 契约测试覆盖点位于父 bounds 但落在 clientArea 外时不会命中 child，点进入 clientArea 后正常命中 child / mouse target。
+  - 顺手修复 `workflow-doctor.rb` 默认外部/内部编码为 UTF-8，避免普通 `ruby agent/workflow-doctor.rb` 在中文 roadmap 上触发 US-ASCII 读取错误。
+  done_when:
+  - hit-test descends only through parent client area
+  - mouse target search descends only through parent client area
+  - existing bounds/insets/clientArea tests pass
+  - cargo fmt --check passes
+  - cargo test -p novadraw-scene passes
+  - cargo clippy -p novadraw-scene -- -D warnings passes
+  - ruby agent/workflow-doctor.rb passes
+  - bash agent/workflow-verify.sh --fast passes
+- id: AD-030
+  title: M2 remove and reparent lifecycle contract audit
+  contract: M2 remove and reparent mutations must preserve FigureGraph topology
+    invariants and avoid partial writes. Invalid remove/reparent requests must
+    leave parent links, child lists, interaction state, invalid queues, and dirty
+    regions unchanged.
+  evolution_kind: parity
+  milestone_id: M2
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - novadraw-scene/src/graph/mod.rs
+  - novadraw-scene/src/graph/update_integration_test.rs
+  - agent/backlog/index.yaml
+  - agent/backlog/recent.yaml
+  - agent/backlog/archive/2026-06.yaml
+  - agent/goal-roadmap.md
+  - agent/inner-loop-checkpoint.md
+  - agent/inner-loop-worklog.md
+  progress_notes:
+  - Root Cause：`apply_reparent_mutation` 已拒绝 invalid parent、self reparent 与 descendant reparent，但 detach 旧父发生在 attach 新父之前；若新父已异常持有 child，attach 会失败并留下 orphan，违反 remove/reparent no partial write 契约。
+  - "对标 Draw2D：add/reparent 会先保证不会形成 cycle，remove 会只接受真实 direct child，并触发重绘/重验证。"
+  - "新增 `contains_direct_child`，在 reparent 写入前校验旧父确实持有 child、新父尚未持有 child。"
+  - "新增测试覆盖 wrong-parent remove 无副作用：不 detach child、不清交互状态、不排队 invalid/dirty。"
+  - "新增测试覆盖 duplicate-new-parent reparent 无副作用：不 detach 旧父、不改 parent、不排队 invalid/dirty。"
+  done_when:
+  - wrong-parent remove has no side effects
+  - duplicate-new-parent reparent has no side effects
+  - existing remove/reparent invalid parent, self, and descendant tests pass
+  - cargo fmt --check passes
+  - cargo test -p novadraw-scene passes
+  - cargo clippy -p novadraw-scene -- -D warnings passes
+  - ruby agent/workflow-doctor.rb passes
+  - bash agent/workflow-verify.sh --fast passes
+- id: AD-031
+  title: M2 contract alignment summary
+  contract: M2 can move from in_progress to contract_aligned only when all YAML
+    probes have automated code evidence and residual risks are explicitly kept
+    outside the contract layer.
+  evolution_kind: parity
+  milestone_id: M2
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - agent/m2-contract-alignment-summary.md
+  - agent/draw2d-core-milestones.yaml
+  - agent/backlog/index.yaml
+  - agent/backlog/recent.yaml
+  - agent/backlog/archive/2026-06.yaml
+  - agent/goal-roadmap.md
+  - agent/inner-loop-checkpoint.md
+  - agent/inner-loop-worklog.md
+  progress_notes:
+  - Root Cause：M2 已完成多个局部 delta，但 milestone 状态仍停留在 `in_progress`；需要将 add/remove/reparent、z-order、bounds/clientArea、visible/enabled 四类 YAML probes 与自动化证据逐项对齐，避免状态推进依赖口头判断。
+  - 新增 `agent/m2-contract-alignment-summary.md`，逐项登记 M2 scope、contracts、probes、delta evidence、verification 与 residual risks。
+  - 将 M2 从 `in_progress` 推进到 `contract_aligned`；不推进到 `behavior_verified` 或 `complete`。
+  - 下一步保留为 M2 product-layer existence checks，而不是直接跳到 M3 complete。
+  done_when:
+  - M2 YAML probes are mapped to automated evidence
+  - M2 status is contract_aligned
+  - residual risks are documented outside the contract layer
+  - cargo test -p novadraw-scene passes
+  - cargo clippy -p novadraw-scene -- -D warnings passes
+  - ruby agent/workflow-doctor.rb passes
+  - bash agent/workflow-verify.sh --fast passes
+- id: AD-027
+  title: M2 effective visible/enabled propagation
+  contract: M2 FigureGraph visible/enabled state must expose local and effective
+    parent-chain semantics, and graph update entry points must honor effective
+    visibility/enabled state instead of only checking the target node's local flag.
+  evolution_kind: parity
+  milestone_id: M2
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - novadraw-scene/src/graph/mod.rs
+  - novadraw-scene/src/graph/update_integration_test.rs
+  - agent/backlog/index.yaml
+  - agent/backlog/recent.yaml
+  - agent/backlog/archive/2026-06.yaml
+  - agent/inner-loop-checkpoint.md
+  - agent/inner-loop-worklog.md
+  progress_notes:
+  - Root Cause：`FigureBlock.is_visible` / `is_enabled` 只是节点本地状态；render
+    和 hit-test 通过父节点遍历能自然跳过隐藏子树，但 repaint 与 validation
+    可直接以 child id 作为入口，仍只检查目标节点本地标志，导致隐藏/禁用祖先下的 child
+    仍可能进入更新队列语义。
+  - "新增 `is_visible` / `is_enabled` 本地查询，以及 `is_effectively_visible` / `is_effectively_enabled` 父链查询。"
+  - "新增 `set_enabled`，并让 `set_visible(false)` / `set_enabled(false)` 清理子树交互状态。"
+  - "`repaint` 改为按有效可见性过滤；validation phase 改为按有效可见性与有效启用状态过滤。"
+  - 新增 M2 定向测试覆盖父链 visible/enabled 传播、隐藏祖先下 repaint 无 dirty region、隐藏/禁用祖先下 validation queue drain 但不验证 child。
+  done_when:
+  - effective visible follows parent chain
+  - effective enabled follows parent chain
+  - repaint skips child under hidden ancestor
+  - validation skips child under hidden or disabled ancestor and drains queue
+  - cargo fmt --check passes
+  - cargo test -p novadraw-scene passes
+  - cargo clippy -p novadraw-scene -- -D warnings passes
+  - bash agent/workflow-verify.sh passes

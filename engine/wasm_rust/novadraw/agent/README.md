@@ -212,6 +212,16 @@ title: Solo Coder Architecture Workflow
 - 当前验证失败原因主要来自仓库基线而非本轮改动
 - `worklog` 或 `checkpoint` 已写出“先整理 backlog”“先判断是否拆分”等信号
 
+### 执行动量门禁
+
+工作流文件只服务于代码推进，不能成为连续主工作。以下规则为硬门禁：
+
+- 最近两个终态 delta 不得同时是 documentation-only delta。
+- documentation-only delta 指 evidence / files 只包含 `agent/` 或 `doc/` 下的 `.md` / `.yaml` / `.yml` 文件，且没有产品代码、运行时代码、可执行脚本或测试文件证据。
+- summary、roadmap、checkpoint、backlog compaction 这类 delta 只能作为一次状态收口；下一轮必须回到 product/runtime code、executable workflow code 或 tests。
+- milestone 从 `contract_aligned` 推到 `behavior_verified` 后，默认下一步必须进入下一个 code-bearing milestone delta；不得继续围绕同一 milestone 追加状态总结，除非用户明确要求做审计或修复 workflow。
+- `workflow-doctor.rb` 会检查 recent 中最近两个终态 delta，若都属于 documentation-only，则 baseline gate 失败。
+
 ### 验证门禁
 
 验证分为两层：
@@ -655,6 +665,8 @@ title: Solo Coder Architecture Workflow
 - 每个 delta 只描述一个职责边界问题或一个状态归属问题
 - 一个 delta 的修改范围应尽量限制在一个接口簇或一个调用链
 - 如果改动超过 50 行，优先拆分为多个 delta
+- documentation-only delta 只能用于 contract summary、状态迁移、backlog/checkpoint 修复等治理收口；不得连续执行
+- product-layer existence check 必须包含 crate 外部测试或可执行验证证据，否则只能算 documentation-only，不能推动 `behavior_verified`
 - 如果还不能确定是否值得执行，先作为 `candidate`
 - 若一个 delta 的 `Next Step` 已经分叉成多个独立子问题，必须转为 `split`
 - 判断是否拆分时，优先看“独立根因数量”和“职责边界数量”，代码行数只作辅助参考
