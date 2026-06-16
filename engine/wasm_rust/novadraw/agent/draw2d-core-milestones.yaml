@@ -121,7 +121,7 @@ milestones:
   - id: M3
     title: 绘制遍历与裁剪闭环
     layer: Figure Runtime
-    status: not_started
+    status: in_progress
     goal: >
       Align rendering traversal with Draw2D Figure paint template semantics and
       make clipping consistent with the Figure tree.

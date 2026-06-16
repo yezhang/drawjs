@@ -1273,6 +1273,39 @@ items:
   - cargo test -p novadraw-scene passes
   - cargo clippy -p novadraw-scene -- -D warnings passes
   - bash agent/workflow-verify.sh passes
+- id: AD-033
+  title: M3 iterative render client-area state equivalence
+  contract: Iterative rendering must preserve the same parent clientArea clip
+    state between sibling children as recursive Draw2D-style paint traversal.
+  evolution_kind: parity
+  milestone_id: M3
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - novadraw-scene/src/graph/render_iterative.rs
+  - novadraw-scene/src/graph/mod.rs
+  - agent/draw2d-core-milestones.yaml
+  - agent/goal-roadmap.md
+  - agent/backlog/index.yaml
+  - agent/backlog/recent.yaml
+  - agent/backlog/archive/2026-06.yaml
+  - agent/inner-loop-checkpoint.md
+  - agent/inner-loop-worklog.md
+  progress_notes:
+  - Root Cause：recursive render 在 paintClientArea 设置 parent clientArea clip 后会 `push_state()`，child clip 结束后 `restore_state()` 回到 parent clientArea；iterative render 缺少该保存点，`ExitChild` 会恢复到更外层状态，导致 sibling clip state 与递归路径不等价。
+  - 对标 Draw2D paintChildren：每个 child 的 bounds clip 必须是 parent clientArea clip 下的临时收窄，child 完成后恢复到 parent clientArea。
+  - 在 iterative `EnterClientArea` 末尾新增 `push_state()` 保存 parent clientArea 状态；`ExitClientArea` 改为 `pop_state()` 后再 `restore_state()`，与 recursive paintClientArea 状态栈语义一致。
+  - 新增 `test_iterative_render_matches_recursive_clip_state_for_siblings`，比较 sibling 场景下 recursive 与 iterative 的 render command signature。
+  - M3 从 `not_started` 推进到 `in_progress`；不推进到 `contract_aligned`，因为 nested clipping、border/insets 与 paint-vs-hit-test probes 尚未闭合。
+  done_when:
+  - iterative render preserves parent clientArea clip between siblings
+  - recursive and iterative render command signatures match for sibling clipping state
+  - M3 status is in_progress
+  - cargo fmt --check passes
+  - cargo test -p novadraw-scene iterative_render passes
+  - cargo test -p novadraw-scene passes
+  - cargo clippy -p novadraw-scene -- -D warnings passes
 - id: AD-032
   title: M2 product-layer existence checks
   contract: M2 can move from contract_aligned to behavior_verified only when

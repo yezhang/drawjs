@@ -1724,7 +1724,41 @@ mod tests {
     use crate::graph::FigureGraphRenderRef;
     use crate::{FigureEvent, FigureGraph, NotificationEffect, Rectangle, ViewportFigure};
     use novadraw_core::Color as NovadrawCoreColor;
-    use novadraw_render::NdCanvas;
+    use novadraw_render::{NdCanvas, command::RenderCommandKind};
+
+    #[derive(Debug, PartialEq)]
+    enum RenderSignature {
+        PushState,
+        RestoreState,
+        PopState,
+        Clip([f64; 4]),
+        FillRect([f64; 4]),
+        StrokeRect([f64; 4]),
+        Other(&'static str),
+    }
+
+    fn rect_signature(rect: &[glam::DVec2; 2]) -> [f64; 4] {
+        [rect[0].x, rect[0].y, rect[1].x, rect[1].y]
+    }
+
+    fn render_signatures(gc: &NdCanvas) -> Vec<RenderSignature> {
+        gc.commands()
+            .iter()
+            .map(|command| match &command.kind {
+                RenderCommandKind::PushState => RenderSignature::PushState,
+                RenderCommandKind::RestoreState => RenderSignature::RestoreState,
+                RenderCommandKind::PopState => RenderSignature::PopState,
+                RenderCommandKind::Clip { rect } => RenderSignature::Clip(rect_signature(rect)),
+                RenderCommandKind::FillRect { rect, .. } => {
+                    RenderSignature::FillRect(rect_signature(rect))
+                }
+                RenderCommandKind::StrokeRect { rect, .. } => {
+                    RenderSignature::StrokeRect(rect_signature(rect))
+                }
+                _ => RenderSignature::Other("other"),
+            })
+            .collect()
+    }
 
     // ========== 通用测试 Figure 类型 ==========
 
@@ -2976,6 +3010,26 @@ mod tests {
             "迭代渲染应产生至少 10 个命令，实际为 {}",
             cmd_iterative
         );
+    }
+
+    #[test]
+    fn test_iterative_render_matches_recursive_clip_state_for_siblings() {
+        let mut scene = FigureGraph::new();
+
+        let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 100.0, 100.0)));
+        scene.add_child_to(
+            parent_id,
+            Box::new(RectangleFigure::new(10.0, 10.0, 20.0, 20.0)),
+        );
+        scene.add_child_to(
+            parent_id,
+            Box::new(RectangleFigure::new(40.0, 40.0, 20.0, 20.0)),
+        );
+
+        let recursive = scene.render();
+        let iterative = scene.render_iterative();
+
+        assert_eq!(render_signatures(&iterative), render_signatures(&recursive));
     }
 
     /// 测试迭代渲染：可见性过滤

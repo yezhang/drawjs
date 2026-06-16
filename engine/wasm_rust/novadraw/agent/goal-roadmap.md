@@ -44,7 +44,7 @@
 |------|------|----------|------|
 | M1 | 几何与 Graphics 基础 | `behavior_verified` | M1 probes summary 已确认契约层自动化证据；M1 product existence checks 已覆盖几何类型清单与 Graphics API 清单；尚未进入 `complete` |
 | M2 | Figure 树与盒模型 | `behavior_verified` | AD-026 至 AD-031 已覆盖 M2 YAML probes 与契约对齐；AD-032 product existence checks 已覆盖 5 基础图元、FigureGraph 产品 API 与三段式 paint 顺序；尚未进入 `complete` |
-| M3 | 绘制遍历与裁剪闭环 | `not_started` | — |
+| M3 | 绘制遍历与裁剪闭环 | `in_progress` | AD-033 已修正 iterative render clientArea 状态恢复，覆盖 recursive/iterative sibling clip state equivalence；其余 M3 probes 尚未闭合 |
 | M4 | 坐标域与变换闭环 | `not_started` | — |
 | M5 | Layout + Validation + UpdateManager | `not_started` | — |
 | M6 | 事件分发与交互状态机 | `not_started` | — |

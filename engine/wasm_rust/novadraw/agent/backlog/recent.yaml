@@ -4,11 +4,6 @@ last_updated: '2026-06-12'
 description: Short human-readable summary of latest terminal deltas. Full history
   lives in archive files.
 items:
-- id: AD-029
-  title: M2 bounds/insets/clientArea consistency audit
-  status: verified
-  evolution_kind: parity
-  milestone_id: M2
 - id: AD-030
   title: M2 remove and reparent lifecycle contract audit
   status: verified
@@ -29,3 +24,8 @@ items:
   status: verified
   evolution_kind: workflow
   parent_id: M0
+- id: AD-033
+  title: M3 iterative render client-area state equivalence
+  status: verified
+  evolution_kind: parity
+  milestone_id: M3

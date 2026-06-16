@@ -8,11 +8,11 @@
 
 ## Current Delta
 
-- WF-004 Execution momentum gate
+- AD-033 M3 iterative render client-area state equivalence
 
 ## Current Status
 
-- verified（WF-004 已为 workflow 增加 documentation-only 连续执行门禁；下一步仍回到 M3 code-bearing 主线）
+- verified（AD-033 已修正 iterative render sibling clip state 与 recursive render 不等价问题；M3 已进入 `in_progress`）
 
 ## Context Boundary
 
@@ -20,6 +20,16 @@
 - 已剥离主题不得作为每轮 next step、阻塞项或残余风险反复带出。
 
 ## What Was Done
+
+### AD-033 M3 iterative render client-area state equivalence（本轮，verified）
+- **根因分析**：recursive render 在 paintClientArea 设置 parent clientArea clip 后会 `push_state()`，child clip 结束后 `restore_state()` 回到 parent clientArea；iterative render 缺少该保存点，`ExitChild` 会恢复到更外层状态，导致 sibling clip state 与递归路径不等价。
+- **最小修复**：
+  - `render_iterative.rs` 在 `EnterClientArea` 完成 parent clientArea transform/clip 后新增 `push_state()`，保存 parent clientArea 状态。
+  - `ExitClientArea` 改为 `pop_state()` 后再 `restore_state()`，对齐 recursive paintClientArea 状态栈语义。
+  - `graph/mod.rs` 新增 render command signature helper 和 `test_iterative_render_matches_recursive_clip_state_for_siblings`，验证 sibling 场景下 recursive/iterative command signature 一致。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-scene iterative_render ✅，cargo test -p novadraw-scene 162/162 + 3 integration + 3 doctests ✅，cargo clippy -p novadraw-scene -- -D warnings ✅，ruby agent/workflow-doctor.rb ✅，bash agent/workflow-verify.sh --fast ✅
+- **状态推进**：M3 从 `not_started` 推进到 `in_progress`；不推进到 `contract_aligned`。
+- **下一步**：M3 nested clipping and border/insets rendering tests。
 
 ### WF-004 Execution momentum gate（本轮，verified）
 - **根因分析**：AD-031/AD-032 让用户感知到近期工作偏向 md/status 文件；现有 workflow 有拆分、active/recent 生命周期和 milestone 状态门禁，但没有阻止连续 documentation-only delta 的执行动量规则。

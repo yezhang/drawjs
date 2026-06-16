@@ -22,6 +22,22 @@
 
 ## Entries
 
+## 2026-06-12 / AD-033
+
+- Goal: 启动 M3 代码主线，先收敛 recursive/iterative render 在 sibling child clipping state 上的不等价。
+- Root Cause: recursive render 在 paintClientArea 设置 parent clientArea clip 后会 `push_state()`，child clip 结束后 `restore_state()` 回到 parent clientArea；iterative render 缺少该保存点，`ExitChild` 会恢复到更外层状态，导致 sibling clip state 与递归路径不等价。
+- Minimal Fix:
+  - `render_iterative.rs` 在 `EnterClientArea` 完成 parent clientArea transform/clip 后新增 `push_state()`，保存 parent clientArea 状态。
+  - `ExitClientArea` 改为 `pop_state()` 后再 `restore_state()`，对齐 recursive paintClientArea 状态栈语义。
+  - `graph/mod.rs` 新增 render command signature helper 和 `test_iterative_render_matches_recursive_clip_state_for_siblings`，验证 sibling 场景下 recursive/iterative command signature 一致。
+- Files: `novadraw-scene/src/graph/render_iterative.rs`, `novadraw-scene/src/graph/mod.rs`, `agent/draw2d-core-milestones.yaml`, `agent/goal-roadmap.md`, `agent/backlog/index.yaml`, `agent/backlog/recent.yaml`, `agent/backlog/archive/2026-06.yaml`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: cargo fmt --check ✅, cargo test -p novadraw-scene iterative_render ✅, cargo test -p novadraw-scene 162/162 + 3 integration + 3 doctests ✅, cargo clippy -p novadraw-scene -- -D warnings ✅
+- Baseline Verification: ruby agent/workflow-doctor.rb ✅, git diff --check ✅, bash agent/workflow-verify.sh --fast ✅
+- Decision: AD-033 状态 `verified`；M3 从 `not_started` 推进到 `in_progress`。
+- Split Decision: 本轮只修复 iterative clientArea state equivalence；nested clipping、border/insets、paint-vs-hit-test 作为后续 M3 delta，不混入本轮。
+- Post-Execution Reflection: 该修复触碰 protected render_iterative 文件，但属于对标 Draw2D paintChildren 状态恢复的主流程偏差修正；下一步继续补 M3 clipping probes。
+- Next Step: M3 nested clipping and border/insets rendering tests。
+
 ## 2026-06-12 / WF-004
 
 - Goal: 给 workflow 增加执行动量门禁，防止连续 documentation-only delta 替代代码主线推进。

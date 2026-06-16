@@ -1,6 +1,6 @@
 //! 迭代渲染实现
 //!
-//! 使用四状态栈迭代机制替代递归遍历，避免深度层次结构导致堆栈溢出。
+//! 使用 6 个任务状态的显式栈状态机替代递归遍历，避免深度层次结构导致堆栈溢出。
 //! 参考 Eclipse Draw2d 的 paint() 方法设计。
 
 use novadraw_render::NdCanvas;
@@ -9,10 +9,19 @@ use super::{BlockId, FigureGraphRenderRef};
 use crate::debug_render;
 use crate::figure::Bounded;
 
-/// 四状态渲染任务
+/// 迭代渲染任务状态
 ///
 /// 使用栈迭代实现 Figure 树的渲染遍历，将递归转换为显式栈操作。
-/// 状态执行顺序：EnterFigure → EnterClientArea → ExitClientArea → ExitFigure
+/// 任务状态包括：
+/// - `EnterFigure`
+/// - `EnterChild`
+/// - `EnterClientArea`
+/// - `ExitClientArea`
+/// - `ExitChild`
+/// - `ExitFigure`
+///
+/// 常规执行顺序为：
+/// `EnterFigure` → `EnterClientArea` → (`EnterChild` → child subtree → `ExitChild`)* → `ExitClientArea` → `ExitFigure`
 /// 与 draw2d 保持一致：paintChildren 中对每个子节点单独 clip 到其 bounds。
 #[derive(Debug, Clone, Copy)]
 enum RenderTask {
@@ -36,7 +45,8 @@ enum RenderTask {
 
     /// 退出客户区域
     ///
-    /// 执行：`restore_state()` - 恢复到 EnterClientArea 前的状态
+    /// 执行：`pop_state()` → `restore_state()` - 先弹出 client-area 保存点，
+    /// 再恢复到 EnterFigure 保存的外层状态。
     ExitClientArea(BlockId),
 
     /// 退出子节点
@@ -207,6 +217,10 @@ impl<'a> FigureRendererIter<'a> {
             );
         }
 
+        // Match recursive/draw2d paintClientArea state semantics:
+        // child-specific clips restore back to the parent client-area clip.
+        self.gc.push_state();
+
         // 2. 收集可见子节点（需要获取 bounds 用于 clip）
         let children_info: Vec<(BlockId, _)> = block
             .children
@@ -273,11 +287,13 @@ impl<'a> FigureRendererIter<'a> {
 
     /// 处理退出客户区域状态
     ///
-    /// 执行：`restore_state()` - 恢复到 EnterClientArea 前的状态
+    /// 执行：`pop_state()` → `restore_state()` - 先弹出 client-area 保存点，
+    /// 再恢复到 EnterFigure 保存的外层状态。
     fn handle_exit_client_area(&mut self, _block_id: BlockId) {
         self.counter += 1;
         let id = self.counter;
-        debug_render!("[ITER] #{:02} ExitClientArea restore_state", id);
+        debug_render!("[ITER] #{:02} ExitClientArea pop_state + restore_state", id);
+        self.gc.pop_state();
         self.gc.restore_state();
     }
 

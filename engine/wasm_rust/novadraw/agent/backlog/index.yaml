@@ -1,8 +1,8 @@
 ---
 version: 1
 last_updated: '2026-06-12'
-current_delta: WF-004
-next_recommended_delta: M3 render traversal and clipping contract audit
+current_delta: AD-033
+next_recommended_delta: M3 nested clipping and border/insets rendering tests
 read_order:
 - agent/backlog/index.yaml
 - agent/backlog/active.yaml
