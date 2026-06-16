@@ -128,6 +128,13 @@ impl Bounded for RectangleFigure {
     fn use_local_coordinates(&self) -> bool {
         self.use_local_coordinates
     }
+
+    fn insets(&self) -> (f64, f64, f64, f64) {
+        self.border
+            .as_deref()
+            .map(Border::get_insets)
+            .unwrap_or((0.0, 0.0, 0.0, 0.0))
+    }
 }
 
 // 实现 Updatable trait：验证钩子

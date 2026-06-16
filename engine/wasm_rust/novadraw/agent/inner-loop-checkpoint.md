@@ -8,11 +8,11 @@
 
 ## Current Delta
 
-- AD-033 M3 iterative render client-area state equivalence
+- AD-034 M3 border insets client-area clipping
 
 ## Current Status
 
-- verified（AD-033 已修正 iterative render sibling clip state 与 recursive render 不等价问题；M3 已进入 `in_progress`）
+- verified（AD-034 已将 RectangleFigure border insets 接入 clientArea 裁剪，并验证 nested border/insets 场景下 recursive/iterative render 等价；M3 保持 `in_progress`）
 
 ## Context Boundary
 
@@ -20,6 +20,16 @@
 - 已剥离主题不得作为每轮 next step、阻塞项或残余风险反复带出。
 
 ## What Was Done
+
+### AD-034 M3 border insets client-area clipping（本轮，verified）
+- **根因分析**：`RectangleFigure::with_border(...)` 已支持 Border 装饰器，但 `Bounded::insets()` 未从 border 读取 `get_insets()`，导致产品图元的 border insets 不会收窄 clientArea，children 可进入应由 border/insets 隔离的绘制区域。
+- **最小修复**：
+  - `RectangleFigure` 的 `Bounded::insets()` 返回 border insets；无 border 时保持 `(0,0,0,0)`。
+  - `graph/mod.rs` 新增 `test_border_insets_define_client_area_clip_for_children`，验证 parent clientArea clip 使用 border insets、border 在 children 之后绘制且使用 inset-adjusted bounds。
+  - 新增 `test_iterative_render_matches_recursive_nested_border_insets_clipping`，验证 nested border/insets 场景下 recursive/iterative render signature 等价。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-scene ✅，cargo clippy -p novadraw-scene -- -D warnings ✅
+- **状态推进**：M3 保持 `in_progress`；不推进到 `contract_aligned`。
+- **下一步**：M3 paint versus hit-test consistency tests。
 
 ### AD-033 M3 iterative render client-area state equivalence（本轮，verified）
 - **根因分析**：recursive render 在 paintClientArea 设置 parent clientArea clip 后会 `push_state()`，child clip 结束后 `restore_state()` 回到 parent clientArea；iterative render 缺少该保存点，`ExitChild` 会恢复到更外层状态，导致 sibling clip state 与递归路径不等价。

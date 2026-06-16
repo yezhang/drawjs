@@ -1722,7 +1722,9 @@ impl Default for FigureGraph {
 mod tests {
     use super::super::figure::{Bounded, RectangleFigure, Shape, Updatable};
     use crate::graph::FigureGraphRenderRef;
-    use crate::{FigureEvent, FigureGraph, NotificationEffect, Rectangle, ViewportFigure};
+    use crate::{
+        FigureEvent, FigureGraph, LineBorder, NotificationEffect, Rectangle, ViewportFigure,
+    };
     use novadraw_core::Color as NovadrawCoreColor;
     use novadraw_render::{NdCanvas, command::RenderCommandKind};
 
@@ -3024,6 +3026,91 @@ mod tests {
         scene.add_child_to(
             parent_id,
             Box::new(RectangleFigure::new(40.0, 40.0, 20.0, 20.0)),
+        );
+
+        let recursive = scene.render();
+        let iterative = scene.render_iterative();
+
+        assert_eq!(render_signatures(&iterative), render_signatures(&recursive));
+    }
+
+    #[test]
+    fn test_border_insets_define_client_area_clip_for_children() {
+        let mut scene = FigureGraph::new();
+
+        let parent_id = scene.set_contents(Box::new(
+            RectangleFigure::new(0.0, 0.0, 120.0, 100.0).with_border(
+                LineBorder::new(NovadrawCoreColor::hex("#111111"), 2.0)
+                    .with_insets(10.0, 20.0, 30.0, 40.0),
+            ),
+        ));
+        scene.add_child_to(
+            parent_id,
+            Box::new(RectangleFigure::new_with_color(
+                5.0,
+                5.0,
+                20.0,
+                20.0,
+                NovadrawCoreColor::hex("#222222"),
+            )),
+        );
+
+        let recursive = scene.render();
+        let signatures = render_signatures(&recursive);
+
+        assert!(
+            signatures.contains(&RenderSignature::Clip([20.0, 10.0, 80.0, 70.0])),
+            "parent clientArea must be clipped by border insets"
+        );
+        assert!(
+            signatures.contains(&RenderSignature::StrokeRect([21.0, 11.0, 79.0, 69.0])),
+            "border must render in its inset-adjusted bounds"
+        );
+
+        let child_fill_index = signatures
+            .iter()
+            .position(|signature| *signature == RenderSignature::FillRect([5.0, 5.0, 25.0, 25.0]))
+            .expect("child fill must be rendered under parent clientArea clip");
+        let parent_border_index = signatures
+            .iter()
+            .position(|signature| {
+                *signature == RenderSignature::StrokeRect([21.0, 11.0, 79.0, 69.0])
+            })
+            .expect("parent border must be rendered");
+        assert!(
+            parent_border_index > child_fill_index,
+            "border must render after children"
+        );
+    }
+
+    #[test]
+    fn test_iterative_render_matches_recursive_nested_border_insets_clipping() {
+        let mut scene = FigureGraph::new();
+
+        let root_id = scene.set_contents(Box::new(
+            RectangleFigure::new(0.0, 0.0, 160.0, 140.0).with_border(
+                LineBorder::new(NovadrawCoreColor::hex("#111111"), 2.0)
+                    .with_insets(8.0, 12.0, 16.0, 20.0),
+            ),
+        ));
+        let child_id = scene.add_child_to(
+            root_id,
+            Box::new(
+                RectangleFigure::new(10.0, 10.0, 90.0, 80.0).with_border(
+                    LineBorder::new(NovadrawCoreColor::hex("#222222"), 2.0)
+                        .with_insets(5.0, 6.0, 7.0, 8.0),
+                ),
+            ),
+        );
+        scene.add_child_to(
+            child_id,
+            Box::new(RectangleFigure::new_with_color(
+                12.0,
+                12.0,
+                30.0,
+                24.0,
+                NovadrawCoreColor::hex("#333333"),
+            )),
         );
 
         let recursive = scene.render();

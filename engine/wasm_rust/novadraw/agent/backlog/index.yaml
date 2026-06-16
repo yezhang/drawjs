@@ -1,8 +1,8 @@
 ---
 version: 1
 last_updated: '2026-06-12'
-current_delta: AD-033
-next_recommended_delta: M3 nested clipping and border/insets rendering tests
+current_delta: AD-034
+next_recommended_delta: M3 paint versus hit-test consistency tests
 read_order:
 - agent/backlog/index.yaml
 - agent/backlog/active.yaml

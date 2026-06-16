@@ -679,6 +679,19 @@
 - Next Step: AD-003 PendingMutation timing audit
 
 
+## 2026-06-12 / AD-034
+
+- Goal: M3 border insets client-area clipping
+- Root Cause: `RectangleFigure::with_border(...)` 已支持 Border 装饰器，但 `Bounded::insets()` 未从 border 读取 `get_insets()`，导致产品图元的 border insets 不会收窄 clientArea，children 可进入应由 border/insets 隔离的绘制区域
+- Files: `novadraw-scene/src/figure/rectangle.rs`, `novadraw-scene/src/graph/mod.rs`, `agent/backlog/index.yaml`, `agent/backlog/recent.yaml`, `agent/backlog/archive/2026-06.yaml`, `agent/goal-roadmap.md`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: cargo fmt --check ✅, cargo test -p novadraw-scene ✅, cargo clippy -p novadraw-scene -- -D warnings ✅
+- Baseline Verification: ruby agent/workflow-doctor.rb ✅, bash agent/workflow-verify.sh --fast ✅, git diff --check ✅
+- Decision: `RectangleFigure` 的 `Bounded::insets()` 以 Border insets 为 SSOT；渲染链路继续通过 `Bounded::client_area()` 统一使用 inset-adjusted child painting area
+- Split Decision: 不推进 M3 到 `contract_aligned`；下一轮单独闭合 paint versus hit-test consistency
+- Post-Execution Reflection: 本轮是代码-bearing delta，符合 WF-004 execution momentum gate；递归/迭代等价检查继续以状态机行为签名为准
+- New Candidate Deltas: 无
+- Next Step: M3 paint versus hit-test consistency tests
+
 ## 2026-05-25 / AD-001C
 
 - Root Cause: 事件入口的 `was_queued -> dispatch -> request_update` transition 样板分散在多个 wrapper；`SceneHost` 文档仍描述未实现的 `about_to_wait` 每帧驱动；host queued flag 与 UpdateManager queued flag 之间缺少漏同步自愈路径；`NovadrawSystem` 裸访问器未说明绕过调度事务的风险
