@@ -330,21 +330,17 @@ fn create_scene_8_stroke_vs_border() -> novadraw::FigureGraph {
     scene
 }
 
+type SceneEntry = (&'static str, Box<dyn FnMut() -> novadraw::FigureGraph>);
+
 fn main() {
-    let scenes: Vec<(&'static str, Box<dyn FnMut() -> novadraw::FigureGraph>)> = vec![
-        (
-            "RectangleBorder",
-            Box::new(|| create_scene_4_rectangle_border()),
-        ),
-        (
-            "Border+insets",
-            Box::new(|| create_scene_5_border_with_insets()),
-        ),
-        ("LineBorder", Box::new(|| create_scene_6_line_border())),
-        ("MarginBorder", Box::new(|| create_scene_7_margin_border())),
+    let scenes: Vec<SceneEntry> = vec![
+        ("RectangleBorder", Box::new(create_scene_4_rectangle_border)),
+        ("Border+insets", Box::new(create_scene_5_border_with_insets)),
+        ("LineBorder", Box::new(create_scene_6_line_border)),
+        ("MarginBorder", Box::new(create_scene_7_margin_border)),
         (
             "Stroke vs Border",
-            Box::new(|| create_scene_8_stroke_vs_border()),
+            Box::new(create_scene_8_stroke_vs_border),
         ),
     ];
 

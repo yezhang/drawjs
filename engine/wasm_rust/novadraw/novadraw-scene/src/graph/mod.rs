@@ -42,6 +42,13 @@ const SELECTION_OUTLINE_COLOR: Color = Color {
 const SELECTION_OUTLINE_INSET: f64 = 2.0;
 const SELECTION_OUTLINE_STROKE_WIDTH: f64 = 4.0;
 
+fn point_in_rect(point: (f64, f64), rect: &Rectangle) -> bool {
+    point.0 >= rect.x
+        && point.0 <= rect.x + rect.width
+        && point.1 >= rect.y
+        && point.1 <= rect.y + rect.height
+}
+
 pub(crate) fn paint_selection_overlay(block: &FigureBlock, gc: &mut NdCanvas) {
     if !block.is_selected {
         return;
@@ -257,7 +264,9 @@ impl FigureGraph {
     /// 注意：此方法不触发 revalidate()，用于批量构建场景。
     /// 交互式修改使用 SceneManager.set_contents() 方法。
     pub fn set_contents(&mut self, figure: Box<dyn super::Figure>) -> BlockId {
-        let contents_id = self.new_block_with_parent(figure, self.root);
+        let contents_id = self
+            .new_block_with_parent(figure, self.root)
+            .expect("FigureGraph root must exist");
         self.contents = Some(contents_id);
         self.invalidate();
         contents_id
@@ -274,6 +283,18 @@ impl FigureGraph {
     ///
     /// 与 `add_child()` 的区别：此方法不触发 revalidate()，用于批量构建场景。
     pub fn add_child_to(&mut self, parent_id: BlockId, figure: Box<dyn super::Figure>) -> BlockId {
+        self.try_add_child_to(parent_id, figure)
+            .unwrap_or_else(BlockId::null)
+    }
+
+    /// 尝试添加子块到指定父块。
+    ///
+    /// parent 不存在时不分配节点、不修改 UUID 映射，并返回 `None`。
+    pub fn try_add_child_to(
+        &mut self,
+        parent_id: BlockId,
+        figure: Box<dyn super::Figure>,
+    ) -> Option<BlockId> {
         self.new_block_with_parent(figure, parent_id)
     }
 
@@ -307,7 +328,8 @@ impl FigureGraph {
         color: novadraw_core::Color,
     ) -> BlockId {
         let figure = super::figure::RectangleFigure::new_with_color(x, y, width, height, color);
-        self.new_block_with_parent(Box::new(figure), parent_id)
+        self.try_add_child_to(parent_id, Box::new(figure))
+            .unwrap_or_else(BlockId::null)
     }
 
     /// 添加子块
@@ -327,7 +349,9 @@ impl FigureGraph {
         figure: Box<dyn super::Figure>,
     ) -> BlockId {
         let bounds = figure.bounds();
-        let child_id = self.new_block_with_parent(figure, parent_id);
+        let Some(child_id) = self.try_add_child_to(parent_id, figure) else {
+            return BlockId::null();
+        };
 
         self.mark_invalid(update_manager, parent_id);
         update_manager.add_dirty_region(child_id, bounds);
@@ -402,7 +426,11 @@ impl FigureGraph {
         &mut self,
         figure: Box<dyn super::Figure>,
         parent_id: BlockId,
-    ) -> BlockId {
+    ) -> Option<BlockId> {
+        if !self.blocks.contains_key(parent_id) {
+            return None;
+        }
+
         let uuid = Uuid::new_v4();
         let id = self.blocks.insert_with_key(|key| FigureBlock {
             id: key,
@@ -424,7 +452,7 @@ impl FigureGraph {
         self.uuid_map.insert(uuid, id);
         self.blocks[parent_id].children.push(id);
         self.mark_validation_path_invalid(parent_id);
-        id
+        Some(id)
     }
 
     fn attach_child(&mut self, parent_id: BlockId, child_id: BlockId) -> bool {
@@ -462,6 +490,12 @@ impl FigureGraph {
         }
         self.mark_validation_path_invalid(parent_id);
         true
+    }
+
+    fn contains_direct_child(&self, parent_id: BlockId, child_id: BlockId) -> bool {
+        self.blocks
+            .get(parent_id)
+            .is_some_and(|parent| parent.children.contains(&child_id))
     }
 
     fn is_descendant_of(&self, mut node: BlockId, ancestor: BlockId) -> bool {
@@ -530,6 +564,11 @@ impl FigureGraph {
             return false;
         }
         if child == new_parent || self.is_descendant_of(new_parent, child) {
+            return false;
+        }
+        if !self.contains_direct_child(old_parent, child)
+            || self.contains_direct_child(new_parent, child)
+        {
             return false;
         }
 
@@ -611,7 +650,7 @@ impl FigureGraph {
         rect: Option<Rectangle>,
     ) {
         if let Some(block) = self.blocks.get(block_id) {
-            if !block.is_visible {
+            if !self.is_effectively_visible(block_id) {
                 return;
             }
 
@@ -658,10 +697,11 @@ impl FigureGraph {
             }
 
             for block_id in block_ids {
-                let Some(block) = self.blocks.get(block_id) else {
+                if !self.blocks.contains_key(block_id) {
                     continue;
-                };
-                if !block.is_visible || !block.is_enabled {
+                }
+                if !self.is_effectively_visible(block_id) || !self.is_effectively_enabled(block_id)
+                {
                     continue;
                 }
                 self.revalidate(block_id);
@@ -976,22 +1016,139 @@ impl FigureGraph {
         self.blocks.get(id)
     }
 
+    /// 返回指定父节点的 child 顺序。
+    ///
+    /// 顺序与 Draw2D 一致：数组靠前的 child 先绘制，靠后的 child 后绘制并位于更高 z-order。
+    pub fn child_order(&self, parent_id: BlockId) -> Option<Vec<BlockId>> {
+        self.blocks
+            .get(parent_id)
+            .map(|block| block.children.clone())
+    }
+
+    /// 返回 child 在父节点内的 z-order index。
+    ///
+    /// index 越大表示越靠前绘制、越靠上层。
+    pub fn child_z_index(&self, parent_id: BlockId, child_id: BlockId) -> Option<usize> {
+        self.blocks
+            .get(parent_id)?
+            .children
+            .iter()
+            .position(|&id| id == child_id)
+    }
+
+    /// 将直接 child 移动到指定 z-order index。
+    ///
+    /// `index == 0` 表示最底层；`index == children.len() - 1` 表示最顶层。
+    pub fn move_child_to_index(
+        &mut self,
+        parent_id: BlockId,
+        child_id: BlockId,
+        index: usize,
+    ) -> bool {
+        let Some(parent) = self.blocks.get_mut(parent_id) else {
+            return false;
+        };
+
+        let Some(old_index) = parent.children.iter().position(|&id| id == child_id) else {
+            return false;
+        };
+
+        if index >= parent.children.len() || old_index == index {
+            return false;
+        }
+
+        let child = parent.children.remove(old_index);
+        parent.children.insert(index, child);
+        self.notify_block_changed(parent_id);
+        true
+    }
+
+    /// 将直接 child 移动到最高 z-order。
+    pub fn bring_child_to_front(&mut self, parent_id: BlockId, child_id: BlockId) -> bool {
+        let Some(last_index) = self
+            .blocks
+            .get(parent_id)
+            .and_then(|parent| parent.children.len().checked_sub(1))
+        else {
+            return false;
+        };
+        self.move_child_to_index(parent_id, child_id, last_index)
+    }
+
+    /// 将直接 child 移动到最低 z-order。
+    pub fn send_child_to_back(&mut self, parent_id: BlockId, child_id: BlockId) -> bool {
+        self.move_child_to_index(parent_id, child_id, 0)
+    }
+
     /// 获取指定块的 Figure bounds。
     pub fn figure_bounds(&self, id: BlockId) -> Option<Rectangle> {
         self.blocks.get(id).map(FigureBlock::figure_bounds)
     }
 
+    /// 返回节点自身的本地可见性标志。
+    pub fn is_visible(&self, id: BlockId) -> bool {
+        self.blocks
+            .get(id)
+            .map(|block| block.is_visible)
+            .unwrap_or(false)
+    }
+
+    /// 返回节点自身的本地启用标志。
+    pub fn is_enabled(&self, id: BlockId) -> bool {
+        self.blocks
+            .get(id)
+            .map(|block| block.is_enabled)
+            .unwrap_or(false)
+    }
+
+    /// 返回节点沿父链传播后的有效可见性。
+    pub fn is_effectively_visible(&self, id: BlockId) -> bool {
+        self.effective_flag_from(id, |block| block.is_visible)
+    }
+
+    /// 返回节点沿父链传播后的有效启用状态。
+    pub fn is_effectively_enabled(&self, id: BlockId) -> bool {
+        self.effective_flag_from(id, |block| block.is_enabled)
+    }
+
     /// 设置块可见性。
     pub fn set_visible(&mut self, id: BlockId, visible: bool) -> bool {
-        let Some(block) = self.blocks.get_mut(id) else {
-            return false;
-        };
+        {
+            let Some(block) = self.blocks.get_mut(id) else {
+                return false;
+            };
 
-        if block.is_visible == visible {
-            return false;
+            if block.is_visible == visible {
+                return false;
+            }
+
+            block.is_visible = visible;
         }
 
-        block.is_visible = visible;
+        if !visible {
+            self.clear_interaction_state_for_subtree(id);
+        }
+        self.notify_block_changed(id);
+        true
+    }
+
+    /// 设置块启用状态。
+    pub fn set_enabled(&mut self, id: BlockId, enabled: bool) -> bool {
+        {
+            let Some(block) = self.blocks.get_mut(id) else {
+                return false;
+            };
+
+            if block.is_enabled == enabled {
+                return false;
+            }
+
+            block.is_enabled = enabled;
+        }
+
+        if !enabled {
+            self.clear_interaction_state_for_subtree(id);
+        }
         self.notify_block_changed(id);
         true
     }
@@ -1394,6 +1551,12 @@ impl FigureGraph {
         path.push(block_id);
         let mut child_point = point;
         self.translate_from_parent(block_id, &mut child_point);
+        let client_area = block.figure.client_area();
+        if !point_in_rect(child_point, &client_area) {
+            let hit = Some((block_id, path.clone()));
+            path.pop();
+            return hit;
+        }
 
         for &child_id in block.children.iter().rev() {
             if let Some(hit) = self.hit_test_from(child_id, child_point, path) {
@@ -1423,6 +1586,11 @@ impl FigureGraph {
 
         let mut child_point = point;
         self.translate_from_parent(block_id, &mut child_point);
+        let client_area = block.figure.client_area();
+        if !point_in_rect(child_point, &client_area) {
+            return block.figure.wants_mouse_events().then_some(block_id);
+        }
+
         for &child_id in block.children.iter().rev() {
             if let Some(target) = self.find_mouse_event_target_from(child_id, child_point) {
                 return Some(target);
@@ -1471,6 +1639,26 @@ impl FigureGraph {
                 return true;
             }
             current = self.blocks.get(id).and_then(|block| block.parent);
+        }
+        false
+    }
+
+    fn effective_flag_from(
+        &self,
+        mut block_id: BlockId,
+        local_flag: fn(&FigureBlock) -> bool,
+    ) -> bool {
+        for _ in 0..self.blocks.len() {
+            let Some(block) = self.blocks.get(block_id) else {
+                return false;
+            };
+            if !local_flag(block) {
+                return false;
+            }
+            let Some(parent_id) = block.parent else {
+                return true;
+            };
+            block_id = parent_id;
         }
         false
     }
@@ -1983,6 +2171,122 @@ mod tests {
             scene.find_mouse_event_target_at(35.0, 35.0),
             Some(interactive_child)
         );
+    }
+
+    #[test]
+    fn test_hit_test_descends_only_through_parent_client_area() {
+        let mut scene = FigureGraph::new();
+        let parent_id = scene.set_contents(Box::new(TestFigureWithInsets::new(
+            100.0,
+            100.0,
+            100.0,
+            100.0,
+            (10.0, 10.0, 10.0, 10.0),
+        )));
+        let child_id = scene.add_child_to(
+            parent_id,
+            Box::new(RectangleFigure::new(-5.0, -5.0, 20.0, 20.0)),
+        );
+
+        assert_eq!(scene.hit_test_simple((105.0, 105.0)), Some(parent_id));
+        assert_eq!(scene.hit_test_simple((111.0, 111.0)), Some(child_id));
+    }
+
+    #[test]
+    fn test_mouse_event_target_descends_only_through_parent_client_area() {
+        let mut scene = FigureGraph::new();
+        let parent_id = scene.set_contents(Box::new(TestFigureWithInsets::new(
+            100.0,
+            100.0,
+            100.0,
+            100.0,
+            (10.0, 10.0, 10.0, 10.0),
+        )));
+        let child_id = scene.add_child_to(
+            parent_id,
+            Box::new(TestInteractiveFigure::new(-5.0, -5.0, 20.0, 20.0)),
+        );
+
+        assert_eq!(scene.find_mouse_event_target_at(105.0, 105.0), None);
+        assert_eq!(
+            scene.find_mouse_event_target_at(111.0, 111.0),
+            Some(child_id)
+        );
+    }
+
+    #[test]
+    fn test_child_order_appends_children_back_to_front() {
+        let mut scene = FigureGraph::new();
+        let root_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
+        let first = scene.add_child_to(
+            root_id,
+            Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+        );
+        let second = scene.add_child_to(
+            root_id,
+            Box::new(RectangleFigure::new(20.0, 20.0, 50.0, 50.0)),
+        );
+        let third = scene.add_child_to(
+            root_id,
+            Box::new(RectangleFigure::new(30.0, 30.0, 50.0, 50.0)),
+        );
+
+        assert_eq!(scene.child_order(root_id), Some(vec![first, second, third]));
+        assert_eq!(scene.child_z_index(root_id, first), Some(0));
+        assert_eq!(scene.child_z_index(root_id, second), Some(1));
+        assert_eq!(scene.child_z_index(root_id, third), Some(2));
+    }
+
+    #[test]
+    fn test_z_order_reorder_changes_topmost_hit_test_target() {
+        let mut scene = FigureGraph::new();
+        let root_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
+        let bottom = scene.add_child_to(
+            root_id,
+            Box::new(RectangleFigure::new(20.0, 20.0, 100.0, 100.0)),
+        );
+        let middle = scene.add_child_to(
+            root_id,
+            Box::new(RectangleFigure::new(20.0, 20.0, 100.0, 100.0)),
+        );
+        let top = scene.add_child_to(
+            root_id,
+            Box::new(RectangleFigure::new(20.0, 20.0, 100.0, 100.0)),
+        );
+
+        assert_eq!(scene.hit_test_simple((30.0, 30.0)), Some(top));
+
+        assert!(scene.bring_child_to_front(root_id, bottom));
+        assert_eq!(scene.child_order(root_id), Some(vec![middle, top, bottom]));
+        assert_eq!(scene.hit_test_simple((30.0, 30.0)), Some(bottom));
+
+        assert!(scene.send_child_to_back(root_id, bottom));
+        assert_eq!(scene.child_order(root_id), Some(vec![bottom, middle, top]));
+        assert_eq!(scene.hit_test_simple((30.0, 30.0)), Some(top));
+    }
+
+    #[test]
+    fn test_z_order_reorder_rejects_invalid_inputs_without_side_effects() {
+        let mut scene = FigureGraph::new();
+        let root_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
+        let child = scene.add_child_to(
+            root_id,
+            Box::new(RectangleFigure::new(20.0, 20.0, 100.0, 100.0)),
+        );
+        let _sibling = scene.add_child_to(
+            root_id,
+            Box::new(RectangleFigure::new(40.0, 40.0, 100.0, 100.0)),
+        );
+        let other_parent = scene.add_child_to(
+            root_id,
+            Box::new(RectangleFigure::new(0.0, 0.0, 10.0, 10.0)),
+        );
+        let initial_order = scene.child_order(root_id);
+
+        assert!(!scene.move_child_to_index(root_id, child, 3));
+        assert!(!scene.move_child_to_index(other_parent, child, 0));
+        assert!(!scene.bring_child_to_front(root_id, other_parent));
+        assert_eq!(scene.child_order(root_id), initial_order);
     }
 
     #[test]

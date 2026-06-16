@@ -11,18 +11,13 @@ use crate::graph::BlockId;
 use novadraw_geometry::Rectangle;
 
 /// Flow 布局方向
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum FlowDirection {
     /// 水平流动（从左到右，然后换行）
+    #[default]
     Horizontal,
     /// 垂直流动（从上到下，然后换列）
     Vertical,
-}
-
-impl Default for FlowDirection {
-    fn default() -> Self {
-        Self::Horizontal
-    }
 }
 
 /// Flow 布局器

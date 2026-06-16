@@ -75,6 +75,8 @@ pub enum RenderCommandKind {
         rect: [glam::DVec2; 2],
         color: Color,
         width: f64,
+        /// 线型样式
+        line_style: LineStyle,
         /// 线帽样式
         cap: LineCap,
         /// 连接样式
@@ -97,6 +99,8 @@ pub enum RenderCommandKind {
         stroke_color: Option<Color>,
         /// 描边宽度
         stroke_width: f64,
+        /// 线型样式
+        line_style: LineStyle,
         /// 线帽样式
         cap: LineCap,
         /// 连接样式
@@ -121,6 +125,8 @@ pub enum RenderCommandKind {
         color: Color,
         /// 线条宽度
         width: f64,
+        /// 线型样式
+        line_style: LineStyle,
         /// 线帽样式
         cap: LineCap,
         /// 连接样式
@@ -135,6 +141,8 @@ pub enum RenderCommandKind {
         color: Color,
         /// 线条宽度
         width: f64,
+        /// 线型样式
+        line_style: LineStyle,
         /// 线帽样式
         cap: LineCap,
         /// 连接样式
@@ -171,6 +179,8 @@ pub enum RenderCommandKind {
         color: Color,
         /// 描边宽度
         width: f64,
+        /// 线型样式
+        line_style: LineStyle,
         /// 线帽样式
         line_cap: LineCap,
         /// 线连接样式
@@ -244,6 +254,15 @@ pub enum LineJoin {
     Miter,
     Round,
     Bevel,
+}
+
+/// 线型样式
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum LineStyle {
+    #[default]
+    Solid,
+    Dash,
+    Dot,
 }
 
 /// 填充规则

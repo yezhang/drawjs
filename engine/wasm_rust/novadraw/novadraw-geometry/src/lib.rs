@@ -26,3 +26,24 @@ pub use rect::{Dimension, Point, Rectangle, Size};
 pub use transform::Transform;
 pub use translatable::{Insets, Translatable};
 pub use vec2::Vec2;
+
+/// 精度点兼容别名。
+///
+/// Novadraw 的几何值默认使用 `f64`，因此 precision 命名映射到同一底层类型。
+pub type PrecisionPoint = Point;
+
+/// 精度矩形兼容别名。
+///
+/// Novadraw 的几何值默认使用 `f64`，因此 precision 命名映射到同一底层类型。
+pub type PrecisionRectangle = Rectangle;
+
+/// 精度尺寸兼容别名。
+///
+/// Novadraw 的几何值默认使用 `f64`，因此 precision 命名映射到同一底层类型。
+pub type PrecisionDimension = Dimension;
+
+/// 向量兼容别名。
+pub type Vector = Vec2;
+
+/// 仿射变换兼容别名。
+pub type AffineTransform = Transform;

@@ -238,17 +238,19 @@ fn create_scene_6_stroke_vs_border() -> novadraw::FigureGraph {
     scene
 }
 
+type SceneEntry = (&'static str, Box<dyn FnMut() -> novadraw::FigureGraph>);
+
 fn main() {
-    let scenes: Vec<(&'static str, Box<dyn FnMut() -> novadraw::FigureGraph>)> = vec![
-        ("Fill Colors", Box::new(|| create_scene_0_fill_colors())),
-        ("Alpha/Transparency", Box::new(|| create_scene_1_alpha())),
-        ("Stroke Width", Box::new(|| create_scene_2_stroke_width())),
-        ("Stroke Color", Box::new(|| create_scene_3_stroke_color())),
-        ("LineCap", Box::new(|| create_scene_4_line_cap())),
-        ("LineJoin", Box::new(|| create_scene_5_line_join())),
+    let scenes: Vec<SceneEntry> = vec![
+        ("Fill Colors", Box::new(create_scene_0_fill_colors)),
+        ("Alpha/Transparency", Box::new(create_scene_1_alpha)),
+        ("Stroke Width", Box::new(create_scene_2_stroke_width)),
+        ("Stroke Color", Box::new(create_scene_3_stroke_color)),
+        ("LineCap", Box::new(create_scene_4_line_cap)),
+        ("LineJoin", Box::new(create_scene_5_line_join)),
         (
             "Stroke vs Border",
-            Box::new(|| create_scene_6_stroke_vs_border()),
+            Box::new(create_scene_6_stroke_vs_border),
         ),
     ];
 

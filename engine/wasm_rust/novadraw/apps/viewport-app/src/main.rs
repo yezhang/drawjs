@@ -34,6 +34,7 @@ fn empty_scene() -> (novadraw::FigureGraph, novadraw::BlockId) {
     (scene, root_id)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn add_viewport(
     scene: &mut novadraw::FigureGraph,
     parent_id: novadraw::BlockId,
@@ -290,16 +291,13 @@ fn scenes() -> Vec<SceneFactory> {
     vec![
         (
             "clip_to_viewport",
-            Box::new(|| create_scene_0_clip_to_viewport()),
+            Box::new(create_scene_0_clip_to_viewport),
         ),
-        ("origin_scroll", Box::new(|| create_scene_1_origin_scroll())),
-        (
-            "zoomed_content",
-            Box::new(|| create_scene_2_zoomed_content()),
-        ),
+        ("origin_scroll", Box::new(create_scene_1_origin_scroll)),
+        ("zoomed_content", Box::new(create_scene_2_zoomed_content)),
         (
             "nested_viewports",
-            Box::new(|| create_scene_3_nested_viewports()),
+            Box::new(create_scene_3_nested_viewports),
         ),
     ]
 }

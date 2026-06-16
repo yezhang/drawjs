@@ -23,7 +23,7 @@ pub mod submission;
 /// 渲染器 traits 模块
 pub mod traits;
 
-pub use command::{RenderCommand, RenderCommandKind};
+pub use command::{ImageData, LineCap, LineJoin, LineStyle, RenderCommand, RenderCommandKind};
 pub use context::NdCanvas;
 pub use submission::{DamageSet, RenderSubmission};
 pub use traits::{RenderBackend, WindowProxy};

@@ -204,7 +204,7 @@ impl TriangleFigure {
     /// 2. 主尖角完整，不被裁剪（在收缩后的边界内，考虑描边向外扩展）
     /// 3. 底部两角的裁剪由渲染器的 line join 行为自然产生
     fn compute_points(&self) -> [(f64, f64); 3] {
-        let mut r = self.bounds.clone();
+        let mut r = self.bounds;
 
         if r.width <= 0.0 || r.height <= 0.0 {
             return [(0.0, 0.0), (0.0, 0.0), (0.0, 0.0)];
@@ -331,9 +331,9 @@ impl Updatable for TriangleFigure {
     /// 在布局完成后被调用，预计算三角形的顶点位置。
     fn validate(&mut self) {
         // 检查 bounds 是否变化，变化则重新计算顶点
-        if self.cached_bounds != Some(self.bounds.clone()) {
+        if self.cached_bounds != Some(self.bounds) {
             self.cached_points = Some(self.compute_points());
-            self.cached_bounds = Some(self.bounds.clone());
+            self.cached_bounds = Some(self.bounds);
         }
     }
 

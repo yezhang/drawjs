@@ -254,30 +254,27 @@ fn main() {
         "Transform App - 坐标变换验证 (按数字键 0-9 切换场景)",
         "transform-app",
         vec![
-            ("translate", Box::new(|| create_scene_0_translate())),
-            ("scale_center", Box::new(|| create_scene_1_scale_center())),
-            ("scale_anchor", Box::new(|| create_scene_2_scale_anchor())),
-            ("rotate", Box::new(|| create_scene_3_rotate())),
+            ("translate", Box::new(create_scene_0_translate)),
+            ("scale_center", Box::new(create_scene_1_scale_center)),
+            ("scale_anchor", Box::new(create_scene_2_scale_anchor)),
+            ("rotate", Box::new(create_scene_3_rotate)),
             (
                 "transform_propagation",
-                Box::new(|| create_scene_4_transform_propagation()),
+                Box::new(create_scene_4_transform_propagation),
             ),
-            ("local_coords", Box::new(|| create_scene_5_local_coords())),
+            ("local_coords", Box::new(create_scene_5_local_coords)),
             (
                 "transform_matrix",
-                Box::new(|| create_scene_6_transform_matrix()),
+                Box::new(create_scene_6_transform_matrix),
             ),
-            (
-                "scale_animation",
-                Box::new(|| create_scene_7_scale_animation()),
-            ),
+            ("scale_animation", Box::new(create_scene_7_scale_animation)),
             (
                 "rotate_animation",
-                Box::new(|| create_scene_8_rotate_animation()),
+                Box::new(create_scene_8_rotate_animation),
             ),
             (
                 "viewport_to_content",
-                Box::new(|| create_scene_9_viewport_to_content()),
+                Box::new(create_scene_9_viewport_to_content),
             ),
         ],
     )

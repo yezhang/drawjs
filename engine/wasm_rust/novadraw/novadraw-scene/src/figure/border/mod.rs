@@ -40,9 +40,10 @@ pub trait Border: Send + Sync {
 }
 
 /// Border 样式
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum BorderStyle {
     /// 实线
+    #[default]
     Solid,
     /// 虚线
     Dash,
@@ -50,12 +51,6 @@ pub enum BorderStyle {
     Dot,
     /// dash-dot 交替
     DashDot,
-}
-
-impl Default for BorderStyle {
-    fn default() -> Self {
-        Self::Solid
-    }
 }
 
 /// 通用边框构建器

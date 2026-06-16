@@ -309,6 +309,7 @@ impl VelloRenderer {
                 rect,
                 color,
                 width,
+                line_style: _,
                 cap,
                 join,
             } => {
@@ -349,6 +350,7 @@ impl VelloRenderer {
                 p2,
                 color,
                 width,
+                line_style: _,
                 cap,
                 join,
             } => {
@@ -390,6 +392,7 @@ impl VelloRenderer {
                 points,
                 color,
                 width,
+                line_style: _,
                 cap,
                 join,
             } => {
@@ -439,6 +442,7 @@ impl VelloRenderer {
                 fill_color,
                 stroke_color,
                 stroke_width,
+                line_style: _,
                 cap,
                 join,
             } => {
@@ -570,6 +574,7 @@ impl VelloRenderer {
                 path,
                 color,
                 width,
+                line_style: _,
                 line_cap,
                 line_join,
             } => {

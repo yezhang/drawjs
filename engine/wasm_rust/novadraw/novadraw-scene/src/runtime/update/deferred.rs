@@ -91,7 +91,7 @@ impl SceneUpdateManager {
                 }
                 NotificationEffect::EmitFigure(event) => {
                     for listener in &self.listeners {
-                        listener.on_figure_event(event.clone());
+                        listener.on_figure_event(*event);
                     }
                 }
                 NotificationEffect::EmitUpdate(event) => {

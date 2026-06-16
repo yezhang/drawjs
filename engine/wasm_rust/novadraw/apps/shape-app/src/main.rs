@@ -258,8 +258,8 @@ fn create_scene_3_polyline() -> novadraw::FigureGraph {
     let container = novadraw::RectangleFigure::new_with_color(
         0.0,
         0.0,
-        WINDOW_WIDTH as f64,
-        WINDOW_HEIGHT as f64,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
         novadraw::Color::rgba(0.15, 0.15, 0.15, 1.0),
     );
     let container_id = scene.set_contents(Box::new(container));
@@ -1027,26 +1027,22 @@ fn create_scene_11_parent_child() -> novadraw::FigureGraph {
 // 场景映射
 // ============================================================================
 
+type SceneEntry = (&'static str, Box<dyn FnMut() -> novadraw::FigureGraph>);
+
 fn main() {
     // 解析命令行参数
     let args: Vec<String> = std::env::args().collect();
 
     // 场景列表
-    let scenes: Vec<(&'static str, Box<dyn FnMut() -> novadraw::FigureGraph>)> = vec![
-        (
-            "0:Rectangle Fill",
-            Box::new(|| create_scene_0_rectangle_fill()),
-        ),
-        ("1:Ellipse Fill", Box::new(|| create_scene_1_ellipse_fill())),
-        ("2:Rounded Rect", Box::new(|| create_scene_2_rounded_rect())),
-        ("3:Polyline", Box::new(|| create_scene_3_polyline())),
-        ("4:Mixed Shapes", Box::new(|| create_scene_8_mixed_shapes())),
-        ("5:Z-Order", Box::new(|| create_scene_9_zorder())),
-        ("6:Triangle", Box::new(|| create_scene_10_triangle())),
-        (
-            "7:Parent-Child",
-            Box::new(|| create_scene_11_parent_child()),
-        ),
+    let scenes: Vec<SceneEntry> = vec![
+        ("0:Rectangle Fill", Box::new(create_scene_0_rectangle_fill)),
+        ("1:Ellipse Fill", Box::new(create_scene_1_ellipse_fill)),
+        ("2:Rounded Rect", Box::new(create_scene_2_rounded_rect)),
+        ("3:Polyline", Box::new(create_scene_3_polyline)),
+        ("4:Mixed Shapes", Box::new(create_scene_8_mixed_shapes)),
+        ("5:Z-Order", Box::new(create_scene_9_zorder)),
+        ("6:Triangle", Box::new(create_scene_10_triangle)),
+        ("7:Parent-Child", Box::new(create_scene_11_parent_child)),
     ];
 
     // 检查截图模式

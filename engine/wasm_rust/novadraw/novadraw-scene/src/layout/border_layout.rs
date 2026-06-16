@@ -11,9 +11,10 @@ use novadraw_geometry::Rectangle;
 /// Border 布局区域
 ///
 /// 对应 draw2d: BorderLayout.CENTER, NORTH, SOUTH, EAST, WEST
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum BorderRegion {
     /// 中心区域（默认）
+    #[default]
     Center,
     /// 北部（顶部）
     North,
@@ -25,15 +26,9 @@ pub enum BorderRegion {
     West,
 }
 
-impl Default for BorderRegion {
-    fn default() -> Self {
-        Self::Center
-    }
-}
-
 impl BorderRegion {
     /// 从字符串解析区域
-    pub fn from_str(s: &str) -> Self {
+    pub fn from_name(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "north" | "n" => BorderRegion::North,
             "south" | "s" => BorderRegion::South,
@@ -264,17 +259,17 @@ impl LayoutManager for BorderLayout {
         }
 
         for (child_id, _) in &children {
-            if ctx.get_constraint(*child_id).is_none() {
-                if let Some(region) = remaining_regions.pop() {
-                    let (x, y, w, h) = match region {
-                        BorderRegion::North => (cx, cy, cw, north_h),
-                        BorderRegion::South => (cx, cy + ch - south_h, cw, south_h),
-                        BorderRegion::East => (cx + cw - east_w, center_y, east_w, center_h),
-                        BorderRegion::West => (cx, center_y, west_w, center_h),
-                        BorderRegion::Center => (center_x, center_y, center_w, center_h),
-                    };
-                    ctx.set_child_bounds(*child_id, Rectangle::new(x, y, w, h));
-                }
+            if ctx.get_constraint(*child_id).is_none()
+                && let Some(region) = remaining_regions.pop()
+            {
+                let (x, y, w, h) = match region {
+                    BorderRegion::North => (cx, cy, cw, north_h),
+                    BorderRegion::South => (cx, cy + ch - south_h, cw, south_h),
+                    BorderRegion::East => (cx + cw - east_w, center_y, east_w, center_h),
+                    BorderRegion::West => (cx, center_y, west_w, center_h),
+                    BorderRegion::Center => (center_x, center_y, center_w, center_h),
+                };
+                ctx.set_child_bounds(*child_id, Rectangle::new(x, y, w, h));
             }
         }
     }
@@ -290,16 +285,16 @@ mod tests {
 
     #[test]
     fn test_border_region_from_str() {
-        assert_eq!(BorderRegion::from_str("north"), BorderRegion::North);
-        assert_eq!(BorderRegion::from_str("N"), BorderRegion::North);
-        assert_eq!(BorderRegion::from_str("south"), BorderRegion::South);
-        assert_eq!(BorderRegion::from_str("S"), BorderRegion::South);
-        assert_eq!(BorderRegion::from_str("east"), BorderRegion::East);
-        assert_eq!(BorderRegion::from_str("E"), BorderRegion::East);
-        assert_eq!(BorderRegion::from_str("west"), BorderRegion::West);
-        assert_eq!(BorderRegion::from_str("W"), BorderRegion::West);
-        assert_eq!(BorderRegion::from_str("center"), BorderRegion::Center);
-        assert_eq!(BorderRegion::from_str("unknown"), BorderRegion::Center);
+        assert_eq!(BorderRegion::from_name("north"), BorderRegion::North);
+        assert_eq!(BorderRegion::from_name("N"), BorderRegion::North);
+        assert_eq!(BorderRegion::from_name("south"), BorderRegion::South);
+        assert_eq!(BorderRegion::from_name("S"), BorderRegion::South);
+        assert_eq!(BorderRegion::from_name("east"), BorderRegion::East);
+        assert_eq!(BorderRegion::from_name("E"), BorderRegion::East);
+        assert_eq!(BorderRegion::from_name("west"), BorderRegion::West);
+        assert_eq!(BorderRegion::from_name("W"), BorderRegion::West);
+        assert_eq!(BorderRegion::from_name("center"), BorderRegion::Center);
+        assert_eq!(BorderRegion::from_name("unknown"), BorderRegion::Center);
     }
 
     #[test]

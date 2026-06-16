@@ -394,33 +394,33 @@ fn create_scene_transform() -> novadraw::FigureGraph {
 // 主程序
 // ============================================================
 
+type SceneEntry = (&'static str, Box<dyn FnMut() -> novadraw::FigureGraph>);
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
-    let scenes: Vec<(&str, Box<dyn FnMut() -> novadraw::FigureGraph>)> = vec![
-        ("0:Clear", Box::new(|| create_scene_clear())),
-        ("1:FillRect", Box::new(|| create_scene_fill_rect())),
-        ("2:StrokeRect", Box::new(|| create_scene_stroke_rect())),
-        ("3:Ellipse", Box::new(|| create_scene_ellipse())),
-        ("4:Line", Box::new(|| create_scene_line())),
-        ("5:Polyline", Box::new(|| create_scene_polyline())),
-        ("6:LineJoin", Box::new(|| create_scene_line_join())),
-        ("7:Transform", Box::new(|| create_scene_transform())),
+    let scenes: Vec<SceneEntry> = vec![
+        ("0:Clear", Box::new(create_scene_clear)),
+        ("1:FillRect", Box::new(create_scene_fill_rect)),
+        ("2:StrokeRect", Box::new(create_scene_stroke_rect)),
+        ("3:Ellipse", Box::new(create_scene_ellipse)),
+        ("4:Line", Box::new(create_scene_line)),
+        ("5:Polyline", Box::new(create_scene_polyline)),
+        ("6:LineJoin", Box::new(create_scene_line_join)),
+        ("7:Transform", Box::new(create_scene_transform)),
     ];
 
     let title = "NdCanvas API Test - 按数字键切换测试场景";
     let app_name = "ndcanvas-test";
 
-    if args.len() > 1 {
-        if let Some(arg) = args.get(1) {
-            if let Some(idx) = arg
-                .strip_prefix("--screenshot=")
-                .and_then(|s| s.parse::<usize>().ok())
-            {
-                run_demo_app_with_scene_screenshot(title, app_name, scenes, idx).unwrap();
-                return;
-            }
-        }
+    if args.len() > 1
+        && let Some(arg) = args.get(1)
+        && let Some(idx) = arg
+            .strip_prefix("--screenshot=")
+            .and_then(|s| s.parse::<usize>().ok())
+    {
+        run_demo_app_with_scene_screenshot(title, app_name, scenes, idx).unwrap();
+        return;
     }
 
     // 正常启动应用

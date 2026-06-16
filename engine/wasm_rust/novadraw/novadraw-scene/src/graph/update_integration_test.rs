@@ -86,6 +86,99 @@ fn test_invisible_block_no_dirty_region() {
 }
 
 #[test]
+fn test_effective_visibility_follows_parent_chain() {
+    let (mut scene, _) = new_scene();
+    let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
+    let child_id = scene.add_child_to(
+        parent_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+    );
+
+    assert!(scene.is_visible(child_id));
+    assert!(scene.is_effectively_visible(child_id));
+
+    assert!(scene.set_visible(parent_id, false));
+    assert!(scene.is_visible(child_id));
+    assert!(!scene.is_effectively_visible(child_id));
+    assert!(!scene.set_visible(parent_id, false));
+
+    assert!(scene.set_visible(parent_id, true));
+    assert!(scene.is_effectively_visible(child_id));
+}
+
+#[test]
+fn test_effective_enabled_follows_parent_chain() {
+    let (mut scene, _) = new_scene();
+    let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
+    let child_id = scene.add_child_to(
+        parent_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+    );
+
+    assert!(scene.is_enabled(child_id));
+    assert!(scene.is_effectively_enabled(child_id));
+
+    assert!(scene.set_enabled(parent_id, false));
+    assert!(scene.is_enabled(child_id));
+    assert!(!scene.is_effectively_enabled(child_id));
+    assert!(!scene.set_enabled(parent_id, false));
+
+    assert!(scene.set_enabled(parent_id, true));
+    assert!(scene.is_effectively_enabled(child_id));
+}
+
+#[test]
+fn test_repaint_skips_effectively_invisible_child() {
+    let (mut scene, mut update_manager) = new_scene();
+    let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
+    let child_id = scene.add_child_to(
+        parent_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+    );
+
+    scene.set_visible(parent_id, false);
+    scene.repaint(&mut update_manager, child_id, None);
+
+    assert!(!update_manager.has_pending_repaint());
+}
+
+#[test]
+fn test_hidden_parent_skips_child_validation_but_drains_queue() {
+    let (mut scene, mut update_manager) = new_scene();
+    let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
+    let child_id = scene.add_child_to(
+        parent_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+    );
+
+    scene.set_visible(parent_id, false);
+    scene.mark_invalid(&mut update_manager, child_id);
+    scene.perform_update(&mut update_manager);
+
+    assert!(!update_manager.has_pending_layout());
+    assert!(!update_manager.is_update_queued());
+    assert!(!scene.get_block(child_id).unwrap().is_valid);
+}
+
+#[test]
+fn test_disabled_parent_skips_child_validation_but_drains_queue() {
+    let (mut scene, mut update_manager) = new_scene();
+    let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
+    let child_id = scene.add_child_to(
+        parent_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+    );
+
+    scene.set_enabled(parent_id, false);
+    scene.mark_invalid(&mut update_manager, child_id);
+    scene.perform_update(&mut update_manager);
+
+    assert!(!update_manager.has_pending_layout());
+    assert!(!update_manager.is_update_queued());
+    assert!(!scene.get_block(child_id).unwrap().is_valid);
+}
+
+#[test]
 fn test_perform_update_two_phase() {
     let (mut scene, mut update_manager) = new_scene();
     let container_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
@@ -465,6 +558,63 @@ fn test_apply_pending_add_child_with_invalid_parent_has_no_side_effect() {
 }
 
 #[test]
+fn test_direct_add_child_to_invalid_parent_has_no_side_effect() {
+    let (mut scene, _) = new_scene();
+    let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
+    let block_count = scene.blocks.len();
+    let uuid_count = scene.uuid_map.len();
+
+    let child_id = scene.add_child_to(
+        BlockId::null(),
+        Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+    );
+
+    assert_eq!(child_id, BlockId::null());
+    assert_eq!(scene.get_block(parent_id).unwrap().children_count(), 0);
+    assert_eq!(scene.blocks.len(), block_count);
+    assert_eq!(scene.uuid_map.len(), uuid_count);
+}
+
+#[test]
+fn test_try_add_child_to_invalid_parent_returns_none_without_side_effect() {
+    let (mut scene, _) = new_scene();
+    let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
+    let block_count = scene.blocks.len();
+    let uuid_count = scene.uuid_map.len();
+
+    let child_id = scene.try_add_child_to(
+        BlockId::null(),
+        Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+    );
+
+    assert_eq!(child_id, None);
+    assert_eq!(scene.get_block(parent_id).unwrap().children_count(), 0);
+    assert_eq!(scene.blocks.len(), block_count);
+    assert_eq!(scene.uuid_map.len(), uuid_count);
+}
+
+#[test]
+fn test_direct_add_child_with_update_manager_invalid_parent_has_no_side_effect() {
+    let (mut scene, mut update_manager) = new_scene();
+    let _parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
+    let block_count = scene.blocks.len();
+    let uuid_count = scene.uuid_map.len();
+
+    let child_id = scene.add_child(
+        &mut update_manager,
+        BlockId::null(),
+        Box::new(RectangleFigure::new(10.0, 10.0, 50.0, 50.0)),
+    );
+
+    assert_eq!(child_id, BlockId::null());
+    assert_eq!(scene.blocks.len(), block_count);
+    assert_eq!(scene.uuid_map.len(), uuid_count);
+    assert!(!update_manager.is_update_queued());
+    assert!(!update_manager.has_pending_layout());
+    assert!(!update_manager.has_pending_repaint());
+}
+
+#[test]
 fn test_apply_pending_remove_child_clears_interaction_state() {
     let (mut scene, mut update_manager) = new_scene();
     let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 200.0, 200.0)));
@@ -491,6 +641,46 @@ fn test_apply_pending_remove_child_clears_interaction_state() {
     assert_eq!(scene.mouse_target(), None);
     assert_eq!(scene.focus_owner(), None);
     assert_eq!(scene.captured(), None);
+}
+
+#[test]
+fn test_apply_pending_remove_child_with_wrong_parent_has_no_side_effects() {
+    let (mut scene, mut update_manager) = new_scene();
+    let root_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 400.0, 400.0)));
+    let left_id = scene.add_child_to(
+        root_id,
+        Box::new(RectangleFigure::new(0.0, 0.0, 100.0, 100.0)),
+    );
+    let right_id = scene.add_child_to(
+        root_id,
+        Box::new(RectangleFigure::new(200.0, 0.0, 100.0, 100.0)),
+    );
+    let child_id = scene.add_child_to(
+        left_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 20.0, 20.0)),
+    );
+    scene.set_mouse_target(Some(child_id));
+    scene.set_focus_owner(Some(child_id));
+    scene.set_captured(Some(child_id));
+
+    let mut pending_mutations = PendingMutations::new();
+    pending_mutations.enqueue(PendingMutation::remove_child(right_id, child_id));
+
+    assert!(!scene.apply_pending_mutations(&mut update_manager, pending_mutations.drain()));
+    assert_eq!(scene.get_block(child_id).unwrap().parent, Some(left_id));
+    assert!(
+        scene
+            .get_block(left_id)
+            .unwrap()
+            .children
+            .contains(&child_id)
+    );
+    assert_eq!(scene.mouse_target(), Some(child_id));
+    assert_eq!(scene.focus_owner(), Some(child_id));
+    assert_eq!(scene.captured(), Some(child_id));
+    assert!(!update_manager.is_update_queued());
+    assert_eq!(update_manager.invalid_count(), 0);
+    assert_eq!(update_manager.dirty_count(), 0);
 }
 
 #[test]
@@ -529,6 +719,56 @@ fn test_apply_pending_reparent_moves_child_between_containers() {
             .children
             .contains(&child_id)
     );
+}
+
+#[test]
+fn test_apply_pending_reparent_with_duplicate_new_parent_entry_has_no_side_effects() {
+    let (mut scene, mut update_manager) = new_scene();
+    let root_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 400.0, 400.0)));
+    let left_id = scene.add_child_to(
+        root_id,
+        Box::new(RectangleFigure::new(0.0, 0.0, 100.0, 100.0)),
+    );
+    let right_id = scene.add_child_to(
+        root_id,
+        Box::new(RectangleFigure::new(200.0, 0.0, 100.0, 100.0)),
+    );
+    let child_id = scene.add_child_to(
+        left_id,
+        Box::new(RectangleFigure::new(10.0, 10.0, 20.0, 20.0)),
+    );
+    scene
+        .blocks
+        .get_mut(right_id)
+        .unwrap()
+        .children
+        .push(child_id);
+
+    let mut pending_mutations = PendingMutations::new();
+    pending_mutations.enqueue(PendingMutation::reparent(child_id, right_id));
+
+    assert!(!scene.apply_pending_mutations(&mut update_manager, pending_mutations.drain()));
+    assert_eq!(scene.get_block(child_id).unwrap().parent, Some(left_id));
+    assert!(
+        scene
+            .get_block(left_id)
+            .unwrap()
+            .children
+            .contains(&child_id)
+    );
+    assert_eq!(
+        scene
+            .get_block(right_id)
+            .unwrap()
+            .children
+            .iter()
+            .filter(|&&id| id == child_id)
+            .count(),
+        1
+    );
+    assert!(!update_manager.is_update_queued());
+    assert_eq!(update_manager.invalid_count(), 0);
+    assert_eq!(update_manager.dirty_count(), 0);
 }
 
 #[test]

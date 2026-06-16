@@ -259,31 +259,28 @@ fn main() {
         "Clip App - 裁剪验证 (按数字键 0-9 切换场景)",
         "clip-app",
         vec![
-            ("basic_clip", Box::new(|| create_scene_0_basic_clip())),
-            ("nested_clip", Box::new(|| create_scene_1_nested_clip())),
+            ("basic_clip", Box::new(create_scene_0_basic_clip)),
+            ("nested_clip", Box::new(create_scene_1_nested_clip)),
             (
                 "multi_layer_clip",
-                Box::new(|| create_scene_2_multi_layer_clip()),
+                Box::new(create_scene_2_multi_layer_clip),
             ),
-            ("circle_clip", Box::new(|| create_scene_3_circle_clip())),
-            ("path_clip", Box::new(|| create_scene_4_path_clip())),
+            ("circle_clip", Box::new(create_scene_3_circle_clip)),
+            ("path_clip", Box::new(create_scene_4_path_clip)),
             (
                 "clip_with_events",
-                Box::new(|| create_scene_5_clip_with_events()),
+                Box::new(create_scene_5_clip_with_events),
             ),
             (
                 "transparent_clip",
-                Box::new(|| create_scene_6_transparent_clip()),
+                Box::new(create_scene_6_transparent_clip),
             ),
-            (
-                "clip_animation",
-                Box::new(|| create_scene_7_clip_animation()),
-            ),
+            ("clip_animation", Box::new(create_scene_7_clip_animation)),
             (
                 "clip_performance",
-                Box::new(|| create_scene_8_clip_performance()),
+                Box::new(create_scene_8_clip_performance),
             ),
-            ("inverted_clip", Box::new(|| create_scene_9_inverted_clip())),
+            ("inverted_clip", Box::new(create_scene_9_inverted_clip)),
         ],
     )
     .expect("Failed to run app");

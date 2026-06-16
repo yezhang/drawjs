@@ -309,25 +309,16 @@ fn main() {
         "Update App - UpdateManager 生命周期验证 (←→ 切换场景)",
         "update-app",
         vec![
-            (
-                "Static Baseline",
-                Box::new(|| create_scene_0_static_baseline()),
-            ),
-            (
-                "prim_translate",
-                Box::new(|| create_scene_1_prim_translate()),
-            ),
-            (
-                "Coordinate Root",
-                Box::new(|| create_scene_2_coordinate_root()),
-            ),
-            ("repaint", Box::new(|| create_scene_3_repaint())),
-            ("revalidate", Box::new(|| create_scene_4_revalidate())),
+            ("Static Baseline", Box::new(create_scene_0_static_baseline)),
+            ("prim_translate", Box::new(create_scene_1_prim_translate)),
+            ("Coordinate Root", Box::new(create_scene_2_coordinate_root)),
+            ("repaint", Box::new(create_scene_3_repaint)),
+            ("revalidate", Box::new(create_scene_4_revalidate)),
             (
                 "Notification Effects",
-                Box::new(|| create_scene_5_notification_effects()),
+                Box::new(create_scene_5_notification_effects),
             ),
-            ("Damage Repair", Box::new(|| create_scene_6_damage_repair())),
+            ("Damage Repair", Box::new(create_scene_6_damage_repair)),
         ],
     )
     .expect("Failed to run app");

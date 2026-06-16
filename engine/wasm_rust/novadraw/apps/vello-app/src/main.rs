@@ -73,7 +73,7 @@ impl VelloDemo {
         self.scene.fill(
             Fill::NonZero,
             Affine::IDENTITY,
-            &blue,
+            blue,
             None,
             &Rect::new(100.0, 100.0, 300.0, 200.0),
         );
@@ -83,7 +83,7 @@ impl VelloDemo {
         self.scene.fill(
             Fill::NonZero,
             Affine::IDENTITY,
-            &orange,
+            orange,
             None,
             &Rect::new(200.0, 150.0, 400.0, 250.0),
         );

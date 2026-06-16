@@ -291,25 +291,19 @@ fn main() {
         "Event App - 事件处理验证 (按数字键 0-9 切换场景)",
         "event-app",
         vec![
-            (
-                "MouseEnter_Exit",
-                Box::new(|| create_scene_0_mouse_enter_exit()),
-            ),
-            ("MouseHover", Box::new(|| create_scene_1_mouse_hover())),
-            ("MouseDown_Up", Box::new(|| create_scene_2_mouse_down_up())),
-            (
-                "MouseMove_basic",
-                Box::new(|| create_scene_3_mouse_move_basic()),
-            ),
-            ("MouseMove_drag", Box::new(|| create_scene_4_mouse_drag())),
-            ("KeyDown_Up", Box::new(|| create_scene_5_key_down_up())),
-            ("Focus", Box::new(|| create_scene_6_focus())),
-            ("combo_keys", Box::new(|| create_scene_7_combo_keys())),
+            ("MouseEnter_Exit", Box::new(create_scene_0_mouse_enter_exit)),
+            ("MouseHover", Box::new(create_scene_1_mouse_hover)),
+            ("MouseDown_Up", Box::new(create_scene_2_mouse_down_up)),
+            ("MouseMove_basic", Box::new(create_scene_3_mouse_move_basic)),
+            ("MouseMove_drag", Box::new(create_scene_4_mouse_drag)),
+            ("KeyDown_Up", Box::new(create_scene_5_key_down_up)),
+            ("Focus", Box::new(create_scene_6_focus)),
+            ("combo_keys", Box::new(create_scene_7_combo_keys)),
             (
                 "event_propagation",
-                Box::new(|| create_scene_8_event_propagation()),
+                Box::new(create_scene_8_event_propagation),
             ),
-            ("custom_event", Box::new(|| create_scene_9_custom_event())),
+            ("custom_event", Box::new(create_scene_9_custom_event)),
         ],
     )
     .expect("Failed to run app");

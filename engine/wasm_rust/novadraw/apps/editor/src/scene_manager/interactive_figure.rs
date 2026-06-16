@@ -11,6 +11,7 @@ pub struct InteractiveRectFigure {
 }
 
 impl InteractiveRectFigure {
+    #[allow(clippy::too_many_arguments)]
     pub fn with_palette(
         x: f64,
         y: f64,

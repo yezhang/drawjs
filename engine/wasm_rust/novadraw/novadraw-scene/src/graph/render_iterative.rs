@@ -212,11 +212,11 @@ impl<'a> FigureRendererIter<'a> {
             .children
             .iter()
             .filter_map(|&child_id| {
-                if let Some(child) = self.scene.get(child_id) {
-                    if child.is_visible {
-                        let bounds = child.figure.bounds();
-                        return Some((child_id, bounds));
-                    }
+                if let Some(child) = self.scene.get(child_id)
+                    && child.is_visible
+                {
+                    let bounds = child.figure.bounds();
+                    return Some((child_id, bounds));
                 }
                 None
             })
@@ -299,7 +299,7 @@ impl<'a> FigureRendererIter<'a> {
         // 绘制边框
         #[allow(clippy::needless_borrow)]
         block.figure.paint_border(&mut self.gc);
-        super::paint_selection_overlay(block, &mut self.gc);
+        super::paint_selection_overlay(block, self.gc);
 
         // 恢复初始状态
         self.gc.pop_state();

@@ -254,13 +254,13 @@ fn create_scene_constraint_update() -> novadraw::FigureGraph {
     let colors = ["#e74c3c", "#2ecc71", "#3498db"];
     let mut child_ids = Vec::new();
 
-    for i in 0..3 {
+    for (i, color) in colors.iter().enumerate() {
         let rect = novadraw::RectangleFigure::new_with_color(
             50.0 + i as f64 * 100.0,
             50.0,
             80.0,
             80.0,
-            novadraw::Color::hex(colors[i]),
+            novadraw::Color::hex(color),
         );
         let child_id = scene.add_child_to(container_id, Box::new(rect));
         child_ids.push(child_id);
@@ -465,31 +465,27 @@ fn create_scene_border_layout() -> novadraw::FigureGraph {
     scene
 }
 
+type SceneEntry = (&'static str, Box<dyn FnMut() -> novadraw::FigureGraph>);
+
 fn main() {
     let title = "Layout App - 布局管理器验证";
     let app_name = "layout-app";
 
-    let scenes: Vec<(&str, Box<dyn FnMut() -> novadraw::FigureGraph>)> = vec![
-        (
-            "XYLayout + Constraints",
-            Box::new(|| create_scene_xy_layout()),
-        ),
+    let scenes: Vec<SceneEntry> = vec![
+        ("XYLayout + Constraints", Box::new(create_scene_xy_layout)),
         (
             "FillLayout (First Fills)",
-            Box::new(|| create_scene_fill_layout()),
+            Box::new(create_scene_fill_layout),
         ),
-        ("FlowLayout", Box::new(|| create_scene_flow_layout())),
-        ("Nested Layouts", Box::new(|| create_scene_nested_layout())),
+        ("FlowLayout", Box::new(create_scene_flow_layout)),
+        ("Nested Layouts", Box::new(create_scene_nested_layout)),
         (
             "Constraint Update",
-            Box::new(|| create_scene_constraint_update()),
+            Box::new(create_scene_constraint_update),
         ),
-        ("Grid Layout (XY)", Box::new(|| create_scene_grid_layout())),
-        ("No Layout (Raw)", Box::new(|| create_scene_no_layout())),
-        (
-            "Border Layout (XY)",
-            Box::new(|| create_scene_border_layout()),
-        ),
+        ("Grid Layout (XY)", Box::new(create_scene_grid_layout)),
+        ("No Layout (Raw)", Box::new(create_scene_no_layout)),
+        ("Border Layout (XY)", Box::new(create_scene_border_layout)),
     ];
 
     // 解析命令行参数
@@ -530,7 +526,6 @@ fn main() {
                 println!("  --screenshot-all    截图所有场景");
                 println!("  --screenshot=<N>   截图指定场景 (0-{})", scenes.len() - 1);
                 println!("  --help, -h         显示此帮助信息");
-                return;
             }
             _ => {
                 eprintln!("未知选项: {}", args[1]);

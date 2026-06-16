@@ -135,13 +135,13 @@ impl DemoApp {
             return;
         };
 
-        if self.use_update_manager {
-            if let Some(um) = &mut self.update_manager {
-                let canvas = scene.perform_update(um);
-                let submission = canvas.to_submission();
-                renderer.render(&submission);
-                return;
-            }
+        if self.use_update_manager
+            && let Some(um) = &mut self.update_manager
+        {
+            let canvas = scene.perform_update(um);
+            let submission = canvas.to_submission();
+            renderer.render(&submission);
+            return;
         }
 
         let render_ctx = if self.use_iterative_render {

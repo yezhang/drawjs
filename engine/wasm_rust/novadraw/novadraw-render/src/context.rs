@@ -20,6 +20,7 @@ struct GraphicsState {
     stroke_width: f64,
     line_cap: crate::command::LineCap,
     line_join: crate::command::LineJoin,
+    line_style: crate::command::LineStyle,
     font: String,
     font_size: f64,
     global_alpha: f64,
@@ -35,6 +36,7 @@ impl Default for GraphicsState {
             stroke_width: 1.0,
             line_cap: crate::command::LineCap::Butt,
             line_join: crate::command::LineJoin::Miter,
+            line_style: crate::command::LineStyle::Solid,
             font: DEFAULT_FONT.to_string(),
             font_size: DEFAULT_FONT_SIZE,
             global_alpha: 1.0,
@@ -188,9 +190,31 @@ impl NdCanvas {
             rect,
             color,
             width: stroke_width,
+            line_style: self.state.line_style,
             cap,
             join,
         });
+    }
+
+    pub fn fill_rectangle(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        if let Some(color) = self.state.fill_color {
+            self.fill_rect(x, y, width, height, color);
+        }
+    }
+
+    pub fn draw_rectangle(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        if let Some(color) = self.state.stroke_color {
+            self.stroke_rect(
+                x,
+                y,
+                width,
+                height,
+                color,
+                self.state.stroke_width,
+                self.state.line_cap,
+                self.state.line_join,
+            );
+        }
     }
 
     /// 绘制椭圆
@@ -219,9 +243,38 @@ impl NdCanvas {
             fill_color,
             stroke_color,
             stroke_width,
+            line_style: self.state.line_style,
             cap,
             join,
         });
+    }
+
+    pub fn fill_oval(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        self.ellipse(
+            x + width / 2.0,
+            y + height / 2.0,
+            width / 2.0,
+            height / 2.0,
+            self.state.fill_color,
+            None,
+            self.state.stroke_width,
+            self.state.line_cap,
+            self.state.line_join,
+        );
+    }
+
+    pub fn draw_oval(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        self.ellipse(
+            x + width / 2.0,
+            y + height / 2.0,
+            width / 2.0,
+            height / 2.0,
+            None,
+            self.state.stroke_color,
+            self.state.stroke_width,
+            self.state.line_cap,
+            self.state.line_join,
+        );
     }
 
     /// 绘制直线
@@ -242,6 +295,7 @@ impl NdCanvas {
             p2,
             color,
             width,
+            line_style: self.state.line_style,
             cap,
             join,
         });
@@ -266,9 +320,43 @@ impl NdCanvas {
             points: points.to_vec(),
             color,
             width,
+            line_style: self.state.line_style,
             cap,
             join,
         });
+    }
+
+    pub fn draw_polygon(&mut self, points: &[DVec2]) {
+        if points.len() < 2 {
+            return;
+        }
+        let Some(color) = self.state.stroke_color else {
+            return;
+        };
+        let mut closed = points.to_vec();
+        if points.first() != points.last() {
+            closed.push(points[0]);
+        }
+        self.polyline(
+            &closed,
+            color,
+            self.state.stroke_width,
+            self.state.line_cap,
+            self.state.line_join,
+        );
+    }
+
+    pub fn fill_polygon(&mut self, points: &[DVec2]) {
+        if points.len() < 3 {
+            return;
+        }
+        self.begin_path();
+        self.move_to(points[0].x, points[0].y);
+        for point in &points[1..] {
+            self.line_to(point.x, point.y);
+        }
+        self.close_path();
+        self.fill();
     }
 
     /// 开始构建路径
@@ -375,6 +463,7 @@ impl NdCanvas {
                     path,
                     color,
                     width,
+                    line_style: self.state.line_style,
                     line_cap,
                     line_join,
                 });
@@ -401,6 +490,7 @@ impl NdCanvas {
                     path,
                     color,
                     width,
+                    line_style: self.state.line_style,
                     line_cap,
                     line_join,
                 });
@@ -412,6 +502,11 @@ impl NdCanvas {
         let rect = [DVec2::new(x, y), DVec2::new(x + width, y + height)];
         self.state.clip_depth += 1;
         self.create_command(RenderCommandKind::Clip { rect });
+    }
+
+    pub fn set_clip(&mut self, x: f64, y: f64, width: f64, height: f64) {
+        self.reset_clip();
+        self.clip_rect(x, y, width, height);
     }
 
     pub fn reset_clip(&mut self) {
@@ -446,12 +541,24 @@ impl NdCanvas {
         self.state.fill_color = Some(color);
     }
 
+    pub fn set_background_color(&mut self, color: Color) {
+        self.fill_style(color);
+    }
+
     pub fn stroke_style(&mut self, color: Color) {
         self.state.stroke_color = Some(color);
     }
 
+    pub fn set_foreground_color(&mut self, color: Color) {
+        self.stroke_style(color);
+    }
+
     pub fn line_width(&mut self, width: f64) {
         self.state.stroke_width = width;
+    }
+
+    pub fn set_line_width(&mut self, width: f64) {
+        self.line_width(width);
     }
 
     pub fn line_cap(&mut self, cap: crate::command::LineCap) {
@@ -460,6 +567,14 @@ impl NdCanvas {
 
     pub fn line_join(&mut self, join: crate::command::LineJoin) {
         self.state.line_join = join;
+    }
+
+    pub fn line_style(&mut self, style: crate::command::LineStyle) {
+        self.state.line_style = style;
+    }
+
+    pub fn set_line_style(&mut self, style: crate::command::LineStyle) {
+        self.line_style(style);
     }
 
     pub fn line_dash_offset(&mut self, _offset: f64) {}
@@ -494,6 +609,14 @@ impl NdCanvas {
             color,
             max_width: None,
         });
+    }
+
+    pub fn draw_text(&mut self, text: &str, x: f64, y: f64) {
+        self.fill_text(text, x, y);
+    }
+
+    pub fn draw_string(&mut self, text: &str, x: f64, y: f64) {
+        self.fill_text(text, x, y);
     }
 
     pub fn stroke_text(&mut self, text: &str, x: f64, y: f64) {
@@ -549,6 +672,10 @@ impl NdCanvas {
         let alpha = alpha.clamp(0.0, 1.0);
         self.state.global_alpha = alpha;
         self.create_command(RenderCommandKind::SetGlobalAlpha { alpha });
+    }
+
+    pub fn set_alpha(&mut self, alpha: f64) {
+        self.global_alpha(alpha);
     }
 
     pub fn global_composite_operation(&mut self, _op: &str) {}
