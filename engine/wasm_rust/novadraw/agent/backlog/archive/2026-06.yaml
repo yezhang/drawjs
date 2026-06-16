@@ -1343,6 +1343,68 @@ items:
   - cargo clippy -p novadraw-scene -- -D warnings passes
   - ruby agent/workflow-doctor.rb passes
   - bash agent/workflow-verify.sh --fast passes
+- id: WF-005
+  title: Workflow SSOT cleanup
+  contract: Workflow hot path must have one readiness gate, one continuous controller,
+    and one checkpoint-based interruption record instead of parallel checklist,
+    prompt launcher, map mirror, and inbox files.
+  evolution_kind: workflow
+  priority: high
+  status: verified
+  parent_id: M0
+  evidence:
+  - agent/workflow-verify.sh
+  - agent/workflow-doctor.rb
+  - agent/workflow-continuous.md
+  - agent/workflow-run-continuous.sh
+  - agent/README.md
+  - agent/quality-checkpoint-schema.md
+  - agent/inner-loop-checkpoint.md
+  - agent/inner-loop-worklog.md
+  progress_notes:
+  - Root Cause：工作流已经从文档驱动演进为 `workflow-doctor.rb` + `workflow-verify.sh` + continuous controller 驱动，但旧 readiness、run-once、map、inbox 仍被当作热路径入口。
+  - "`workflow-verify.sh --gate=ready` 接管 readiness hard gate。"
+  - "`inner-loop-checkpoint.md` 新增 `Interruptions` 小节，中断不再写独立 inbox。"
+  - 删除 `workflow-run-once.sh`、`workflow-map.md`、`quality-workflow-readiness.md`、`interruptions-inbox.md`。
+  done_when:
+  - ready gate is executable through workflow-verify.sh
+  - checkpoint schema includes Interruptions
+  - old workflow hot-path references are removed
+  - ruby agent/workflow-doctor.rb passes
+  - ./agent/workflow-verify.sh --fast --gate=ready passes
+- id: AD-035
+  title: M3 paint versus hit-test consistency tests
+  contract: M3 paint clipping and hit testing must share the same Figure clientArea
+    semantics, including Border insets, so hit-test and mouse target descent cannot
+    enter children outside the painted parent clientArea.
+  evolution_kind: parity
+  milestone_id: M3
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - novadraw-scene/src/graph/mod.rs
+  - agent/draw2d-core-milestones.yaml
+  - agent/backlog/index.yaml
+  - agent/backlog/recent.yaml
+  - agent/backlog/archive/2026-06.yaml
+  - agent/goal-roadmap.md
+  - agent/inner-loop-checkpoint.md
+  - agent/inner-loop-worklog.md
+  progress_notes:
+  - Root Cause：AD-034 已让 Border insets 进入 render clientArea clip，但 M3 仍缺少同一 clientArea 同时约束 paint、hit-test 与 mouse event target descent 的契约测试。
+  - 新增 `test_paint_clip_and_hit_test_share_border_inset_client_area`，验证 parent border-inset clientArea clip 与 hit-test descent 一致。
+  - 新增 `test_mouse_event_target_uses_same_border_inset_client_area_as_paint`，验证 mouse event target 不会进入 paint 不可见的 child 区域。
+  - M3 从 `in_progress` 推进到 `contract_aligned`；不推进到 `behavior_verified`，因为 demo/视觉验证尚未闭合。
+  done_when:
+  - paint traversal clips children to border-inset clientArea
+  - hit-test does not descend outside the painted clientArea
+  - mouse event target descent uses the same clientArea
+  - M3 status is contract_aligned
+  - cargo fmt --check passes
+  - cargo test -p novadraw-scene passes
+  - cargo clippy -p novadraw-scene -- -D warnings passes
+  - ruby agent/workflow-doctor.rb passes
 - id: WF-004
   title: Execution momentum gate
   contract: Workflow governance must prevent consecutive documentation-only

@@ -24,7 +24,7 @@
 1. **YAML**（`agent/draw2d-core-milestones.yaml`）—— `status` 字段按 5 状态机推进（`not_started → in_progress → contract_aligned → behavior_verified → complete`）
 2. **Demo 矩阵**（`doc/06-roadmap/demo-matrix.md`）—— 勾选 Demo Completion Checklist 对应行
 3. **本文**（`agent/goal-roadmap.md`）—— 更新"状态快照"小节
-4. **可选**：若涉及阻塞项，记录到本文"阻塞项"与 `agent/interruptions-inbox.md`
+4. **可选**：若涉及阻塞项，记录到本文"阻塞项"与 `agent/inner-loop-checkpoint.md` 的 `Interruptions` 小节
 
 **编号规则**：本文及任何 delta、PR、commit 信息引用 milestone 编号一律写 `M{n}`，指 YAML M{n}。不允许出现"本文 M{n}"或"MD M{n}"的歧义说法。
 
@@ -44,7 +44,7 @@
 |------|------|----------|------|
 | M1 | 几何与 Graphics 基础 | `behavior_verified` | M1 probes summary 已确认契约层自动化证据；M1 product existence checks 已覆盖几何类型清单与 Graphics API 清单；尚未进入 `complete` |
 | M2 | Figure 树与盒模型 | `behavior_verified` | AD-026 至 AD-031 已覆盖 M2 YAML probes 与契约对齐；AD-032 product existence checks 已覆盖 5 基础图元、FigureGraph 产品 API 与三段式 paint 顺序；尚未进入 `complete` |
-| M3 | 绘制遍历与裁剪闭环 | `in_progress` | AD-033 已修正 iterative render clientArea 状态恢复；AD-034 已将 RectangleFigure border insets 接入 clientArea 裁剪，并覆盖 nested border/insets recursive/iterative 等价；paint versus hit-test consistency 尚未闭合 |
+| M3 | 绘制遍历与裁剪闭环 | `contract_aligned` | AD-033 已修正 iterative render clientArea 状态恢复；AD-034 已将 RectangleFigure border insets 接入 clientArea 裁剪并覆盖 nested border/insets recursive/iterative 等价；AD-035 已闭合 paint versus hit-test consistency；尚未进入 `behavior_verified` |
 | M4 | 坐标域与变换闭环 | `not_started` | — |
 | M5 | Layout + Validation + UpdateManager | `not_started` | — |
 | M6 | 事件分发与交互状态机 | `not_started` | — |

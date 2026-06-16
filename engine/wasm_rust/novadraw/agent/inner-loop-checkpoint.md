@@ -3,16 +3,16 @@
 ## Metadata
 
 - schema_version: 1
-- updated_at: 2026-06-12
+- updated_at: 2026-06-16
 - checkpoint_kind: architecture-loop
 
 ## Current Delta
 
-- AD-034 M3 border insets client-area clipping
+- AD-035 M3 paint versus hit-test consistency tests
 
 ## Current Status
 
-- verified（AD-034 已将 RectangleFigure border insets 接入 clientArea 裁剪，并验证 nested border/insets 场景下 recursive/iterative render 等价；M3 保持 `in_progress`）
+- verified（AD-035 已补齐 paint clip、hit-test descent 与 mouse event target descent 共享 border-inset clientArea 的契约测试；M3 已推进到 `contract_aligned`）
 
 ## Context Boundary
 
@@ -20,6 +20,24 @@
 - 已剥离主题不得作为每轮 next step、阻塞项或残余风险反复带出。
 
 ## What Was Done
+
+### AD-035 M3 paint versus hit-test consistency tests（本轮，verified）
+- **根因分析**：AD-034 已让 Border insets 进入 render clientArea clip，但 M3 仍缺少同一 clientArea 同时约束 paint、hit-test 与 mouse event target descent 的契约测试。
+- **最小修复**：
+  - 新增 `test_paint_clip_and_hit_test_share_border_inset_client_area`，验证 parent border-inset clientArea clip 与 hit-test descent 一致。
+  - 新增 `test_mouse_event_target_uses_same_border_inset_client_area_as_paint`，验证 mouse event target 不会进入 paint 不可见的 child 区域。
+  - M3 从 `in_progress` 推进到 `contract_aligned`；不推进到 `behavior_verified`，因为 demo/视觉验证尚未闭合。
+- **验证**：cargo fmt ✅，cargo test -p novadraw-scene paint_clip_and_hit_test ✅，cargo test -p novadraw-scene mouse_event_target_uses_same_border ✅
+- **下一步**：M3 product visual verification via shapes-demo。
+
+### WF-005 Workflow SSOT cleanup（本轮，verified）
+- **根因分析**：工作流已经由 `workflow-doctor.rb`、`workflow-verify.sh` 和 continuous controller 驱动，但旧 readiness、run-once、map、inbox 仍被当作热路径入口。
+- **最小修复**：
+  - `workflow-verify.sh --gate=ready` 接管 readiness hard gate。
+  - `inner-loop-checkpoint.md` 新增 `Interruptions` 小节，中断不再写独立 inbox。
+  - 删除 `workflow-run-once.sh`、`workflow-map.md`、`quality-workflow-readiness.md`、`interruptions-inbox.md`。
+- **验证**：ruby agent/workflow-doctor.rb ✅，./agent/workflow-verify.sh --fast --gate=ready ✅，git diff --check ✅
+- **下一步**：回到 M3 代码主线。
 
 ### AD-034 M3 border insets client-area clipping（本轮，verified）
 - **根因分析**：`RectangleFigure::with_border(...)` 已支持 Border 装饰器，但 `Bounded::insets()` 未从 border 读取 `get_insets()`，导致产品图元的 border insets 不会收窄 clientArea，children 可进入应由 border/insets 隔离的绘制区域。
@@ -624,9 +642,21 @@
 - AD-031 cargo clippy -p novadraw-scene -- -D warnings: passed ✅
 - AD-031 ruby agent/workflow-doctor.rb: passed ✅
 - AD-031 bash agent/workflow-verify.sh --fast: passed ✅
+- WF-005 ruby agent/workflow-doctor.rb: passed ✅
+- WF-005 ./agent/workflow-verify.sh --fast --gate=ready: passed ✅
+- WF-005 git diff --check: passed ✅
+- AD-035 cargo fmt: passed ✅
+- AD-035 cargo test -p novadraw-scene paint_clip_and_hit_test: passed ✅
+- AD-035 cargo test -p novadraw-scene mouse_event_target_uses_same_border: passed ✅
+- AD-035 ./agent/workflow-verify.sh --fast: passed ✅
+
+## Interruptions
+
+- 当前无 active interruption。
+- 突发任务不再写入独立 inbox；如阻塞主线，直接在本小节记录来源、影响范围、是否阻塞当前 delta 和建议动作。
 
 ## Resume Prompt
 
 ```text
-AD-031 M2 contract alignment summary 已完成并通过完整 `workflow-verify.sh --fast` 验证。M1 保持 `behavior_verified`，M2 已推进到 `contract_aligned`；`agent/backlog/active.yaml` 仍为空。下一轮建议继续 M2 product-layer existence checks。
+AD-035 M3 paint versus hit-test consistency tests 已完成。M3 已推进到 `contract_aligned`；`agent/backlog/active.yaml` 仍为空。下一轮建议进入 M3 product visual verification via shapes-demo，不要直接推进 M3 到 `behavior_verified`。
 ```

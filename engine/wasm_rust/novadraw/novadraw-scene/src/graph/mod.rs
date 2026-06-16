@@ -3084,6 +3084,65 @@ mod tests {
     }
 
     #[test]
+    fn test_paint_clip_and_hit_test_share_border_inset_client_area() {
+        let mut scene = FigureGraph::new();
+
+        let parent_id = scene.set_contents(Box::new(
+            RectangleFigure::new(0.0, 0.0, 120.0, 100.0).with_border(
+                LineBorder::new(NovadrawCoreColor::hex("#111111"), 2.0)
+                    .with_insets(10.0, 20.0, 30.0, 40.0),
+            ),
+        ));
+        let child_id = scene.add_child_to(
+            parent_id,
+            Box::new(RectangleFigure::new_with_color(
+                5.0,
+                5.0,
+                20.0,
+                20.0,
+                NovadrawCoreColor::hex("#222222"),
+            )),
+        );
+
+        let recursive = scene.render();
+        assert!(
+            render_signatures(&recursive)
+                .contains(&RenderSignature::Clip([20.0, 10.0, 80.0, 70.0])),
+            "paint traversal must clip children to the border-inset clientArea"
+        );
+
+        assert_eq!(
+            scene.hit_test_simple((6.0, 6.0)),
+            Some(parent_id),
+            "hit-test must not descend into children outside the painted clientArea"
+        );
+        assert_eq!(
+            scene.hit_test_simple((21.0, 11.0)),
+            Some(child_id),
+            "hit-test should descend once the point is inside the painted clientArea"
+        );
+    }
+
+    #[test]
+    fn test_mouse_event_target_uses_same_border_inset_client_area_as_paint() {
+        let mut scene = FigureGraph::new();
+
+        let parent_id = scene.set_contents(Box::new(
+            RectangleFigure::new(0.0, 0.0, 120.0, 100.0).with_border(
+                LineBorder::new(NovadrawCoreColor::hex("#111111"), 2.0)
+                    .with_insets(10.0, 20.0, 30.0, 40.0),
+            ),
+        ));
+        let child_id = scene.add_child_to(
+            parent_id,
+            Box::new(TestInteractiveFigure::new(5.0, 5.0, 20.0, 20.0)),
+        );
+
+        assert_eq!(scene.find_mouse_event_target_at(6.0, 6.0), None);
+        assert_eq!(scene.find_mouse_event_target_at(21.0, 11.0), Some(child_id));
+    }
+
+    #[test]
     fn test_iterative_render_matches_recursive_nested_border_insets_clipping() {
         let mut scene = FigureGraph::new();
 

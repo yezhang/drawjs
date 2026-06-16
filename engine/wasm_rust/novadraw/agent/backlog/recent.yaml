@@ -1,19 +1,9 @@
 ---
 version: 1
-last_updated: '2026-06-12'
+last_updated: '2026-06-16'
 description: Short human-readable summary of latest terminal deltas. Full history
   lives in archive files.
 items:
-- id: AD-031
-  title: M2 contract alignment summary
-  status: verified
-  evolution_kind: parity
-  milestone_id: M2
-- id: AD-032
-  title: M2 product-layer existence checks
-  status: verified
-  evolution_kind: parity
-  milestone_id: M2
 - id: WF-004
   title: Execution momentum gate
   status: verified
@@ -26,6 +16,16 @@ items:
   milestone_id: M3
 - id: AD-034
   title: M3 border insets client-area clipping
+  status: verified
+  evolution_kind: parity
+  milestone_id: M3
+- id: WF-005
+  title: Workflow SSOT cleanup
+  status: verified
+  evolution_kind: workflow
+  parent_id: M0
+- id: AD-035
+  title: M3 paint versus hit-test consistency tests
   status: verified
   evolution_kind: parity
   milestone_id: M3

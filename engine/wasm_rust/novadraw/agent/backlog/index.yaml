@@ -1,8 +1,8 @@
 ---
 version: 1
-last_updated: '2026-06-12'
-current_delta: AD-034
-next_recommended_delta: M3 paint versus hit-test consistency tests
+last_updated: '2026-06-16'
+current_delta: AD-035
+next_recommended_delta: M3 product visual verification via shapes-demo
 read_order:
 - agent/backlog/index.yaml
 - agent/backlog/active.yaml

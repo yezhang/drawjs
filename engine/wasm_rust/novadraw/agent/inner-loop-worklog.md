@@ -22,6 +22,39 @@
 
 ## Entries
 
+## 2026-06-16 / AD-035
+
+- Goal: 回到 M3 代码主线，闭合 paint clipping 与 hit-test/mouse-target descent 的一致性测试。
+- Root Cause: AD-034 已让 Border insets 进入 render clientArea clip，但缺少同一 clientArea 同时约束 render clip、hit-test descent 与 mouse event target descent 的测试证据；M3 因此仍停在 `in_progress`。
+- Minimal Fix:
+  - 新增 `test_paint_clip_and_hit_test_share_border_inset_client_area`，验证 parent border-inset clientArea clip 与 hit-test descent 使用同一可见区域。
+  - 新增 `test_mouse_event_target_uses_same_border_inset_client_area_as_paint`，验证事件 target 查找不会进入 paint 不可见的 child 区域。
+  - 将 M3 从 `in_progress` 推进到 `contract_aligned`，不推进到 `behavior_verified`。
+- Files: `novadraw-scene/src/graph/mod.rs`, `agent/draw2d-core-milestones.yaml`, `agent/backlog/index.yaml`, `agent/backlog/recent.yaml`, `agent/backlog/archive/2026-06.yaml`, `agent/goal-roadmap.md`, `agent/inner-loop-checkpoint.md`, `agent/inner-loop-worklog.md`
+- Delta Verification: cargo fmt ✅, cargo test -p novadraw-scene paint_clip_and_hit_test ✅, cargo test -p novadraw-scene mouse_event_target_uses_same_border ✅
+- Baseline Verification: `./agent/workflow-verify.sh --fast` passed ✅
+- Decision: AD-035 状态 `verified`；M3 状态 `contract_aligned`。
+- Split Decision: 本轮只补 M3 契约测试和状态推进；M3 behavior verification 需要 demo/视觉验证单独处理。
+- Post-Execution Reflection: 当前修复没有改渲染主循环，只将 Draw2D paintClientArea 的可见区域契约固化到 hit-test 和事件 target 查找路径。
+- Next Step: M3 product visual verification via shapes-demo。
+
+## 2026-06-16 / WF-005
+
+- Goal: 精简工作流 SSOT，删除不再属于热路径的 prompt 启动器、图示镜像、readiness 软门槛和独立 interruption inbox。
+- Root Cause: 工作流已经从文档驱动演进为 `workflow-doctor.rb` + `workflow-verify.sh` + continuous controller 驱动，但旧的 `quality-workflow-readiness.md`、`workflow-run-once.sh`、`workflow-map.md`、`interruptions-inbox.md` 仍被 README 和启动脚本当作热路径入口，造成双门槛、双术语和多处同步成本。
+- Minimal Fix:
+  - `workflow-verify.sh` 新增 `--gate=ready`，把 readiness soft checklist 转为退出码。
+  - `inner-loop-checkpoint.md` 新增 `Interruptions` 小节，`quality-checkpoint-schema.md` 和 `workflow-doctor.rb` 同步纳入 schema。
+  - `workflow-continuous.md` 和 `workflow-run-continuous.sh` 移除旧 readiness/map/inbox/run-once 入口，只保留 continuous + verify 两个可执行入口。
+  - 删除 `workflow-run-once.sh`、`workflow-map.md`、`quality-workflow-readiness.md`、`interruptions-inbox.md`。
+- Files: `agent/workflow-verify.sh`, `agent/workflow-doctor.rb`, `agent/workflow-continuous.md`, `agent/workflow-run-continuous.sh`, `agent/README.md`, `agent/quality-checkpoint-schema.md`, `agent/inner-loop-checkpoint.md`, `agent/goal-roadmap.md`, `.trae/skills/capture-interruption/SKILL.md`
+- Delta Verification: ruby agent/workflow-doctor.rb ✅, bash -n agent/workflow-verify.sh ✅, bash -n agent/workflow-run-continuous.sh ✅, old hot-path reference rg no matches ✅, git diff --check ✅
+- Baseline Verification: `./agent/workflow-verify.sh --fast --gate=ready` passed ✅
+- Decision: WF-005 状态 `verified`；工作流 ready gate 由 `workflow-verify.sh` 统一承载，readiness 文档与 run-once prompt launcher 不再作为热路径入口。
+- Split Decision: 不在本轮重写历史 worklog/history 中的旧文件引用；历史记录保持事实证据，当前热路径引用已清零。
+- Post-Execution Reflection: 工作流入口现在收敛为 `workflow-run-continuous.sh` 生成持续 prompt、`workflow-verify.sh` 执行硬门禁、checkpoint 承载中断恢复；后续若再新增门禁，应优先接入 verify/doctor，不新增平行 checklist 文档。
+- Next Step: 回到 M3 code-bearing 主线，继续 paint versus hit-test consistency tests。
+
 ## 2026-06-12 / AD-033
 
 - Goal: 启动 M3 代码主线，先收敛 recursive/iterative render 在 sibling child clipping state 上的不等价。
