@@ -258,7 +258,6 @@ impl EditorInteractionCore {
 pub struct WinitNovadrawSystem {
     core: EditorInteractionCore,
     scene_host: WinitSceneHost,
-    use_iterative_render: bool,
 }
 
 impl WinitNovadrawSystem {
@@ -266,7 +265,6 @@ impl WinitNovadrawSystem {
         Self {
             core: EditorInteractionCore::new(),
             scene_host: WinitSceneHost::new(window_proxy),
-            use_iterative_render: false,
         }
     }
 
@@ -302,12 +300,6 @@ impl WinitNovadrawSystem {
         } else {
             false
         }
-    }
-
-    pub fn toggle_iterative_render(&mut self) -> bool {
-        self.use_iterative_render = !self.use_iterative_render;
-        self.scene_host.request_update();
-        self.use_iterative_render
     }
 
     fn schedule_update_if_transitioned(&self, was_queued: bool) {
@@ -650,10 +642,8 @@ mod tests {
         let (mut core, target_id) = build_test_core();
         core.scene_manager.scene.set_selected(Some(target_id));
 
-        let recursive = core.scene_manager.scene.render();
-        let iterative = core.scene_manager.scene.render_iterative();
+        let canvas = core.scene_manager.scene.render();
 
-        assert!(has_selection_stroke(&recursive));
-        assert!(has_selection_stroke(&iterative));
+        assert!(has_selection_stroke(&canvas));
     }
 }

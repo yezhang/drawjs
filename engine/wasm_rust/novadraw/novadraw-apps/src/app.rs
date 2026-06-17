@@ -58,7 +58,6 @@ pub struct DemoApp {
     app_name: String,
     width: f64,
     height: f64,
-    use_iterative_render: bool,
     use_update_manager: bool,
     screenshot_mode: Option<usize>,
 }
@@ -86,7 +85,6 @@ impl DemoApp {
             app_name: app_name.to_string(),
             width,
             height,
-            use_iterative_render: false,
             use_update_manager: true,
             screenshot_mode,
         }
@@ -144,11 +142,7 @@ impl DemoApp {
             return;
         }
 
-        let render_ctx = if self.use_iterative_render {
-            scene.render_iterative()
-        } else {
-            scene.render()
-        };
+        let render_ctx = scene.render();
         let submission = render_ctx.to_submission();
         renderer.render(&submission);
     }
@@ -352,18 +346,6 @@ impl ApplicationHandler<()> for DemoApp {
                 match event.physical_key {
                     PhysicalKey::Code(KeyCode::Escape) => {
                         event_loop.exit();
-                    }
-                    PhysicalKey::Code(KeyCode::KeyI) => {
-                        self.use_iterative_render = !self.use_iterative_render;
-                        info!(
-                            "渲染模式: {}",
-                            if self.use_iterative_render {
-                                "迭代渲染"
-                            } else {
-                                "递归渲染"
-                            }
-                        );
-                        self.window.as_ref().unwrap().request_redraw();
                     }
                     PhysicalKey::Code(KeyCode::KeyU) => {
                         self.use_update_manager = !self.use_update_manager;

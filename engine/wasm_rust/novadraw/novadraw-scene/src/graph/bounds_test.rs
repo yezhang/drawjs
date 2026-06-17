@@ -487,20 +487,12 @@ fn test_render_clips_non_local_coordinate_figure_to_client_area() {
         Box::new(RectangleFigure::new(10.0, 20.0, 30.0, 30.0)),
     );
 
-    let recursive_gc = scene.render();
-    let recursive_clips = collect_clip_rects(&recursive_gc);
+    let gc = scene.render();
+    let clips = collect_clip_rects(&gc);
     assert!(
-        has_clip_rect(&recursive_clips, 17.0, 25.0, 80.0, 64.0),
-        "recursive renderer should clip non-local figure children to client area: {:?}",
-        recursive_clips
-    );
-
-    let iterative_gc = scene.render_iterative();
-    let iterative_clips = collect_clip_rects(&iterative_gc);
-    assert!(
-        has_clip_rect(&iterative_clips, 17.0, 25.0, 80.0, 64.0),
-        "iterative renderer should clip non-local figure children to client area: {:?}",
-        iterative_clips
+        has_clip_rect(&clips, 17.0, 25.0, 80.0, 64.0),
+        "renderer should clip non-local figure children to client area: {:?}",
+        clips
     );
 }
 
@@ -521,20 +513,12 @@ fn test_viewport_figure_render_uses_content_clip_and_transform() {
         Box::new(RectangleFigure::new(30.0, 20.0, 40.0, 40.0)),
     );
 
-    let recursive_gc = scene.render();
-    let recursive_clips = collect_clip_rects(&recursive_gc);
+    let gc = scene.render();
+    let clips = collect_clip_rects(&gc);
     assert!(
-        has_clip_rect(&recursive_clips, 20.0, 10.0, 100.0, 50.0),
-        "recursive renderer should clip viewport children in content coordinates: {:?}",
-        recursive_clips
-    );
-
-    let iterative_gc = scene.render_iterative();
-    let iterative_clips = collect_clip_rects(&iterative_gc);
-    assert!(
-        has_clip_rect(&iterative_clips, 20.0, 10.0, 100.0, 50.0),
-        "iterative renderer should clip viewport children in content coordinates: {:?}",
-        iterative_clips
+        has_clip_rect(&clips, 20.0, 10.0, 100.0, 50.0),
+        "renderer should clip viewport children in content coordinates: {:?}",
+        clips
     );
 }
 

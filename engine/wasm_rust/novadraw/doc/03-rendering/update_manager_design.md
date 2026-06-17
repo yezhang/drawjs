@@ -237,7 +237,7 @@ scene.repaint(block_id, None);
 
 if scene.has_pending_updates() {
     scene.perform_update();
-    let canvas = scene.render_iterative();
+    let canvas = scene.render();
 }
 ```
 
@@ -282,7 +282,7 @@ scene.repaint(container_id, None);
 // 执行更新并渲染
 if scene.has_pending_updates() {
     scene.perform_update();
-    let canvas = scene.render_iterative();
+    let canvas = scene.render();
     // ... 渲染到屏幕
 }
 ```
@@ -298,7 +298,7 @@ for child_id in children {
 
 // 一次更新和渲染
 scene.perform_update();
-let canvas = scene.render_iterative();
+let canvas = scene.render();
 ```
 
 ### 部分重绘

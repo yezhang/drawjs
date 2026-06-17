@@ -28,14 +28,12 @@ cargo run -p viewport-app
 
 - 按数字键 `0`-`3` 切换场景
 - 按方向键或鼠标滚轮切换场景
-- 按 `I` 切换递归/迭代渲染
 - 按 `U` 切换 UpdateManager 渲染路径
 - 按 `S` 保存当前场景截图
 - 按 `ESC` 退出程序
 
 ## 验证重点
 
-- 递归渲染与迭代渲染的画面应一致。
 - 开启和关闭 UpdateManager 后画面应一致。
 - 所有彩色 content 都只能出现在 Viewport 黑色边框内。
 - origin / zoom 场景中，绿色锚点用于判断 content 坐标是否正确映射到 Viewport 左上角。

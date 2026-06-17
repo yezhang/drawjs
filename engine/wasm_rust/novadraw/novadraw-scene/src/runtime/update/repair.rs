@@ -110,7 +110,7 @@ pub(crate) fn execute_repair_phase<'a>(
         .filter_map(|(block_id, rect)| propagate_damage_to_root(graph, *block_id, *rect))
         .collect();
     let union = write_damage_set(canvas, propagated_regions);
-    graph.render_to_iterative(canvas);
+    graph.render_to(canvas);
     union
 }
 

@@ -278,20 +278,6 @@ impl ApplicationHandler<()> for GraphicsApp {
                             );
                         }
                     }
-                    PhysicalKey::Code(KeyCode::KeyI) => {
-                        if let Some(system) = &mut self.system {
-                            let new_mode = system.toggle_iterative_render();
-                            println!(
-                                "渲染模式: {}",
-                                if new_mode {
-                                    "迭代渲染"
-                                } else {
-                                    "递归渲染"
-                                }
-                            );
-                            self.request_update();
-                        }
-                    }
                     PhysicalKey::Code(KeyCode::KeyH) => {
                         if let Some(system) = &mut self.system {
                             let scale_factor = self
@@ -376,7 +362,6 @@ pub fn start_app() -> Result<(), Box<dyn std::error::Error>> {
         "    0=基础定位点 1=嵌套父子 2=嵌套(含根) 3=Z-order 4=不可见 5=平移验证 6=裁剪测试 7=椭圆测试 8=直线测试 9=DPI 坐标验证"
     );
     println!("  按 T 键：在场景 5 中平移父节点");
-    println!("  按 I 键：切换递归/迭代渲染模式");
     println!("  按 ESC 退出");
     event_loop.run_app(&mut app)?;
 
