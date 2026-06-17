@@ -24,13 +24,14 @@ apps/editor/       - 编辑器示例
 
 ## 核心禁止事项
 
-- **递归深度限制**：树遍历允许使用递归，深度上限 10,000 层；当性能成为瓶颈时切换迭代方案
+- **递归深度限制**：树遍历允许使用递归，深度上限 10,000 层；性能专项开始前不得重新引入迭代渲染主线
 - **禁止临时方案**：问题必须从根因解决
 - **禁止全局状态**：不使用 Singleton
 - **禁止热路径日志**：渲染循环中不打印日志
 - **禁止 magic numbers**：业务代码中不使用硬编码数字
-- **保留渲染模式切换**：`use_iterative_render` 字段和 I 键切换必须保留
-- **保护渲染主循环**：`novadraw-scene/src/scene/render_recursive.rs` 与 `novadraw-scene/src/scene/render_iterative.rs` 是 Draw2D 渲染主流程承载点，通常不应修改主循环逻辑；除非已对标 draw2d 证明当前主流程与 draw2d 不符，否则问题应优先定位到 Figure 协议、坐标转换、NdCanvas 命令、Vello 后端或调用路径
+- **迭代渲染归档**：`render_iterative.rs`、`use_iterative_render` 和 I 键切换已从主线移除；历史 POC 归档在 git tag `archive/render-iterative-poc-20260617`
+- **保护渲染主循环**：`novadraw-scene/src/graph/render_recursive.rs` 是当前 Draw2D 渲染主流程承载点，通常不应修改主循环逻辑；除非已对标 draw2d 证明当前主流程与 draw2d 不符，否则问题应优先定位到 Figure 协议、坐标转换、NdCanvas 命令、Vello 后端或调用路径
+- **禁止提前恢复迭代渲染**：递归渲染在 M1-M10 核心契约完备前，不得把迭代渲染重新接入代码主线；未来仅能作为性能专项 delta 从归档 tag 恢复并重新设计
 - **通用机制下沉引擎层**：事件分发、坐标转换、target/source Figure 事件点适配、通用上下文等机制必须位于引擎 crate（如 `novadraw-scene`），`apps/*` 只做平台输入适配与示例编排
 
 ## 提交前检查
@@ -142,7 +143,7 @@ draw2d/GEF 的核心设计哲学：
 
 - 使用 `--screenshot` 参数保存渲染结果
 - 使用 `mcp__MiniMax__understand_image` 分析截图
-- 只在处理渲染主循环时分析 `render_iterative.rs`
+- `render_iterative.rs` 已归档；除非执行性能专项恢复，否则不要把归档代码纳入当前实现分析
 - 背景色 RGB(238, 238, 238)，图形颜色应避免与此重复
 
 ## 参考代码

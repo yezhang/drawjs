@@ -44,7 +44,7 @@
 |------|------|----------|------|
 | M1 | 几何与 Graphics 基础 | `behavior_verified` | M1 probes summary 已确认契约层自动化证据；M1 product existence checks 已覆盖几何类型清单与 Graphics API 清单；尚未进入 `complete` |
 | M2 | Figure 树与盒模型 | `behavior_verified` | AD-026 至 AD-031 已覆盖 M2 YAML probes 与契约对齐；AD-032 product existence checks 已覆盖 5 基础图元、FigureGraph 产品 API 与三段式 paint 顺序；尚未进入 `complete` |
-| M3 | 绘制遍历与裁剪闭环 | `behavior_verified` | AD-033 已修正 iterative render clientArea 状态恢复；AD-034 已覆盖 nested border/insets recursive/iterative 等价；AD-035 已闭合 paint versus hit-test consistency；AD-036 已通过 clip-app nested clip 截图验证；尚未进入 `complete` |
+| M3 | 绘制遍历与裁剪闭环 | `behavior_verified` | AD-035 已闭合 paint versus hit-test consistency；AD-036 已通过 clip-app nested clip 截图验证；迭代渲染 POC 已归档到 `archive/render-iterative-poc-20260617`，不再作为当前 M3 门禁；尚未进入 `complete` |
 | M4 | 坐标域与变换闭环 | `not_started` | — |
 | M5 | Layout + Validation + UpdateManager | `not_started` | — |
 | M6 | 事件分发与交互状态机 | `not_started` | — |

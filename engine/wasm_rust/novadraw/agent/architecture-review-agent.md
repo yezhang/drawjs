@@ -42,7 +42,7 @@
 - `novadraw-scene/src/runtime/update/deferred.rs`
 - `novadraw-scene/src/runtime/update/repair.rs`
 - `novadraw-scene/src/graph/render_recursive.rs`
-- `novadraw-scene/src/graph/render_iterative.rs`
+- `doc/01-architecture/render-iterative-archive.md`
 - `apps/editor/src/system.rs`
 - `apps/editor/src/app_window.rs`
 - 与用户指定问题相关的其他源码

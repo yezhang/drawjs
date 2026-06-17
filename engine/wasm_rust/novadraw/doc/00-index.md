@@ -80,6 +80,7 @@ doc/
 | `swt-gc-analysis.md` | SWT GC 分析 | SWT GC 底层绘制 API、IServerOcr2d 接口 |
 | `ideal-architecture-static.md` | 理想架构 - 静态结构 | 组件关系图、Trait 层级、数据结构、平台解耦设计（d2 绘图） |
 | `ideal-architecture-dynamic.md` | 理想架构 - 动态结构 | 事件分发流程、setCapture 机制、两阶段更新、数据流（d2 绘图） |
+| `render-iterative-archive.md` | 迭代渲染归档 | 历史 POC 归档 tag、恢复条件、当前禁止项 |
 
 ### 2. Figure 核心
 

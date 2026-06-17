@@ -1,7 +1,42 @@
 ---
 version: 1
-last_updated: '2026-06-12'
+last_updated: '2026-06-17'
 candidate_items:
+- id: AD-037
+  title: M3 iterative render POC archive
+  contract: Iterative render is a deferred performance POC and must not remain
+    in the Draw2D core evolution path before recursive render semantics are complete.
+  evolution_kind: architecture
+  milestone_id: M3
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - novadraw-scene/src/graph/mod.rs
+  - novadraw-scene/src/runtime/update/repair.rs
+  - novadraw-apps/src/app.rs
+  - apps/editor/src/system.rs
+  - apps/editor/src/app_window.rs
+  - apps/viewport-app/README.md
+  - doc/01-architecture/render-iterative-archive.md
+  - CLAUDE.md
+  - AGENTS.md
+  - agent/draw2d-core-milestones.yaml
+  - agent/goal-roadmap.md
+  progress_notes:
+  - Root Cause：迭代渲染是早期性能 POC；递归渲染语义未完备前保留第二条主循环，会持续干扰 M3-M10 的契约收敛与门禁判断。
+  - 创建 git tag `archive/render-iterative-poc-20260617` 作为可恢复归档点。
+  - 从主线删除 `render_iterative.rs`、`render_iterative()`、`render_to_iterative()`、`FigureRendererIter` 导出和 recursive/iterative 等价测试。
+  - UpdateManager repair 阶段改回递归渲染入口，apps/editor/demo 移除 I 键渲染模式切换。
+  - CLAUDE/AGENTS/roadmap/milestone 文档明确迭代渲染恢复条件和当前禁止项。
+  done_when:
+  - iterative render implementation is removed from the main source tree
+  - runtime and app entry points no longer reference render_iterative
+  - archive tag exists for future recovery
+  - M3 probes and product docs no longer require recursive/iterative equivalence
+  - cargo fmt --check passes
+  - cargo test -p novadraw-scene passes
+  - cargo check passes
 - id: CAD-001
   title: Update listener responsibility audit
   contract: 更新监听器只承担监听语义，不吞并编排或图状态职责

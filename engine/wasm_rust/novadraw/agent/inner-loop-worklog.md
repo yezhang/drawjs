@@ -22,6 +22,21 @@
 
 ## Entries
 
+## 2026-06-17 / AD-037
+
+- Goal: 将迭代渲染 POC 从 Draw2D 核心主线中剥离，并保留未来可恢复点。
+- Root Cause: 迭代渲染是早期极端性能 POC；递归渲染语义未完备前保留第二条主循环，会持续干扰 M3-M10 契约收敛、测试门禁和后续 delta 判断。
+- Minimal Fix:
+  - 创建 git tag `archive/render-iterative-poc-20260617`。
+  - 删除 `novadraw-scene/src/graph/render_iterative.rs` 和 `render_iterative()` / `render_to_iterative()` / `FigureRendererIter` 主线入口。
+  - UpdateManager repair 阶段改回递归渲染入口。
+  - 移除 demo/editor 的 I 键渲染模式切换和相关说明。
+  - 同步 CLAUDE、AGENTS、M3 milestone、roadmap、产品清单、demo 矩阵和归档决策文档。
+- Files: `novadraw-scene/src/graph/mod.rs`, `novadraw-scene/src/runtime/update/repair.rs`, `novadraw-scene/src/graph/render_iterative.rs`, `novadraw-apps/src/app.rs`, `apps/editor/src/system.rs`, `apps/editor/src/app_window.rs`, `apps/viewport-app/README.md`, `doc/01-architecture/render-iterative-archive.md`, `CLAUDE.md`, `AGENTS.md`, `agent/draw2d-core-milestones.yaml`, `agent/goal-roadmap.md`, `doc/06-roadmap/product-deliverables.md`, `doc/06-roadmap/demo-matrix.md`
+- Verification: cargo fmt --check ✅，cargo test -p novadraw-scene ✅，cargo clippy -p novadraw-scene -- -D warnings ✅，cargo check ✅，ruby agent/workflow-doctor.rb ✅，git diff --check ✅
+- Decision: 递归渲染在 M1-M10 核心契约完备前是唯一主线渲染路径；迭代渲染只能作为未来性能专项从归档 tag 恢复。
+- Next Step: M4 coordinate-domain and transform contract audit。
+
 ## 2026-06-16 / AD-036
 
 - Goal: M3 clip-app visual verification

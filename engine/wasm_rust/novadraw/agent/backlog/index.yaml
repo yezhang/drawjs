@@ -1,7 +1,7 @@
 ---
 version: 1
-last_updated: '2026-06-16'
-current_delta: AD-036
+last_updated: '2026-06-17'
+current_delta: AD-037
 next_recommended_delta: M4 coordinate-domain and transform contract audit
 read_order:
 - agent/backlog/index.yaml

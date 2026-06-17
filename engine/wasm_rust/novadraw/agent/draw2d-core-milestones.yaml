@@ -128,9 +128,9 @@ milestones:
     scope:
       - paint -> paintFigure -> paintClientArea/children -> paintBorder order
       - Parent clientArea clip and child bounds clip
-      - Recursive and iterative traversal equivalence
       - Hit-test visible area consistency with paint clipping
     non_scope:
+      - Iterative render implementation and render-mode switching
       - Backend-specific performance tuning
       - Full widget library
       - GEF feedback or handles
@@ -141,7 +141,6 @@ milestones:
     probes:
       - Nested clipping rendering tests
       - Border and insets rendering tests
-      - Recursive and iterative traversal equivalence tests
       - Paint versus hit-test consistency tests
     dependencies:
       - M1

@@ -11,7 +11,7 @@
 |------|---------------------|----------|--------------|
 | M1 | 几何与 Graphics 基础 | [§M1](#m1-几何与-graphics-基础) | 几何类型 + Graphics 状态栈 |
 | M2 | Figure 树与盒模型 | [§M2](#m2-figure-树与盒模型) | 5 基础图元 + 三段式 paint |
-| M3 | 绘制遍历与裁剪闭环 | [§M3](#m3-绘制遍历与裁剪闭环) | 嵌套裁剪 + 递归/迭代等价 |
+| M3 | 绘制遍历与裁剪闭环 | [§M3](#m3-绘制遍历与裁剪闭环) | 嵌套裁剪 + paint/hit-test 一致性 |
 | M4 | 坐标域与变换闭环 | [§M4](#m4-坐标域与变换闭环) | translate* 协议 + 入口域降域 |
 | M5 | Layout + Validation + UpdateManager | [§M5](#m5-layout--validation--updatemanager) | 6 布局 + 两阶段事务 |
 | M6 | 事件分发与交互状态机 | [§M6](#m6-事件分发与交互状态机) | 输入状态机 + 端口 |
@@ -90,9 +90,8 @@
 ### 渲染主循环
 
 - `render_recursive.rs`（递归实现）
-- `render_iterative.rs`（迭代实现）
-- I 键运行时切换
-- 两条主循环必须输出等价命令序列
+- 迭代渲染历史 POC 已归档到 git tag `archive/render-iterative-poc-20260617`
+- 当前阶段不交付 I 键运行时切换或递归/迭代等价门禁
 
 ### 裁剪策略
 

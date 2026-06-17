@@ -3,16 +3,16 @@
 ## Metadata
 
 - schema_version: 1
-- updated_at: 2026-06-16
+- updated_at: 2026-06-17
 - checkpoint_kind: architecture-loop
 
 ## Current Delta
 
-- AD-036 M3 clip-app visual verification
+- AD-037 M3 iterative render POC archive
 
 ## Current Status
 
-- verified（AD-036 已启用并执行 clip-app nested clip 视觉验证；M3 已推进到 `behavior_verified`，但不标记 `complete`）
+- verified（迭代渲染 POC 已从主线移除并归档到 git tag `archive/render-iterative-poc-20260617`；M3 当前门禁回到递归渲染、裁剪与 paint/hit-test 一致性，不恢复递归/迭代等价要求）
 
 ## Context Boundary
 
@@ -20,6 +20,17 @@
 - 已剥离主题不得作为每轮 next step、阻塞项或残余风险反复带出。
 
 ## What Was Done
+
+### AD-037 M3 iterative render POC archive（本轮，verified）
+- **根因分析**：迭代渲染是早期极端性能方向 POC；递归渲染语义尚未完备前，保留第二条主循环会干扰 Draw2D 核心契约收敛、测试门禁和后续 delta 判断。
+- **最小修复**：
+  - 创建 git tag `archive/render-iterative-poc-20260617` 作为可恢复归档点。
+  - 删除 `novadraw-scene/src/graph/render_iterative.rs`，移除 `render_iterative()` / `render_to_iterative()` / `FigureRendererIter` 主线入口。
+  - UpdateManager repair 阶段改回递归渲染入口。
+  - `novadraw-apps`、`apps/editor` 和 `apps/viewport-app` 移除 I 键渲染模式切换及相关说明。
+  - CLAUDE、AGENTS、M3 milestone、产品清单、demo 矩阵和架构归档文档同步为“迭代渲染延后到性能专项”。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-scene ✅，cargo clippy -p novadraw-scene -- -D warnings ✅，cargo check ✅，ruby agent/workflow-doctor.rb ✅，git diff --check ✅
+- **下一步**：继续 M4 coordinate-domain and transform contract audit。
 
 ### AD-036 M3 clip-app visual verification（本轮，verified）
 - **根因分析**：AD-035 已闭合 M3 契约层 probes，但 M3 仍缺少可执行的产品视觉验证入口；旧恢复提示误指向 `shapes-demo`，实际当前可用的 M3 裁剪 demo 是 `clip-app`。
