@@ -1,0 +1,51 @@
+engine/wasm_rust/novadraw/agent/goal-roadmap.md
+  s_6ebc947a1668a0::t_1909cc603ba91d 47
+engine/wasm_rust/novadraw/agent/inner-loop-checkpoint.md
+  s_6ebc947a1668a0::t_2156c213b5a57b 6,11,15,24-31,33
+  s_6ebc947a1668a0::t_96d6d5498724b3 32
+engine/wasm_rust/novadraw/doc/01-architecture/render-iterative-archive.md
+  s_6ebc947a1668a0::t_3b5f23c1738862 1-41
+engine/wasm_rust/novadraw/doc/00-index.md
+  s_6ebc947a1668a0::t_4732c1c13a55d2 83
+engine/wasm_rust/novadraw/agent/inner-loop-worklog.md
+  s_6ebc947a1668a0::t_406b2819d5653d 25-35,37-39
+  s_6ebc947a1668a0::t_32d907f8e19dae 36
+engine/wasm_rust/novadraw/agent/backlog/archive/2026-06.yaml
+  s_6ebc947a1668a0::t_7544e4508990ac 3,5-39
+engine/wasm_rust/novadraw/doc/06-roadmap/demo-matrix.md
+  s_6ebc947a1668a0::t_4186cdd4fe6d69 26,62
+engine/wasm_rust/novadraw/agent/architecture-review-agent.md
+  s_6ebc947a1668a0::t_57ac000da29465 45
+engine/wasm_rust/novadraw/agent/draw2d-core-milestones.yaml
+  s_6ebc947a1668a0::t_186bbf98c437dd 133
+engine/wasm_rust/novadraw/agent/visual-verification.md
+  s_6ebc947a1668a0::t_dae4237c3e9305 163
+engine/wasm_rust/novadraw/doc/06-roadmap/product-deliverables.md
+  s_6ebc947a1668a0::t_55959ab7aee85c 14,93-94
+engine/wasm_rust/novadraw/agent/backlog/recent.yaml
+  s_6ebc947a1668a0::t_290adf83d08cc8 3,7-8,10
+engine/wasm_rust/novadraw/CLAUDE.md
+  s_6ebc947a1668a0::t_a22efb5fb6998b 27,32-34,146
+engine/wasm_rust/novadraw/AGENTS.md
+  s_6ebc947a1668a0::t_10e61004d6fa39 64,68,105,109-110
+engine/wasm_rust/novadraw/agent/backlog/index.yaml
+  s_6ebc947a1668a0::t_aefac982c3a813 3-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "443b3d0e57198f75af1cc4606d079c526cff11f4",
+  "prompts": {},
+  "sessions": {
+    "s_6ebc947a1668a0": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a3134b7a71b6c2e937bc441",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "yezhang <yezhang989@163.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
