@@ -1,0 +1,2400 @@
+engine/wasm_rust/novadraw/.trae/deepwiki/演示应用案例分析/基础功能演示应用分析.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-245 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,245]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/快速上手指南/环境配置与依赖安装.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-261 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,261]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/架构决策与开发流程/质量保障与测试策略.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-282 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,282]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/演示应用案例分析/交互式编辑器实现分析.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-349 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,349]}]}]}
+engine/wasm_rust/novadraw/.trae/skills/resume-architecture-work/SKILL.md
+  s_fa15cb5ec73508::t_b2abda5fd47986 1-60 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a35631c00ebecce8a84d74f","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,60]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/响应式设计与事件系统/视口管理与坐标变换.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-278 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,278]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/演示应用案例分析.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-292 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,292]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/项目概览与设计哲学.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-253 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,253]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/响应式设计与事件系统/交互上下文与状态管理.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-323 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,323]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/核心几何与数学基础/坐标系统与空间转换.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-290 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,290]}]}]}
+engine/wasm_rust/novadraw/.trae/skills/compare-draw2d-core/SKILL.md
+  s_fa15cb5ec73508::t_947c8206ba282a 1-133 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a3561e100ebecce8a84d6ec","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,133]}]}]}
+engine/wasm_rust/novadraw/.trae/skills/review-delta-backlog/SKILL.md
+  s_fa15cb5ec73508::t_b2abda5fd47986 1-58 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a35631c00ebecce8a84d74f","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,58]}]}]}
+"engine/wasm_rust/novadraw/.trae/deepwiki/快速上手指南/编写首个 Figure 应用.md"
+  s_6ebc947a1668a0::t_181b42e68c5231 1-456 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,456]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/快速上手指南.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-270 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,270]}]}]}
+"engine/wasm_rust/novadraw/.trae/deepwiki/Figure 场景图体系/坐标系统与盒子模型.md"
+  s_6ebc947a1668a0::t_181b42e68c5231 1-326 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,326]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/演示应用案例分析/应用开发框架与工具集.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-220 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,220]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/布局引擎与边框系统.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-293 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,293]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/渲染管线与损伤修复.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-222 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,222]}]}]}
+engine/wasm_rust/novadraw/.trae/documents/按特性提交计划.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-89 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,89]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/meta.json
+  s_fa15cb5ec73508::t_b2abda5fd47986 1-432 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a35631c00ebecce8a84d74f","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,432]}]}]}
+engine/wasm_rust/novadraw/.trae/skills/thematic-commit/SKILL.md
+  s_fa15cb5ec73508::t_b2abda5fd47986 1-94 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a35631c00ebecce8a84d74f","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,94]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/布局引擎与边框系统/布局协议与验证流程.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-296 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,296]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/布局引擎与边框系统/边框装饰系统.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-232 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,232]}]}]}
+"engine/wasm_rust/novadraw/.trae/deepwiki/响应式设计与事件系统/响应式通知与 Effect 队列.md"
+  s_6ebc947a1668a0::t_181b42e68c5231 1-299 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,299]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/架构决策与开发流程.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-247 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,247]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/架构决策与开发流程/架构决策记录.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-313 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,313]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/核心几何与数学基础.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-318 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,318]}]}]}
+engine/wasm_rust/novadraw/.trae/skills/capture-interruption/SKILL.md
+  s_fa15cb5ec73508::t_b2abda5fd47986 1-42 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a35631c00ebecce8a84d74f","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,42]}]}]}
+"engine/wasm_rust/novadraw/.trae/deepwiki/渲染管线与损伤修复/损伤修复机制：Damage Repair 的原理与优化.md"
+  s_6ebc947a1668a0::t_181b42e68c5231 1-275 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,275]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/布局引擎与边框系统/布局约束与盒模型.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-218 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,218]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/核心几何与数学基础/数学运算工具.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-309 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,309]}]}]}
+"engine/wasm_rust/novadraw/.trae/deepwiki/架构决策与开发流程/Agent 治理与开发工作流.md"
+  s_6ebc947a1668a0::t_181b42e68c5231 1-194 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,194]}]}]}
+"engine/wasm_rust/novadraw/.trae/deepwiki/Figure 场景图体系/Figure 核心接口与抽象.md"
+  s_6ebc947a1668a0::t_181b42e68c5231 1-347 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,347]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/项目概览与设计哲学/理想架构蓝图.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-308 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,308]}]}]}
+engine/wasm_rust/novadraw/.trae/skills/execute-architecture-delta/SKILL.md
+  s_fa15cb5ec73508::t_b2abda5fd47986 1-48 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a35631c00ebecce8a84d74f","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,48]}]}]}
+engine/wasm_rust/novadraw/.trae/skills/thematic-commit/scripts/commit_by_theme.sh
+  s_fa15cb5ec73508::t_b2abda5fd47986 1-180 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a35631c00ebecce8a84d74f","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,180]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/项目概览与设计哲学/核心设计公理.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-223 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,223]}]}]}
+"engine/wasm_rust/novadraw/.trae/deepwiki/渲染管线与损伤修复/渲染后端：基于 Vello 的 WebGPU 渲染实现.md"
+  s_6ebc947a1668a0::t_181b42e68c5231 1-238 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,238]}]}]}
+"engine/wasm_rust/novadraw/.trae/deepwiki/Figure 场景图体系.md"
+  s_6ebc947a1668a0::t_181b42e68c5231 1-440 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,440]}]}]}
+"engine/wasm_rust/novadraw/.trae/deepwiki/渲染管线与损伤修复/更新管理器：UpdateManager 的设计与流水线.md"
+  s_6ebc947a1668a0::t_181b42e68c5231 1-393 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,393]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/响应式设计与事件系统/事件分发系统.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-266 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,266]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/布局引擎与边框系统/常用布局器实现.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-355 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,355]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/核心几何与数学基础/几何基元与变换.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-266 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,266]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/项目概览与设计哲学/项目愿景与起源.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-316 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,316]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/快速上手指南/运行演示程序.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-328 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,328]}]}]}
+"engine/wasm_rust/novadraw/.trae/deepwiki/Java 到 Rust 迁移指南.md"
+  s_6ebc947a1668a0::t_181b42e68c5231 1-283 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,283]}]}]}
+engine/wasm_rust/novadraw/.trae/deepwiki/响应式设计与事件系统.md
+  s_6ebc947a1668a0::t_181b42e68c5231 1-254 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,254]}]}]}
+engine/wasm_rust/novadraw/.trae/skills/discover-architecture-deltas/SKILL.md
+  s_fa15cb5ec73508::t_b2abda5fd47986 1-161 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a35631c00ebecce8a84d74f","tool_type":"agent","tool_id":"apply_patch","line_ranges":[{"Range":[1,161]}]}]}
+"engine/wasm_rust/novadraw/.trae/deepwiki/渲染管线与损伤修复/渲染命令与上下文：RenderContext 与 DisplayList.md"
+  s_6ebc947a1668a0::t_181b42e68c5231 1-294 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,294]}]}]}
+"engine/wasm_rust/novadraw/.trae/deepwiki/Figure 场景图体系/内置图形组件库.md"
+  s_6ebc947a1668a0::t_181b42e68c5231 1-251 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a36527600ebecce8a84ed3e","tool_type":"agent","tool_id":"RunCommand","line_ranges":[{"Range":[1,251]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "60d5a0e3748ff7ab3e60d9584fe0c6774ac662de",
+  "prompts": {},
+  "sessions": {
+    "s_6ebc947a1668a0": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a3134b7a71b6c2e937bc441",
+        "model": "gpt-5.5__dev",
+        "display_model_name": "GPT-5.5"
+      },
+      "human_author": "yezhang <yezhang989@163.com>"
+    },
+    "s_fa15cb5ec73508": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a33a5e200ebecce8a84d04e",
+        "model": "gpt-5.5__dev",
+        "display_model_name": "GPT-5.5"
+      },
+      "human_author": "yezhang <yezhang989@163.com>"
+    }
+  },
+  "attestation_metadata": {
+    "engine/wasm_rust/novadraw/.trae/deepwiki/Figure 场景图体系.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              440
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  440
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/Figure 场景图体系/Figure 核心接口与抽象.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              347
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  347
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/Figure 场景图体系/内置图形组件库.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              251
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  251
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/Figure 场景图体系/坐标系统与盒子模型.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              326
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  326
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/Java 到 Rust 迁移指南.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              283
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  283
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/meta.json": [
+      {
+        "hash": "s_fa15cb5ec73508::t_b2abda5fd47986",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              432
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a35631c00ebecce8a84d74f",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  432
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/响应式设计与事件系统.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              254
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  254
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/响应式设计与事件系统/事件分发系统.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              266
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  266
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/响应式设计与事件系统/交互上下文与状态管理.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              323
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  323
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/响应式设计与事件系统/响应式通知与 Effect 队列.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              299
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  299
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/响应式设计与事件系统/视口管理与坐标变换.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              278
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  278
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/布局引擎与边框系统.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              293
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  293
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/布局引擎与边框系统/布局协议与验证流程.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              296
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  296
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/布局引擎与边框系统/布局约束与盒模型.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              218
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  218
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/布局引擎与边框系统/常用布局器实现.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              355
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  355
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/布局引擎与边框系统/边框装饰系统.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              232
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  232
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/快速上手指南.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              270
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  270
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/快速上手指南/环境配置与依赖安装.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              261
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  261
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/快速上手指南/编写首个 Figure 应用.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              456
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  456
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/快速上手指南/运行演示程序.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              328
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  328
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/架构决策与开发流程.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              247
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  247
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/架构决策与开发流程/Agent 治理与开发工作流.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              194
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  194
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/架构决策与开发流程/架构决策记录.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              313
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  313
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/架构决策与开发流程/质量保障与测试策略.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              282
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  282
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/核心几何与数学基础.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              318
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  318
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/核心几何与数学基础/几何基元与变换.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              266
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  266
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/核心几何与数学基础/坐标系统与空间转换.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              290
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  290
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/核心几何与数学基础/数学运算工具.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              309
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  309
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/渲染管线与损伤修复.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              222
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  222
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/渲染管线与损伤修复/损伤修复机制：Damage Repair 的原理与优化.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              275
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  275
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/渲染管线与损伤修复/更新管理器：UpdateManager 的设计与流水线.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              393
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  393
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/渲染管线与损伤修复/渲染后端：基于 Vello 的 WebGPU 渲染实现.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              238
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  238
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/渲染管线与损伤修复/渲染命令与上下文：RenderContext 与 DisplayList.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              294
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  294
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/演示应用案例分析.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              292
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  292
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/演示应用案例分析/交互式编辑器实现分析.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              349
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  349
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/演示应用案例分析/基础功能演示应用分析.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              245
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  245
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/演示应用案例分析/应用开发框架与工具集.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              220
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  220
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/项目概览与设计哲学.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              253
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  253
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/项目概览与设计哲学/核心设计公理.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              223
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  223
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/项目概览与设计哲学/理想架构蓝图.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              308
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  308
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/deepwiki/项目概览与设计哲学/项目愿景与起源.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              316
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  316
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/documents/按特性提交计划.md": [
+      {
+        "hash": "s_6ebc947a1668a0::t_181b42e68c5231",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              89
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a36527600ebecce8a84ed3e",
+            "tool_type": "agent",
+            "tool_id": "RunCommand",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  89
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/skills/capture-interruption/SKILL.md": [
+      {
+        "hash": "s_fa15cb5ec73508::t_b2abda5fd47986",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              42
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a35631c00ebecce8a84d74f",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  42
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/skills/compare-draw2d-core/SKILL.md": [
+      {
+        "hash": "s_fa15cb5ec73508::t_947c8206ba282a",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              133
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a3561e100ebecce8a84d6ec",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  133
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/skills/discover-architecture-deltas/SKILL.md": [
+      {
+        "hash": "s_fa15cb5ec73508::t_b2abda5fd47986",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              161
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a35631c00ebecce8a84d74f",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  161
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/skills/execute-architecture-delta/SKILL.md": [
+      {
+        "hash": "s_fa15cb5ec73508::t_b2abda5fd47986",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              48
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a35631c00ebecce8a84d74f",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  48
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/skills/resume-architecture-work/SKILL.md": [
+      {
+        "hash": "s_fa15cb5ec73508::t_b2abda5fd47986",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              60
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a35631c00ebecce8a84d74f",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  60
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/skills/review-delta-backlog/SKILL.md": [
+      {
+        "hash": "s_fa15cb5ec73508::t_b2abda5fd47986",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              58
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a35631c00ebecce8a84d74f",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  58
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/skills/thematic-commit/SKILL.md": [
+      {
+        "hash": "s_fa15cb5ec73508::t_b2abda5fd47986",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              94
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a35631c00ebecce8a84d74f",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  94
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "engine/wasm_rust/novadraw/.trae/skills/thematic-commit/scripts/commit_by_theme.sh": [
+      {
+        "hash": "s_fa15cb5ec73508::t_b2abda5fd47986",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              180
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a35631c00ebecce8a84d74f",
+            "tool_type": "agent",
+            "tool_id": "apply_patch",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  180
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "s_31a6f80137b703": {
+      "tool": "trae",
+      "conversation_id": "6a33a72200ebecce8a84d269",
+      "session_id": "6a33a72200ebecce8a84d269",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_31a6f80137b703::t_0ce117cdf58162": {
+      "tool": "trae",
+      "conversation_id": "6a33a72200ebecce8a84d269",
+      "session_id": "6a33a72200ebecce8a84d269",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_31a6f80137b703::t_0cf9a0583fc4f4": {
+      "tool": "trae",
+      "conversation_id": "6a33a72200ebecce8a84d269",
+      "session_id": "6a33a72200ebecce8a84d269",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_31a6f80137b703::t_5f102405333170": {
+      "tool": "trae",
+      "conversation_id": "6a33a72200ebecce8a84d269",
+      "session_id": "6a33a72200ebecce8a84d269",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_31a6f80137b703::t_92afa98b381c00": {
+      "tool": "trae",
+      "conversation_id": "6a33a72200ebecce8a84d269",
+      "session_id": "6a33a72200ebecce8a84d269",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_31a6f80137b703::t_b8fee54fec133c": {
+      "tool": "trae",
+      "conversation_id": "6a33a72200ebecce8a84d269",
+      "session_id": "6a33a72200ebecce8a84d269",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_31a6f80137b703::t_e64249c1d69719": {
+      "tool": "trae",
+      "conversation_id": "6a33a72200ebecce8a84d269",
+      "session_id": "6a33a72200ebecce8a84d269",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_31a6f80137b703::t_f49031e03433be": {
+      "tool": "trae",
+      "conversation_id": "6a33a72200ebecce8a84d269",
+      "session_id": "6a33a72200ebecce8a84d269",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_31a6f80137b703::t_f4d6225cb834d1": {
+      "tool": "trae",
+      "conversation_id": "6a33a72200ebecce8a84d269",
+      "session_id": "6a33a72200ebecce8a84d269",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_01b2d0d8b86d03": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_02ac90842614f7": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_03cad688d8eed1": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_04e2ec8b4df10e": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_05eb588493e38d": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_071d63c4778cdb": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_0864041e02c240": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_0be0545fd3771e": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_0d982c134c443b": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_0eaa9a65c0ef6c": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_10d697fb2b96c4": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_134d564ee58eb9": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_13bd11cd8ee044": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_159f40ecdcb249": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_181b42e68c5231": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_1d5bec3512aaf1": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_1f18499bf5412b": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_22570a06df368c": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_23ee9d5866f5d1": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_2681dccafa1377": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_26cafa36b06737": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_29483e868d6f21": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_2ef6d52d21e54b": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_3153f84e78a6f1": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_33c375b2a0e54b": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_36979552435f23": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_3775befe2744ab": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_3927fbff4e29b6": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_3af208cdf9a0d2": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_3c261a0143243e": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_3d2e00636caa6a": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_3f820be4c9b410": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_4105b9bf7e3b36": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_45330a3bd4994d": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_47cd249e21a446": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_4a08c93e95fbd7": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_4cfa4d39d22ede": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_4d82143c3c4ad9": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_4dc25ffb925241": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_50200d7a121258": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_5243a700c06666": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_59cd57a588681c": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_5c7d8726e6be0a": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_6558a687c784ab": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_67c17e151ecc88": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_6c8eab571cb807": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_6cdbaa35f478ca": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_6ddb0157a13e75": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_6e020828955348": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_73c626988119ed": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_765bb7b5f88e64": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_81169a3fdc9355": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_8122d33625c88a": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_8634a9d5e80232": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_8634c515812a6d": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_86f3de28a182ee": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_874de000a21f8e": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_8a04668d33f824": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_8cc4e8fe3ecfb4": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_8f50ab50d8444a": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_91b9ca8c479fc9": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_92028205562511": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_9715756a926c1b": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_992054e58ed619": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_996ae6329d7673": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_9a869f5fc04b33": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_9f25ddcffafe6c": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_a037de3b29b45c": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_a1ead482194f03": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_a349c08849a196": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_a4e07ee8494efc": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_a58094e872fd1f": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_aa9d28a0f03390": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_ad0b7b2593f929": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_affcf73bbf6a8d": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_b26c2ec9675bb7": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_b6f0526af6db32": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_b72953b7075021": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_b7989f55fa9710": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_bac48db758e436": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_bcb01eeced3e86": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_be4399db2c562f": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_cd672124283d62": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_d0f36fd16adf6f": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_d37c766df79b99": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_d49d856ccb735b": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_d4ffc1be44193b": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_d61cc69c174991": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_d7902c7a52214d": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_ddf910248d40b4": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_df8e3d1f543aab": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_e0e74b1a3d91dd": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_e5baf2c2c0d04f": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_e62e15eb2bba19": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_e6afbd5307af7f": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_e939369eaed31f": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_ed8528f3c4a766": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_edcaf73c4451d0": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_eec596b0d6dfeb": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_f365f82e7850cf": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_f4f83ad56bba36": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_f665f5553ac728": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_6ebc947a1668a0::t_f72416cd8c3501": {
+      "tool": "trae",
+      "conversation_id": "6a3134b7a71b6c2e937bc441",
+      "session_id": "6a3134b7a71b6c2e937bc441",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_fa15cb5ec73508": {
+      "tool": "trae",
+      "conversation_id": "6a33a5e200ebecce8a84d04e",
+      "session_id": "6a33a5e200ebecce8a84d04e",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_fa15cb5ec73508::t_947c8206ba282a": {
+      "tool": "trae",
+      "conversation_id": "6a33a5e200ebecce8a84d04e",
+      "session_id": "6a33a5e200ebecce8a84d04e",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_fa15cb5ec73508::t_ade0b987799f64": {
+      "tool": "trae",
+      "conversation_id": "6a33a5e200ebecce8a84d04e",
+      "session_id": "6a33a5e200ebecce8a84d04e",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    },
+    "s_fa15cb5ec73508::t_b2abda5fd47986": {
+      "tool": "trae",
+      "conversation_id": "6a33a5e200ebecce8a84d04e",
+      "session_id": "6a33a5e200ebecce8a84d04e",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
