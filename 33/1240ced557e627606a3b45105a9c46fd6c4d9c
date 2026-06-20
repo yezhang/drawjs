@@ -1,0 +1,77 @@
+engine/wasm_rust/novadraw/novadraw-scene/src/figure/polyline.rs
+  s_6ebc947a1668a0::t_bcb01eeced3e86 30-31,50,63,79,138-140,147-149,207-209
+  s_6ebc947a1668a0::t_874de000a21f8e 3-4,18,32-33,51,64,80,141-146,211-217,248-249
+  s_6ebc947a1668a0::t_3c261a0143243e 9
+engine/wasm_rust/novadraw/novadraw-scene/src/figure/polygon.rs
+  s_6ebc947a1668a0::t_e62e15eb2bba19 13,58-63,101-104,138-139
+  s_6ebc947a1668a0::t_992054e58ed619 7
+  s_6ebc947a1668a0::t_df8e3d1f543aab 52-57,97-98
+engine/wasm_rust/novadraw/novadraw-scene/tests/m2_product_existence.rs
+  s_6ebc947a1668a0::t_3775befe2744ab 145-148,150-153,166,168-174
+  s_6ebc947a1668a0::t_edcaf73c4451d0 116,118,140-144,175
+  s_6ebc947a1668a0::t_0864041e02c240 7
+  s_6ebc947a1668a0::t_d4ffc1be44193b 5-6,122-136,138,149,154-165,167
+  s_6ebc947a1668a0::t_a58094e872fd1f 117,119-121,137,139
+engine/wasm_rust/novadraw/novadraw-scene/src/container/viewport.rs
+  s_6ebc947a1668a0::t_f72416cd8c3501 10-11,159,164,174,199-204,244-250,267-270
+  s_6ebc947a1668a0::t_6558a687c784ab 17
+  s_6ebc947a1668a0::t_1f18499bf5412b 16,18
+  s_6ebc947a1668a0::t_996ae6329d7673 163,173,196-198,205-207,240-241
+engine/wasm_rust/novadraw/novadraw-scene/src/figure/ellipse.rs
+  s_6ebc947a1668a0::t_f365f82e7850cf 9
+  s_6ebc947a1668a0::t_d7902c7a52214d 3-4,15,31-32,48,62,76,90-95,148-154,185-186
+  s_6ebc947a1668a0::t_3d2e00636caa6a 29-30,47,61,75,87-89,96-98,144-146
+engine/wasm_rust/novadraw/novadraw-scene/src/runtime/context.rs
+  s_6ebc947a1668a0::t_e939369eaed31f 434,466-467
+engine/wasm_rust/novadraw/novadraw-scene/src/figure/triangle.rs
+  s_6ebc947a1668a0::t_4105b9bf7e3b36 33
+  s_6ebc947a1668a0::t_134d564ee58eb9 79-80,105,133,205-207,214-216,346-348
+  s_6ebc947a1668a0::t_d61cc69c174991 27-28,59,81-82,106,134,208-213,350-356,409-410
+engine/wasm_rust/novadraw/novadraw-scene/src/figure/root.rs
+  s_6ebc947a1668a0::t_d49d856ccb735b 9
+  s_6ebc947a1668a0::t_affcf73bbf6a8d 3-4,20,26-27,36,43-48,75-81,112-113
+  s_6ebc947a1668a0::t_10d697fb2b96c4 24-25,35,40-42,49-51,71-73
+engine/wasm_rust/novadraw/novadraw-scene/src/figure/mod.rs
+  s_6ebc947a1668a0::t_a037de3b29b45c 100-111,195-200
+  s_6ebc947a1668a0::t_6ddb0157a13e75 41,306-315
+engine/wasm_rust/novadraw/novadraw-scene/src/graph/mod.rs
+  s_6ebc947a1668a0::t_3153f84e78a6f1 1701-1702,1882-1935
+  s_6ebc947a1668a0::t_b72953b7075021 1703,1820-1879
+  s_6ebc947a1668a0::t_d0f36fd16adf6f 3176-3237
+  s_6ebc947a1668a0::t_86f3de28a182ee 2869-2898
+  s_6ebc947a1668a0::t_13bd11cd8ee044 1491
+  s_6ebc947a1668a0::t_e0e74b1a3d91dd 3238-3343
+  s_6ebc947a1668a0::t_36979552435f23 2377-2414
+  s_6ebc947a1668a0::t_05eb588493e38d 452,470,488
+  s_6ebc947a1668a0::t_d37c766df79b99 1705-1707,1710
+engine/wasm_rust/novadraw/novadraw-scene/src/lib.rs
+  s_6ebc947a1668a0::t_159f40ecdcb249 27
+  s_6ebc947a1668a0::t_33c375b2a0e54b 28-29
+engine/wasm_rust/novadraw/novadraw-scene/src/figure/rounded_rectangle.rs
+  s_6ebc947a1668a0::t_a349c08849a196 3-4,15,33-34,51,66,88,102-107,145-151,182-183,225
+  s_6ebc947a1668a0::t_3af208cdf9a0d2 9
+  s_6ebc947a1668a0::t_b7989f55fa9710 31-32,50,65,87,99-101,108-110,141-143,224
+engine/wasm_rust/novadraw/novadraw-scene/src/graph/render_recursive.rs
+  s_6ebc947a1668a0::t_26cafa36b06737 8,218-222,236-253
+engine/wasm_rust/novadraw/novadraw-scene/src/figure/rectangle.rs
+  s_6ebc947a1668a0::t_73c626988119ed 9
+  s_6ebc947a1668a0::t_2ef6d52d21e54b 31-32,48,63,78,99-106,145-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "331240ced557e627606a3b45105a9c46fd6c4d9c",
+  "prompts": {},
+  "sessions": {
+    "s_6ebc947a1668a0": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a3134b7a71b6c2e937bc441",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "yezhang <yezhang989@163.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
