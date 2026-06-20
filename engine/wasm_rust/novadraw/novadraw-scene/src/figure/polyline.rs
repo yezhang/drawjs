@@ -1,10 +1,12 @@
 //! 折线图形
 
+use std::sync::Arc;
+
 use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Bounded, Shape, Updatable};
+use super::{Border, Bounded, ChildClippingStrategy, Shape, Updatable};
 
 /// 折线图形
 ///
@@ -13,7 +15,7 @@ use super::{Bounded, Shape, Updatable};
 /// bounds 是自动计算的，基于点列表并扩展线宽。
 ///
 /// 注意：不能通过 set_bounds 定位，应该通过 add_point/set_points 操作点。
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone)]
 pub struct PolylineFigure {
     /// 点列表
     points: Vec<novadraw_geometry::Vec2>,
@@ -25,6 +27,10 @@ pub struct PolylineFigure {
     pub line_cap: novadraw_render::command::LineCap,
     /// 连接样式
     pub line_join: novadraw_render::command::LineJoin,
+    /// 绘制子节点时使用的裁剪策略
+    child_clipping_strategy: ChildClippingStrategy,
+    /// 边框装饰器
+    border: Option<Arc<dyn Border>>,
 }
 
 impl PolylineFigure {
@@ -41,6 +47,8 @@ impl PolylineFigure {
             stroke_width: 2.0,
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
+            border: None,
         }
     }
 
@@ -52,6 +60,8 @@ impl PolylineFigure {
             stroke_width: 2.0,
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
+            border: None,
         }
     }
 
@@ -66,6 +76,8 @@ impl PolylineFigure {
             stroke_width: 2.0,
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
+            border: None,
         }
     }
 
@@ -120,6 +132,18 @@ impl PolylineFigure {
     /// 设置连接样式
     pub fn with_join(mut self, join: novadraw_render::command::LineJoin) -> Self {
         self.line_join = join;
+        self
+    }
+
+    /// 设置子节点绘制裁剪策略。
+    pub fn with_child_clipping_strategy(mut self, strategy: ChildClippingStrategy) -> Self {
+        self.child_clipping_strategy = strategy;
+        self
+    }
+
+    /// 添加边框装饰器。
+    pub fn with_border(mut self, border: impl Border + 'static) -> Self {
+        self.border = Some(Arc::new(border));
         self
     }
 
@@ -180,6 +204,17 @@ impl Bounded for PolylineFigure {
     fn name(&self) -> &'static str {
         "PolylineFigure"
     }
+
+    fn child_clipping_strategy(&self) -> ChildClippingStrategy {
+        self.child_clipping_strategy
+    }
+
+    fn insets(&self) -> (f64, f64, f64, f64) {
+        self.border
+            .as_ref()
+            .map(|border| border.get_insets())
+            .unwrap_or((0.0, 0.0, 0.0, 0.0))
+    }
 }
 
 // 实现 Updatable trait
@@ -208,6 +243,10 @@ impl Shape for PolylineFigure {
 
     fn line_join(&self) -> novadraw_render::command::LineJoin {
         self.line_join
+    }
+
+    fn get_border(&self) -> Option<&dyn Border> {
+        self.border.as_deref()
     }
 
     fn fill_enabled(&self) -> bool {

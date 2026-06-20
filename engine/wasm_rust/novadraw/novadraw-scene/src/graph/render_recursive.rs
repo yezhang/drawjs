@@ -5,6 +5,7 @@
 use novadraw_render::NdCanvas;
 
 use super::BlockId;
+use crate::ChildClippingStrategy;
 use crate::debug_render;
 
 /// 场景图引用（用于渲染）
@@ -214,6 +215,11 @@ impl<'a> FigureRenderer<'a> {
             };
             block.children.to_vec()
         };
+        let clipping_strategy = self
+            .scene
+            .get(block_id)
+            .map(|block| block.figure.child_clipping_strategy())
+            .unwrap_or(ChildClippingStrategy::ClipToChildBounds);
 
         debug_render!(
             "[RECUR]     paint_children, children count: {}",
@@ -227,24 +233,24 @@ impl<'a> FigureRenderer<'a> {
                 _ => continue,
             };
 
-            // 获取子元素的 bounds 作为裁剪区域
-            let child_bounds = child_block.figure.bounds();
-
-            debug_render!("[RECUR]     -> clip to child bounds={:?}", child_bounds);
-
-            // 裁剪到子元素 bounds
-            self.gc.clip_rect(
-                child_bounds.x,
-                child_bounds.y,
-                child_bounds.width,
-                child_bounds.height,
-            );
-
-            // 绘制子元素
-            self.paint(child_id);
-
-            // 恢复裁剪区域（恢复到 paint 之前的状态）
-            self.gc.restore_state();
+            match clipping_strategy {
+                ChildClippingStrategy::ClipToChildBounds => {
+                    let child_bounds = child_block.figure.bounds();
+                    debug_render!("[RECUR]     -> clip to child bounds={:?}", child_bounds);
+                    self.gc.clip_rect(
+                        child_bounds.x,
+                        child_bounds.y,
+                        child_bounds.width,
+                        child_bounds.height,
+                    );
+                    self.paint(child_id);
+                    self.gc.restore_state();
+                }
+                ChildClippingStrategy::DoNotClipChildBounds => {
+                    debug_render!("[RECUR]     -> paint child without child bounds clip");
+                    self.paint(child_id);
+                }
+            }
         }
     }
 }

@@ -24,11 +24,13 @@
 //!
 //! 3. **渲染与几何分离**：bounds 是逻辑状态，顶点是渲染产物。validate() 处于"逻辑状态已确定 → 即将渲染"的节点，此时 bounds 已稳定，计算顶点最合适。
 
+use std::sync::Arc;
+
 use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Bounded, Shape, Updatable};
+use super::{Border, Bounded, ChildClippingStrategy, Shape, Updatable};
 
 /// 三角形方向
 #[derive(Clone, Copy, Debug, PartialEq, Default)]
@@ -54,7 +56,7 @@ pub enum Direction {
 ///
 /// 顶点在 `validate()` 阶段计算并缓存，参考 draw2d: Figure.validate()。
 /// 渲染时使用缓存的顶点，避免重复计算。
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone)]
 pub struct TriangleFigure {
     /// 边界矩形
     pub bounds: Rectangle,
@@ -74,6 +76,10 @@ pub struct TriangleFigure {
     cached_points: Option<[(f64, f64); 3]>,
     /// 缓存的 bounds（用于检测是否需要重新计算）
     cached_bounds: Option<Rectangle>,
+    /// 绘制子节点时使用的裁剪策略
+    child_clipping_strategy: ChildClippingStrategy,
+    /// 边框装饰器
+    border: Option<Arc<dyn Border>>,
 }
 
 impl TriangleFigure {
@@ -96,6 +102,8 @@ impl TriangleFigure {
             line_join: novadraw_render::command::LineJoin::Miter,
             cached_points: None,
             cached_bounds: None,
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
+            border: None,
         }
     }
 
@@ -122,6 +130,8 @@ impl TriangleFigure {
             line_join: novadraw_render::command::LineJoin::Miter,
             cached_points: None,
             cached_bounds: None,
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
+            border: None,
         }
     }
 
@@ -189,6 +199,18 @@ impl TriangleFigure {
         self.fill_color = fill;
         self.stroke_color = stroke;
         self.stroke_width = stroke_width;
+        self
+    }
+
+    /// 设置子节点绘制裁剪策略。
+    pub fn with_child_clipping_strategy(mut self, strategy: ChildClippingStrategy) -> Self {
+        self.child_clipping_strategy = strategy;
+        self
+    }
+
+    /// 添加边框装饰器。
+    pub fn with_border(mut self, border: impl Border + 'static) -> Self {
+        self.border = Some(Arc::new(border));
         self
     }
 
@@ -321,6 +343,17 @@ impl Bounded for TriangleFigure {
     fn name(&self) -> &'static str {
         "TriangleFigure"
     }
+
+    fn child_clipping_strategy(&self) -> ChildClippingStrategy {
+        self.child_clipping_strategy
+    }
+
+    fn insets(&self) -> (f64, f64, f64, f64) {
+        self.border
+            .as_ref()
+            .map(|border| border.get_insets())
+            .unwrap_or((0.0, 0.0, 0.0, 0.0))
+    }
 }
 
 // 实现 Updatable trait：验证钩子
@@ -371,6 +404,10 @@ impl Shape for TriangleFigure {
 
     fn line_join(&self) -> novadraw_render::command::LineJoin {
         self.line_join
+    }
+
+    fn get_border(&self) -> Option<&dyn Border> {
+        self.border.as_deref()
     }
 
     fn fill_enabled(&self) -> bool {

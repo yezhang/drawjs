@@ -7,11 +7,15 @@
 //! `translate_to_parent` / `translate_from_parent` 协议加入父链，而不是在事件或渲染入口
 //! 额外添加全局空间特判。
 
+use std::sync::Arc;
+
 use glam::DVec2;
 use novadraw_geometry::{Rectangle, Transform};
 use novadraw_render::NdCanvas;
 
-use crate::figure::{Bounded, ChildTransform, Figure, Updatable};
+use crate::figure::{
+    Bounded, ChildClippingStrategy, ChildTransform, Figure, Updatable, border::Border,
+};
 
 /// 视口
 ///
@@ -152,10 +156,12 @@ impl Default for Viewport {
 ///
 /// `ViewportFigure` 是 Figure 树中的坐标根和裁剪容器：自身 bounds 位于父坐标域，
 /// 子节点位于 content 坐标域。
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone)]
 pub struct ViewportFigure {
     bounds: Rectangle,
     viewport: Viewport,
+    child_clipping_strategy: ChildClippingStrategy,
+    border: Option<Arc<dyn Border>>,
 }
 
 impl ViewportFigure {
@@ -164,6 +170,8 @@ impl ViewportFigure {
         Self {
             bounds: Rectangle::new(x, y, width, height),
             viewport: Viewport::new(),
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
+            border: None,
         }
     }
 
@@ -182,6 +190,18 @@ impl ViewportFigure {
     /// 设置统一缩放。
     pub fn with_zoom(mut self, zoom: f64) -> Self {
         self.viewport.zoom = zoom;
+        self
+    }
+
+    /// 设置子节点绘制裁剪策略。
+    pub fn with_child_clipping_strategy(mut self, strategy: ChildClippingStrategy) -> Self {
+        self.child_clipping_strategy = strategy;
+        self
+    }
+
+    /// 添加边框装饰器。
+    pub fn with_border(mut self, border: impl Border + 'static) -> Self {
+        self.border = Some(Arc::new(border));
         self
     }
 
@@ -217,6 +237,17 @@ impl Bounded for ViewportFigure {
         )
     }
 
+    fn child_clipping_strategy(&self) -> ChildClippingStrategy {
+        self.child_clipping_strategy
+    }
+
+    fn insets(&self) -> (f64, f64, f64, f64) {
+        self.border
+            .as_ref()
+            .map(|border| border.get_insets())
+            .unwrap_or((0.0, 0.0, 0.0, 0.0))
+    }
+
     fn client_area(&self) -> Rectangle {
         Rectangle::new(
             self.viewport.origin.x,
@@ -233,6 +264,10 @@ impl Updatable for ViewportFigure {
 
 impl Figure for ViewportFigure {
     fn paint_figure(&self, _gc: &mut NdCanvas) {}
+
+    fn get_border(&self) -> Option<&dyn Border> {
+        self.border.as_deref()
+    }
 }
 
 #[cfg(test)]

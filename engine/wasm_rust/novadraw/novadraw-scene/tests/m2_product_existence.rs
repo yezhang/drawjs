@@ -2,8 +2,9 @@ use novadraw_core::Color;
 use novadraw_geometry::{Rectangle, Vec2};
 use novadraw_render::{NdCanvas, command::RenderCommandKind};
 use novadraw_scene::{
-    Bounded, Direction, EllipseFigure, Figure, FigureGraph, PolygonFigure, RectangleFigure,
-    RoundedRectangleFigure, TriangleFigure, Updatable,
+    Bounded, ChildClippingStrategy, Direction, EllipseFigure, Figure, FigureGraph, LineBorder,
+    PolygonFigure, PolylineFigure, RectangleFigure, RootFigure, RoundedRectangleFigure,
+    TriangleFigure, Updatable, ViewportFigure,
 };
 
 const ROOT_COLOR: Color = Color {
@@ -110,6 +111,68 @@ fn m2_five_product_figures_are_importable_as_dyn_figures() {
         ]
     );
     assert!(figures.iter().all(|figure| figure.bounds().width > 0.0));
+}
+
+#[test]
+fn existing_product_figures_expose_child_clipping_strategy_api() {
+    let strategy = ChildClippingStrategy::DoNotClipChildBounds;
+
+    let figures: Vec<Box<dyn Figure>> = vec![
+        Box::new(RectangleFigure::new(0.0, 0.0, 20.0, 10.0).with_child_clipping_strategy(strategy)),
+        Box::new(EllipseFigure::new(0.0, 0.0, 20.0, 10.0).with_child_clipping_strategy(strategy)),
+        Box::new(PolylineFigure::new(0.0, 0.0, 20.0, 10.0).with_child_clipping_strategy(strategy)),
+        Box::new(
+            PolygonFigure::from_points(vec![
+                Vec2::new(0.0, 0.0),
+                Vec2::new(20.0, 0.0),
+                Vec2::new(10.0, 10.0),
+            ])
+            .with_child_clipping_strategy(strategy),
+        ),
+        Box::new(
+            RoundedRectangleFigure::new(0.0, 0.0, 20.0, 10.0, 4.0)
+                .with_child_clipping_strategy(strategy),
+        ),
+        Box::new(TriangleFigure::new(0.0, 0.0, 20.0, 10.0).with_child_clipping_strategy(strategy)),
+        Box::new(RootFigure::new(0.0, 0.0, 20.0, 10.0).with_child_clipping_strategy(strategy)),
+        Box::new(ViewportFigure::new(0.0, 0.0, 20.0, 10.0).with_child_clipping_strategy(strategy)),
+    ];
+
+    assert!(
+        figures
+            .iter()
+            .all(|figure| figure.child_clipping_strategy() == strategy)
+    );
+}
+
+#[test]
+fn existing_product_figures_expose_border_api() {
+    let border = || LineBorder::new(Color::BLACK, 1.0).with_insets(1.0, 2.0, 3.0, 4.0);
+
+    let figures: Vec<Box<dyn Figure>> = vec![
+        Box::new(RectangleFigure::new(0.0, 0.0, 20.0, 10.0).with_border(border())),
+        Box::new(EllipseFigure::new(0.0, 0.0, 20.0, 10.0).with_border(border())),
+        Box::new(PolylineFigure::new(0.0, 0.0, 20.0, 10.0).with_border(border())),
+        Box::new(
+            PolygonFigure::from_points(vec![
+                Vec2::new(0.0, 0.0),
+                Vec2::new(20.0, 0.0),
+                Vec2::new(10.0, 10.0),
+            ])
+            .with_border(border()),
+        ),
+        Box::new(RoundedRectangleFigure::new(0.0, 0.0, 20.0, 10.0, 4.0).with_border(border())),
+        Box::new(TriangleFigure::new(0.0, 0.0, 20.0, 10.0).with_border(border())),
+        Box::new(RootFigure::new(0.0, 0.0, 20.0, 10.0).with_border(border())),
+        Box::new(ViewportFigure::new(0.0, 0.0, 20.0, 10.0).with_border(border())),
+    ];
+
+    assert!(figures.iter().all(|figure| figure.get_border().is_some()));
+    assert!(
+        figures
+            .iter()
+            .all(|figure| figure.insets() == (1.0, 2.0, 3.0, 4.0))
+    );
 }
 
 #[test]

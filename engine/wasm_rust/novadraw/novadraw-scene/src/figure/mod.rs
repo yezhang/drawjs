@@ -38,7 +38,7 @@ use novadraw_geometry::{Rectangle, Translatable};
 use novadraw_render::NdCanvas;
 use novadraw_render::command::{LineCap, LineJoin};
 
-use crate::{MouseEvent, NovadrawContext};
+use crate::{BlockId, MouseEvent, NovadrawContext};
 use border::Border;
 
 // ============================================================================
@@ -95,6 +95,18 @@ impl ChildTransform {
         target.translate(-self.translate_x, -self.translate_y);
         target.scale(1.0 / self.scale);
     }
+}
+
+/// Figure 绘制子节点时使用的裁剪策略。
+///
+/// 对应 Draw2D `ClippingStrategy` 的核心语义：父 Figure 可以决定
+/// `paintChildren` 阶段是否把每个 child 限制在 child bounds 内。
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ChildClippingStrategy {
+    /// 默认策略：先受父 clientArea 限制，再把每个 child 裁剪到自身 bounds。
+    ClipToChildBounds,
+    /// 只保留父 clientArea 裁剪，不额外裁剪到 child bounds。
+    DoNotClipChildBounds,
 }
 
 /// 边界相关方法 trait
@@ -178,6 +190,14 @@ pub trait Bounded: Send + Sync {
         } else {
             ChildTransform::IDENTITY
         }
+    }
+
+    /// 获取绘制子节点时使用的裁剪策略。
+    ///
+    /// 对应 draw2d: `Figure#getClippingStrategy()` / `setClippingStrategy(...)`
+    /// 的默认行为。具体 Figure 可以覆盖或暴露 builder 来改变策略。
+    fn child_clipping_strategy(&self) -> ChildClippingStrategy {
+        ChildClippingStrategy::ClipToChildBounds
     }
 
     // ==================== 布局相关方法 ====================
@@ -283,6 +303,16 @@ pub trait Updatable: Send + Sync {
 ///         └─> paintBorder()        [PaintBorder]
 /// ```
 pub trait Figure: Bounded + Updatable + Send + Sync {
+    /// Figure 挂载到父节点后的生命周期 hook。
+    ///
+    /// 对应 draw2d: addNotify()。
+    fn on_attached(&mut self, _parent_id: BlockId) {}
+
+    /// Figure 从父节点移除前的生命周期 hook。
+    ///
+    /// 对应 draw2d: removeNotify()。
+    fn on_detached(&mut self, _parent_id: BlockId) {}
+
     /// ===== 模板方法 =====
     /// 初始化本地属性
     ///

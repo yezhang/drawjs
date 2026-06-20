@@ -449,6 +449,7 @@ impl FigureGraph {
         });
         self.uuid_map.insert(uuid, id);
         self.blocks[parent_id].children.push(id);
+        self.blocks[id].figure.on_attached(parent_id);
         self.mark_validation_path_invalid(parent_id);
         Some(id)
     }
@@ -466,6 +467,7 @@ impl FigureGraph {
         if let Some(child) = self.blocks.get_mut(child_id) {
             child.parent = Some(parent_id);
             child.is_valid = false;
+            child.figure.on_attached(parent_id);
         }
         self.mark_validation_path_invalid(parent_id);
         true
@@ -483,6 +485,7 @@ impl FigureGraph {
         }
 
         if let Some(child) = self.blocks.get_mut(child_id) {
+            child.figure.on_detached(parent_id);
             child.parent = None;
             child.is_valid = false;
         }
@@ -1485,7 +1488,7 @@ impl FigureGraph {
         if let Some(block) = self.blocks.get(block_id) {
             if let Some(parent_id) = block.parent {
                 self.translate_to_relative(parent_id, t);
-                self.translate_from_parent(block_id, t);
+                self.translate_from_parent(parent_id, t);
             }
         }
     }
@@ -1695,11 +1698,16 @@ impl Default for FigureGraph {
 
 #[cfg(test)]
 mod tests {
-    use super::super::figure::{Bounded, RectangleFigure, Shape, Updatable};
+    use std::sync::{Arc, Mutex};
+
+    use super::super::figure::{Bounded, ChildClippingStrategy, RectangleFigure, Shape, Updatable};
     use crate::{
-        FigureEvent, FigureGraph, LineBorder, NotificationEffect, Rectangle, ViewportFigure,
+        BlockId, EllipseFigure, Figure, FigureEvent, FigureGraph, LineBorder, NotificationEffect,
+        PolygonFigure, PolylineFigure, Rectangle, RootFigure, RoundedRectangleFigure,
+        TriangleFigure, ViewportFigure,
     };
     use novadraw_core::Color as NovadrawCoreColor;
+    use novadraw_geometry::Vec2;
     use novadraw_render::{NdCanvas, command::RenderCommandKind};
 
     #[derive(Debug, PartialEq)]
@@ -1807,6 +1815,124 @@ mod tests {
         fn fill_shape(&self, _gc: &mut NdCanvas) {}
 
         fn outline_shape(&self, _gc: &mut NdCanvas) {}
+    }
+
+    #[derive(Clone, Copy)]
+    struct OverflowPaintFigure {
+        bounds: Rectangle,
+        paint_rect: Rectangle,
+    }
+
+    impl OverflowPaintFigure {
+        fn new(bounds: Rectangle, paint_rect: Rectangle) -> Self {
+            Self { bounds, paint_rect }
+        }
+    }
+
+    impl Bounded for OverflowPaintFigure {
+        fn bounds(&self) -> Rectangle {
+            self.bounds
+        }
+
+        fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
+            self.bounds = Rectangle::new(x, y, width, height);
+        }
+
+        fn name(&self) -> &'static str {
+            "OverflowPaintFigure"
+        }
+    }
+
+    impl Updatable for OverflowPaintFigure {
+        fn validate(&mut self) {}
+    }
+
+    impl Shape for OverflowPaintFigure {
+        fn stroke_color(&self) -> Option<NovadrawCoreColor> {
+            None
+        }
+
+        fn stroke_width(&self) -> f64 {
+            0.0
+        }
+
+        fn fill_color(&self) -> Option<NovadrawCoreColor> {
+            Some(NovadrawCoreColor::hex("#44aa44"))
+        }
+
+        fn line_cap(&self) -> novadraw_render::command::LineCap {
+            novadraw_render::command::LineCap::default()
+        }
+
+        fn line_join(&self) -> novadraw_render::command::LineJoin {
+            novadraw_render::command::LineJoin::default()
+        }
+
+        fn fill_shape(&self, gc: &mut NdCanvas) {
+            gc.fill_rect(
+                self.paint_rect.x,
+                self.paint_rect.y,
+                self.paint_rect.width,
+                self.paint_rect.height,
+                NovadrawCoreColor::hex("#44aa44"),
+            );
+        }
+
+        fn outline_shape(&self, _gc: &mut NdCanvas) {}
+    }
+
+    struct LifecycleRecordingFigure {
+        bounds: Rectangle,
+        events: Arc<Mutex<Vec<LifecycleEvent>>>,
+    }
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    enum LifecycleEvent {
+        Attached(BlockId),
+        Detached(BlockId),
+    }
+
+    impl LifecycleRecordingFigure {
+        fn new(events: Arc<Mutex<Vec<LifecycleEvent>>>) -> Self {
+            Self {
+                bounds: Rectangle::new(0.0, 0.0, 10.0, 10.0),
+                events,
+            }
+        }
+    }
+
+    impl Bounded for LifecycleRecordingFigure {
+        fn bounds(&self) -> Rectangle {
+            self.bounds
+        }
+
+        fn set_bounds(&mut self, x: f64, y: f64, width: f64, height: f64) {
+            self.bounds = Rectangle::new(x, y, width, height);
+        }
+
+        fn name(&self) -> &'static str {
+            "LifecycleRecordingFigure"
+        }
+    }
+
+    impl Updatable for LifecycleRecordingFigure {
+        fn validate(&mut self) {}
+    }
+
+    impl Figure for LifecycleRecordingFigure {
+        fn on_attached(&mut self, parent_id: BlockId) {
+            self.events
+                .lock()
+                .unwrap()
+                .push(LifecycleEvent::Attached(parent_id));
+        }
+
+        fn on_detached(&mut self, parent_id: BlockId) {
+            self.events
+                .lock()
+                .unwrap()
+                .push(LifecycleEvent::Detached(parent_id));
+        }
     }
 
     /// 带 insets 的 Figure
@@ -2245,6 +2371,45 @@ mod tests {
         assert_eq!(scene.child_z_index(root_id, first), Some(0));
         assert_eq!(scene.child_z_index(root_id, second), Some(1));
         assert_eq!(scene.child_z_index(root_id, third), Some(2));
+    }
+
+    #[test]
+    fn test_figure_lifecycle_hooks_fire_on_add_remove_and_reparent() {
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let mut scene = FigureGraph::new();
+        let left_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 100.0, 100.0)));
+        let right_id = scene.add_child_to(
+            left_id,
+            Box::new(RectangleFigure::new(20.0, 20.0, 50.0, 50.0)),
+        );
+        let child_id = scene.add_child_to(
+            left_id,
+            Box::new(LifecycleRecordingFigure::new(Arc::clone(&events))),
+        );
+
+        assert_eq!(
+            *events.lock().unwrap(),
+            vec![LifecycleEvent::Attached(left_id)]
+        );
+
+        assert!(scene.detach_child(left_id, child_id));
+        assert_eq!(
+            *events.lock().unwrap(),
+            vec![
+                LifecycleEvent::Attached(left_id),
+                LifecycleEvent::Detached(left_id)
+            ]
+        );
+
+        assert!(scene.attach_child(right_id, child_id));
+        assert_eq!(
+            *events.lock().unwrap(),
+            vec![
+                LifecycleEvent::Attached(left_id),
+                LifecycleEvent::Detached(left_id),
+                LifecycleEvent::Attached(right_id)
+            ]
+        );
     }
 
     #[test]
@@ -2701,6 +2866,36 @@ mod tests {
         assert_eq!(point.1, 25.0, "y 应为 60 - 30 - 5");
     }
 
+    /// 测试 translate_to_relative 与 translate_to_absolute_mut 严格互为父链逆变换。
+    ///
+    /// 场景：目标节点本身也是坐标根。
+    /// 期望：转换到 absolute 后再转换回 relative 时，不会额外应用目标节点自己的
+    /// translateFromParent；这与 Draw2D Figure#translateToRelative 的 parent-chain 协议一致。
+    #[test]
+    fn test_translate_to_relative_roundtrips_target_coordinate_root() {
+        let mut scene = FigureGraph::new();
+
+        let contents_id =
+            scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 800.0, 600.0)));
+
+        let coord_root1_id = scene.add_child_to(
+            contents_id,
+            Box::new(TestCoordinateRootFigure::new(20.0, 30.0, 100.0, 100.0)),
+        );
+
+        let coord_root2_id = scene.add_child_to(
+            coord_root1_id,
+            Box::new(TestCoordinateRootFigure::new(10.0, 5.0, 50.0, 50.0)),
+        );
+
+        let mut point = (15.0, 25.0);
+        scene.translate_to_absolute_mut(coord_root2_id, &mut point);
+        assert_eq!(point, (35.0, 55.0));
+
+        scene.translate_to_relative(coord_root2_id, &mut point);
+        assert_eq!(point, (15.0, 25.0));
+    }
+
     /// 测试 translate_to_relative Rectangle 类型
     ///
     /// 场景：使用 Rectangle 类型进行坐标转换
@@ -2975,6 +3170,175 @@ mod tests {
             Some(child_id),
             "hit-test should descend once the point is inside the painted clientArea"
         );
+    }
+
+    #[test]
+    fn test_default_clipping_strategy_clips_children_to_child_bounds() {
+        let mut scene = FigureGraph::new();
+
+        let parent_id = scene.set_contents(Box::new(RectangleFigure::new(0.0, 0.0, 100.0, 100.0)));
+        scene.add_child_to(
+            parent_id,
+            Box::new(OverflowPaintFigure::new(
+                Rectangle::new(20.0, 20.0, 10.0, 10.0),
+                Rectangle::new(0.0, 0.0, 80.0, 80.0),
+            )),
+        );
+
+        let signatures = render_signatures(&scene.render());
+        let overflow_paint_index = signatures
+            .iter()
+            .position(|signature| *signature == RenderSignature::FillRect([0.0, 0.0, 80.0, 80.0]))
+            .expect("overflow child paint must be emitted");
+        let child_bounds_clip_index = signatures
+            .iter()
+            .position(|signature| *signature == RenderSignature::Clip([20.0, 20.0, 30.0, 30.0]))
+            .expect("default clipping strategy must clip to child bounds");
+
+        assert!(
+            child_bounds_clip_index < overflow_paint_index,
+            "child bounds clip must be applied before child paint"
+        );
+    }
+
+    #[test]
+    fn test_custom_clipping_strategy_can_skip_child_bounds_clip() {
+        let mut scene = FigureGraph::new();
+
+        let parent_id = scene.set_contents(Box::new(
+            RectangleFigure::new(0.0, 0.0, 100.0, 100.0)
+                .with_child_clipping_strategy(ChildClippingStrategy::DoNotClipChildBounds),
+        ));
+        scene.add_child_to(
+            parent_id,
+            Box::new(OverflowPaintFigure::new(
+                Rectangle::new(20.0, 20.0, 10.0, 10.0),
+                Rectangle::new(0.0, 0.0, 80.0, 80.0),
+            )),
+        );
+
+        let signatures = render_signatures(&scene.render());
+        let overflow_paint_index = signatures
+            .iter()
+            .position(|signature| *signature == RenderSignature::FillRect([0.0, 0.0, 80.0, 80.0]))
+            .expect("overflow child paint must be emitted");
+
+        assert!(
+            !signatures[..overflow_paint_index]
+                .contains(&RenderSignature::Clip([20.0, 20.0, 30.0, 30.0])),
+            "custom clipping strategy must not clip child paint to child bounds"
+        );
+        assert!(
+            signatures.contains(&RenderSignature::Clip([0.0, 0.0, 100.0, 100.0])),
+            "parent clientArea clip must remain active"
+        );
+    }
+
+    #[test]
+    fn test_existing_figures_expose_child_clipping_strategy() {
+        let parent_factories: Vec<(&str, Box<dyn Fn() -> Box<dyn Figure>>)> = vec![
+            (
+                "ellipse",
+                Box::new(|| {
+                    Box::new(
+                        EllipseFigure::new(0.0, 0.0, 100.0, 100.0).with_child_clipping_strategy(
+                            ChildClippingStrategy::DoNotClipChildBounds,
+                        ),
+                    )
+                }),
+            ),
+            (
+                "rounded_rectangle",
+                Box::new(|| {
+                    Box::new(
+                        RoundedRectangleFigure::new(0.0, 0.0, 100.0, 100.0, 8.0)
+                            .with_child_clipping_strategy(
+                                ChildClippingStrategy::DoNotClipChildBounds,
+                            ),
+                    )
+                }),
+            ),
+            (
+                "polyline",
+                Box::new(|| {
+                    Box::new(
+                        PolylineFigure::new(0.0, 0.0, 100.0, 100.0).with_child_clipping_strategy(
+                            ChildClippingStrategy::DoNotClipChildBounds,
+                        ),
+                    )
+                }),
+            ),
+            (
+                "polygon",
+                Box::new(|| {
+                    Box::new(
+                        PolygonFigure::from_points(vec![
+                            Vec2::new(0.0, 0.0),
+                            Vec2::new(100.0, 0.0),
+                            Vec2::new(100.0, 100.0),
+                            Vec2::new(0.0, 100.0),
+                        ])
+                        .with_child_clipping_strategy(ChildClippingStrategy::DoNotClipChildBounds),
+                    )
+                }),
+            ),
+            (
+                "triangle",
+                Box::new(|| {
+                    Box::new(
+                        TriangleFigure::new(0.0, 0.0, 100.0, 100.0).with_child_clipping_strategy(
+                            ChildClippingStrategy::DoNotClipChildBounds,
+                        ),
+                    )
+                }),
+            ),
+            (
+                "root",
+                Box::new(|| {
+                    Box::new(
+                        RootFigure::new(0.0, 0.0, 100.0, 100.0).with_child_clipping_strategy(
+                            ChildClippingStrategy::DoNotClipChildBounds,
+                        ),
+                    )
+                }),
+            ),
+            (
+                "viewport",
+                Box::new(|| {
+                    Box::new(
+                        ViewportFigure::new(0.0, 0.0, 100.0, 100.0).with_child_clipping_strategy(
+                            ChildClippingStrategy::DoNotClipChildBounds,
+                        ),
+                    )
+                }),
+            ),
+        ];
+
+        for (name, make_parent) in parent_factories {
+            let mut scene = FigureGraph::new();
+            let parent_id = scene.set_contents(make_parent());
+            scene.add_child_to(
+                parent_id,
+                Box::new(OverflowPaintFigure::new(
+                    Rectangle::new(20.0, 20.0, 10.0, 10.0),
+                    Rectangle::new(0.0, 0.0, 80.0, 80.0),
+                )),
+            );
+
+            let signatures = render_signatures(&scene.render());
+            let overflow_paint_index = signatures
+                .iter()
+                .position(|signature| {
+                    *signature == RenderSignature::FillRect([0.0, 0.0, 80.0, 80.0])
+                })
+                .unwrap_or_else(|| panic!("{name}: overflow child paint must be emitted"));
+
+            assert!(
+                !signatures[..overflow_paint_index]
+                    .contains(&RenderSignature::Clip([20.0, 20.0, 30.0, 30.0])),
+                "{name}: custom clipping strategy must not clip child paint to child bounds"
+            );
+        }
     }
 
     #[test]

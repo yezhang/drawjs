@@ -6,7 +6,7 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Border, Bounded, Shape, Updatable};
+use super::{Border, Bounded, ChildClippingStrategy, Shape, Updatable};
 
 /// 矩形图形
 ///
@@ -28,6 +28,8 @@ pub struct RectangleFigure {
     pub line_join: novadraw_render::command::LineJoin,
     /// 是否使用本地坐标模式
     use_local_coordinates: bool,
+    /// 绘制子节点时使用的裁剪策略
+    child_clipping_strategy: ChildClippingStrategy,
     /// 边框装饰器
     pub border: Option<Arc<dyn Border>>,
 }
@@ -43,6 +45,7 @@ impl RectangleFigure {
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
             use_local_coordinates: false,
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
             border: None,
         }
     }
@@ -57,6 +60,7 @@ impl RectangleFigure {
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
             use_local_coordinates: false,
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
             border: None,
         }
     }
@@ -71,6 +75,7 @@ impl RectangleFigure {
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
             use_local_coordinates: false,
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
             border: None,
         }
     }
@@ -88,6 +93,14 @@ impl RectangleFigure {
     /// `false`: 子元素继续与当前 Figure 共享父坐标域
     pub fn with_local_coordinates(mut self, enable: bool) -> Self {
         self.use_local_coordinates = enable;
+        self
+    }
+
+    /// 设置子节点绘制裁剪策略。
+    ///
+    /// 对应 draw2d: setClippingStrategy(...)
+    pub fn with_child_clipping_strategy(mut self, strategy: ChildClippingStrategy) -> Self {
+        self.child_clipping_strategy = strategy;
         self
     }
 
@@ -127,6 +140,10 @@ impl Bounded for RectangleFigure {
 
     fn use_local_coordinates(&self) -> bool {
         self.use_local_coordinates
+    }
+
+    fn child_clipping_strategy(&self) -> ChildClippingStrategy {
+        self.child_clipping_strategy
     }
 
     fn insets(&self) -> (f64, f64, f64, f64) {

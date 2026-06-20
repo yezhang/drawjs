@@ -4,13 +4,13 @@ use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Bounded, PolylineFigure, Shape, Updatable};
+use super::{Border, Bounded, ChildClippingStrategy, PolylineFigure, Shape, Updatable};
 
 /// 多边形图形
 ///
 /// 参考 Eclipse Draw2D 的 Polygon 设计。
 /// 继承自 PolylineFigure，但支持填充（闭合路径）。
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone)]
 pub struct PolygonFigure {
     /// 内部使用 PolylineFigure 存储点
     polyline: PolylineFigure,
@@ -49,6 +49,18 @@ impl PolygonFigure {
         self.polyline.stroke_width = width;
         self
     }
+
+    /// 设置子节点绘制裁剪策略。
+    pub fn with_child_clipping_strategy(mut self, strategy: ChildClippingStrategy) -> Self {
+        self.polyline = self.polyline.with_child_clipping_strategy(strategy);
+        self
+    }
+
+    /// 添加边框装饰器。
+    pub fn with_border(mut self, border: impl Border + 'static) -> Self {
+        self.polyline = self.polyline.with_border(border);
+        self
+    }
 }
 
 // 实现 Bounded trait
@@ -82,6 +94,14 @@ impl Bounded for PolygonFigure {
         Bounded::use_local_coordinates(&self.polyline)
     }
 
+    fn child_clipping_strategy(&self) -> ChildClippingStrategy {
+        self.polyline.child_clipping_strategy()
+    }
+
+    fn insets(&self) -> (f64, f64, f64, f64) {
+        self.polyline.insets()
+    }
+
     fn name(&self) -> &'static str {
         "PolygonFigure"
     }
@@ -113,6 +133,10 @@ impl Shape for PolygonFigure {
 
     fn line_join(&self) -> novadraw_render::command::LineJoin {
         self.polyline.line_join()
+    }
+
+    fn get_border(&self) -> Option<&dyn Border> {
+        self.polyline.get_border()
     }
 
     fn fill_enabled(&self) -> bool {

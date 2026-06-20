@@ -431,7 +431,7 @@ mod tests {
     }
 
     #[test]
-    fn test_scene_dispatch_context_respects_target_local_coordinate_root() {
+    fn test_scene_dispatch_context_uses_target_parent_coordinate_domain() {
         let recorded = Arc::new(Mutex::new(None));
         let mut scene = FigureGraph::new();
         let contents_id =
@@ -463,8 +463,8 @@ mod tests {
         assert_eq!(
             *recorded.lock().unwrap(),
             Some(RecordedMousePoint {
-                x: 10.0,
-                y: 10.0,
+                x: 30.0,
+                y: 40.0,
                 entry_x: 130.0,
                 entry_y: 90.0,
             })

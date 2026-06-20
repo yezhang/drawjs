@@ -24,8 +24,9 @@ pub use container::viewport;
 pub use figure::border;
 pub use figure::border::{Border, LineBorder, MarginBorder, RectangleBorder};
 pub use figure::{
-    Bounded, ChildTransform, Direction, EllipseFigure, Figure, PolygonFigure, PolylineFigure,
-    RectangleFigure, RootFigure, RoundedRectangleFigure, Shape, TriangleFigure, Updatable,
+    Bounded, ChildClippingStrategy, ChildTransform, Direction, EllipseFigure, Figure,
+    PolygonFigure, PolylineFigure, RectangleFigure, RootFigure, RoundedRectangleFigure, Shape,
+    TriangleFigure, Updatable,
 };
 pub use graph as scene;
 pub use graph::{BlockId, FigureGraph, FigureRenderer};

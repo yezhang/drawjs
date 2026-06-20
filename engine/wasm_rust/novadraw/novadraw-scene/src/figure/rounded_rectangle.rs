@@ -1,16 +1,18 @@
 //! 圆角矩形图形
 
+use std::sync::Arc;
+
 use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Bounded, Shape, Updatable};
+use super::{Border, Bounded, ChildClippingStrategy, Shape, Updatable};
 
 /// 圆角矩形图形
 ///
 /// 参考 Eclipse Draw2D 的 RoundedRectangle 设计。
 /// 在矩形基础上添加圆角半径，支持填充和描边。
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone)]
 pub struct RoundedRectangleFigure {
     /// 边界矩形
     pub bounds: Rectangle,
@@ -26,6 +28,10 @@ pub struct RoundedRectangleFigure {
     pub line_cap: novadraw_render::command::LineCap,
     /// 连接样式
     pub line_join: novadraw_render::command::LineJoin,
+    /// 绘制子节点时使用的裁剪策略
+    child_clipping_strategy: ChildClippingStrategy,
+    /// 边框装饰器
+    border: Option<Arc<dyn Border>>,
 }
 
 impl RoundedRectangleFigure {
@@ -41,6 +47,8 @@ impl RoundedRectangleFigure {
             stroke_width: 0.0,
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
+            border: None,
         }
     }
 
@@ -54,6 +62,8 @@ impl RoundedRectangleFigure {
             stroke_width: 0.0,
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
+            border: None,
         }
     }
 
@@ -74,6 +84,8 @@ impl RoundedRectangleFigure {
             stroke_width: 0.0,
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
+            border: None,
         }
     }
 
@@ -81,6 +93,18 @@ impl RoundedRectangleFigure {
     pub fn with_stroke(mut self, color: Color, width: f64) -> Self {
         self.stroke_color = Some(color);
         self.stroke_width = width;
+        self
+    }
+
+    /// 设置子节点绘制裁剪策略。
+    pub fn with_child_clipping_strategy(mut self, strategy: ChildClippingStrategy) -> Self {
+        self.child_clipping_strategy = strategy;
+        self
+    }
+
+    /// 添加边框装饰器。
+    pub fn with_border(mut self, border: impl Border + 'static) -> Self {
+        self.border = Some(Arc::new(border));
         self
     }
 
@@ -114,6 +138,17 @@ impl Bounded for RoundedRectangleFigure {
     fn name(&self) -> &'static str {
         "RoundedRectangleFigure"
     }
+
+    fn child_clipping_strategy(&self) -> ChildClippingStrategy {
+        self.child_clipping_strategy
+    }
+
+    fn insets(&self) -> (f64, f64, f64, f64) {
+        self.border
+            .as_ref()
+            .map(|border| border.get_insets())
+            .unwrap_or((0.0, 0.0, 0.0, 0.0))
+    }
 }
 
 // 实现 Updatable trait
@@ -142,6 +177,10 @@ impl Shape for RoundedRectangleFigure {
 
     fn line_join(&self) -> novadraw_render::command::LineJoin {
         self.line_join
+    }
+
+    fn get_border(&self) -> Option<&dyn Border> {
+        self.border.as_deref()
     }
 
     fn fill_enabled(&self) -> bool {
@@ -182,6 +221,8 @@ impl Shape for RoundedRectangleFigure {
                 stroke_width: self.stroke_width, // 使用原始描边宽度
                 line_cap: self.line_cap,
                 line_join: self.line_join,
+                child_clipping_strategy: self.child_clipping_strategy,
+                border: None,
             };
             temp_rect.draw_rounded_rect(gc, None, Some(color));
         }

@@ -1,10 +1,12 @@
 //! 根图形
 
+use std::sync::Arc;
+
 use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Bounded, Shape, Updatable};
+use super::{Border, Bounded, ChildClippingStrategy, Shape, Updatable};
 
 /// 根图形（内部使用）
 ///
@@ -15,10 +17,14 @@ use super::{Bounded, Shape, Updatable};
 /// - 透明（不渲染自身）
 /// - 使用 trait 默认的本地坐标模式（false）
 /// - 不需要填充/描边属性
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone)]
 pub struct RootFigure {
     /// 边界矩形
     bounds: Rectangle,
+    /// 绘制子节点时使用的裁剪策略
+    child_clipping_strategy: ChildClippingStrategy,
+    /// 边框装饰器
+    border: Option<Arc<dyn Border>>,
 }
 
 impl RootFigure {
@@ -26,7 +32,21 @@ impl RootFigure {
     pub fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
         Self {
             bounds: Rectangle::new(x, y, width, height),
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
+            border: None,
         }
+    }
+
+    /// 设置子节点绘制裁剪策略。
+    pub fn with_child_clipping_strategy(mut self, strategy: ChildClippingStrategy) -> Self {
+        self.child_clipping_strategy = strategy;
+        self
+    }
+
+    /// 添加边框装饰器。
+    pub fn with_border(mut self, border: impl Border + 'static) -> Self {
+        self.border = Some(Arc::new(border));
+        self
     }
 
     /// 设置边界
@@ -47,6 +67,17 @@ impl Bounded for RootFigure {
 
     fn name(&self) -> &'static str {
         "RootFigure"
+    }
+
+    fn child_clipping_strategy(&self) -> ChildClippingStrategy {
+        self.child_clipping_strategy
+    }
+
+    fn insets(&self) -> (f64, f64, f64, f64) {
+        self.border
+            .as_ref()
+            .map(|border| border.get_insets())
+            .unwrap_or((0.0, 0.0, 0.0, 0.0))
     }
 }
 
@@ -76,6 +107,10 @@ impl Shape for RootFigure {
 
     fn line_join(&self) -> novadraw_render::command::LineJoin {
         novadraw_render::command::LineJoin::default()
+    }
+
+    fn get_border(&self) -> Option<&dyn Border> {
+        self.border.as_deref()
     }
 
     fn fill_enabled(&self) -> bool {

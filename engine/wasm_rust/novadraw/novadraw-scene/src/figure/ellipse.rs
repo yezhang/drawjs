@@ -1,16 +1,18 @@
 //! 椭圆图形
 
+use std::sync::Arc;
+
 use novadraw_core::Color;
 use novadraw_geometry::Rectangle;
 use novadraw_render::NdCanvas;
 
-use super::{Bounded, Shape, Updatable};
+use super::{Border, Bounded, ChildClippingStrategy, Shape, Updatable};
 
 /// 椭圆图形
 ///
 /// 用于渲染椭圆形状。
 /// 椭圆外切于 bounds 矩形。
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone)]
 pub struct EllipseFigure {
     /// 边界矩形（外切矩形）
     pub bounds: Rectangle,
@@ -24,6 +26,10 @@ pub struct EllipseFigure {
     pub line_cap: novadraw_render::command::LineCap,
     /// 连接样式
     pub line_join: novadraw_render::command::LineJoin,
+    /// 绘制子节点时使用的裁剪策略
+    child_clipping_strategy: ChildClippingStrategy,
+    /// 边框装饰器
+    border: Option<Arc<dyn Border>>,
 }
 
 impl EllipseFigure {
@@ -38,6 +44,8 @@ impl EllipseFigure {
             stroke_width: 0.0,
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
+            border: None,
         }
     }
 
@@ -50,6 +58,8 @@ impl EllipseFigure {
             stroke_width: 0.0,
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
+            border: None,
         }
     }
 
@@ -62,6 +72,8 @@ impl EllipseFigure {
             stroke_width: 0.0,
             line_cap: novadraw_render::command::LineCap::default(),
             line_join: novadraw_render::command::LineJoin::default(),
+            child_clipping_strategy: ChildClippingStrategy::ClipToChildBounds,
+            border: None,
         }
     }
 
@@ -69,6 +81,18 @@ impl EllipseFigure {
     pub fn with_stroke(mut self, color: Color, width: f64) -> Self {
         self.stroke_color = Some(color);
         self.stroke_width = width;
+        self
+    }
+
+    /// 设置子节点绘制裁剪策略。
+    pub fn with_child_clipping_strategy(mut self, strategy: ChildClippingStrategy) -> Self {
+        self.child_clipping_strategy = strategy;
+        self
+    }
+
+    /// 添加边框装饰器。
+    pub fn with_border(mut self, border: impl Border + 'static) -> Self {
+        self.border = Some(Arc::new(border));
         self
     }
 
@@ -117,6 +141,17 @@ impl Bounded for EllipseFigure {
     fn name(&self) -> &'static str {
         "EllipseFigure"
     }
+
+    fn child_clipping_strategy(&self) -> ChildClippingStrategy {
+        self.child_clipping_strategy
+    }
+
+    fn insets(&self) -> (f64, f64, f64, f64) {
+        self.border
+            .as_ref()
+            .map(|border| border.get_insets())
+            .unwrap_or((0.0, 0.0, 0.0, 0.0))
+    }
 }
 
 // 实现 Updatable trait
@@ -145,6 +180,10 @@ impl Shape for EllipseFigure {
 
     fn line_join(&self) -> novadraw_render::command::LineJoin {
         self.line_join
+    }
+
+    fn get_border(&self) -> Option<&dyn Border> {
+        self.border.as_deref()
     }
 
     fn fill_enabled(&self) -> bool {
