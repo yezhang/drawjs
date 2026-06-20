@@ -7,6 +7,3 @@ target/
 
 # Runtime logs
 log/
-
-# Local Trae workspace files
-.trae/
