@@ -1,0 +1,85 @@
+engine/wasm_rust/novadraw/agent/m1-product-existence-checks.md
+  s_6ebc947a1668a0::t_e6afbd5307af7f 7,10,63-65,69-71,75-76
+engine/wasm_rust/novadraw/AGENTS.md
+  s_31a6f80137b703::t_5f102405333170 49,54
+engine/wasm_rust/novadraw/agent/backlog/schema.yaml
+  s_31a6f80137b703::t_f4d6225cb834d1 10-14,24
+engine/wasm_rust/novadraw/agent/m3-completion-summary.md
+  s_6ebc947a1668a0::t_a1ead482194f03 57
+  s_6ebc947a1668a0::t_3f820be4c9b410 22-23,34,58-60
+  s_6ebc947a1668a0::t_0be0545fd3771e 30,49
+  s_6ebc947a1668a0::t_9f25ddcffafe6c 1-21,24-29,31-33,35-48,50-56
+engine/wasm_rust/novadraw/doc/00-index.md
+  s_31a6f80137b703::t_0cf9a0583fc4f4 16,76,159-163
+engine/wasm_rust/novadraw/agent/backlog/index.yaml
+  s_6ebc947a1668a0::t_50200d7a121258 4-5
+  s_6ebc947a1668a0::t_765bb7b5f88e64 3
+engine/wasm_rust/novadraw/doc/01-architecture/draw2d_api_coverage.md
+  s_6ebc947a1668a0::t_b6f0526af6db32 14-27,142-143,150,161
+  s_31a6f80137b703::t_92afa98b381c00 93-141,144-149,151-160,162
+  s_31a6f80137b703::t_f49031e03433be 1-13,28-92,163-462
+engine/wasm_rust/novadraw/agent/m2-contract-alignment-summary.md
+  s_6ebc947a1668a0::t_8f50ab50d8444a 7,10,12-14,26,60,75,91-94,98
+engine/wasm_rust/novadraw/agent/goal-roadmap.md
+  s_6ebc947a1668a0::t_5c7d8726e6be0a 37,45-47
+  s_6ebc947a1668a0::t_8634c515812a6d 31,38,48
+engine/wasm_rust/novadraw/CLAUDE.md
+  s_31a6f80137b703::t_0ce117cdf58162 74,81
+engine/wasm_rust/novadraw/agent/backlog/archive/2026-06.yaml
+  s_6ebc947a1668a0::t_eec596b0d6dfeb 80-82,84,87-88,90-91,96-97,105-106,110-112,114-115,118,120,123-127
+  s_6ebc947a1668a0::t_03cad688d8eed1 117,122
+  s_6ebc947a1668a0::t_0d982c134c443b 3,42-78
+  s_6ebc947a1668a0::t_47cd249e21a446 79,83,85-86,89,92-95,108-109,113,119
+  s_6ebc947a1668a0::t_ad0b7b2593f929 7-11,31,34,36
+  s_6ebc947a1668a0::t_8a04668d33f824 98-104,107,116,121
+  s_6ebc947a1668a0::t_e5baf2c2c0d04f 5-6,12-30,32-33,35,37-41
+engine/wasm_rust/novadraw/agent/backlog/active.yaml
+  s_6ebc947a1668a0::t_92028205562511 3
+engine/wasm_rust/novadraw/agent/inner-loop-checkpoint.md
+  s_6ebc947a1668a0::t_ed8528f3c4a766 6,34,37,42-43
+  s_6ebc947a1668a0::t_4a08c93e95fbd7 47,50,60
+  s_6ebc947a1668a0::t_23ee9d5866f5d1 45
+  s_6ebc947a1668a0::t_67c17e151ecc88 36,38-41
+  s_6ebc947a1668a0::t_071d63c4778cdb 54,56
+  s_6ebc947a1668a0::t_22570a06df368c 48-49,51-52,55,57-59
+  s_6ebc947a1668a0::t_ddf910248d40b4 11,15,24-33
+  s_6ebc947a1668a0::t_45330a3bd4994d 53
+  s_6ebc947a1668a0::t_4dc25ffb925241 35,44,46
+engine/wasm_rust/novadraw/agent/draw2d-core-milestones.yaml
+  s_6ebc947a1668a0::t_29483e868d6f21 44-46,111,120,160,166,479-480
+  s_6ebc947a1668a0::t_01b2d0d8b86d03 70,105,115,152,159
+  s_31a6f80137b703::t_b8fee54fec133c 11,18,39,41,90-96,131-141,176-186,221-229,267-276,313-322,357-367,404-413,452-462,500-509
+  s_31a6f80137b703::t_e64249c1d69719 550-564,568
+  s_6ebc947a1668a0::t_8634a9d5e80232 198
+engine/wasm_rust/novadraw/agent/backlog/recent.yaml
+  s_6ebc947a1668a0::t_9a869f5fc04b33 3,12-13
+  s_6ebc947a1668a0::t_8cc4e8fe3ecfb4 7-11
+  s_6ebc947a1668a0::t_be4399db2c562f 18
+  s_6ebc947a1668a0::t_91b9ca8c479fc9 17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "3d321f27c509625160718a49fe1fd4dda52cab5d",
+  "prompts": {},
+  "sessions": {
+    "s_31a6f80137b703": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a33a72200ebecce8a84d269",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "yezhang <yezhang989@163.com>"
+    },
+    "s_6ebc947a1668a0": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a3134b7a71b6c2e937bc441",
+        "model": "gpt-5.5__dev"
+      },
+      "human_author": "yezhang <yezhang989@163.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
