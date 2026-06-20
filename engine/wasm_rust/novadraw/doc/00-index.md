@@ -13,6 +13,7 @@ doc/
 ├── 01-architecture/                  # 架构设计
 │   ├── gef_principle.md              # GEF 框架核心原理
 │   ├── draw2d_design_axioms.md       # Draw2D 底层设计公理
+│   ├── draw2d_api_coverage.md        # Draw2D API 语义覆盖清单
 │   ├── draw2d_notification_design.md # Draw2D 通知机制设计分析
 │   ├── displaylist_design.md          # DisplayList 中间层设计
 │   ├── draw2d-history.md             # draw2d 历史与架构演变
@@ -72,6 +73,7 @@ doc/
 |------|------|----------|
 | `gef_principle.md` | GEF 框架架构 | MVC 模式、EditPart 控制器、Command 模式、Request/EditPolicy 机制、连接支持 |
 | `draw2d_design_axioms.md` | Draw2D 设计公理 | Figure 树、bounds、坐标根、两阶段更新、damage 修复、事件状态机 |
+| `draw2d_api_coverage.md` | Draw2D API 覆盖 | 按 API family 记录 draw2d 语义契约、Novadraw 合理变体、覆盖检查点与后续 probes |
 | `draw2d_notification_design.md` | Draw2D 通知机制 | Figure/Coordinate/Property/Ancestor/Input/Update 六类通知语义、实现方式、与 Zed/Novadraw 的对应关系 |
 | `displaylist_design.md` | DisplayList 设计 | crate 设计决策、协议定义、与渲染层解耦方案 |
 | `draw2d-history.md` | draw2d 历史 | draw2d 架构演变、设计决策背景 |
@@ -154,10 +156,11 @@ doc/
 ```text
 1. gef_principle.md              # 理解整体架构
 2. draw2d_design_axioms.md       # 理解最底层不变量
-3. draw2d_notification_design.md # 理解 draw2d 的通知语义分层
-4. figure_core_concepts.md       # 理解 Figure 模型
-5. coordinates.md                # 理解坐标系
-6. zed_reactive_design.md        # 理解现代 Rust 响应式/通知机制参考
+3. draw2d_api_coverage.md        # 理解 API family 与 Novadraw 覆盖账本
+4. draw2d_notification_design.md # 理解 draw2d 的通知语义分层
+5. figure_core_concepts.md       # 理解 Figure 模型
+6. coordinates.md                # 理解坐标系
+7. zed_reactive_design.md        # 理解现代 Rust 响应式/通知机制参考
 ```
 
 ### 渲染开发

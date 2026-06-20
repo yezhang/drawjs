@@ -4,19 +4,14 @@
 
 - Milestone: M2 Figure 树与盒模型
 - Previous status: `in_progress`
-- Recommended status: `contract_aligned`
+- Recommended status: `complete`
 - Decision time: 2026-06-12
 
-M2 can move from `in_progress` to `contract_aligned`.
+M2 can move from `behavior_verified` to `complete`.
 
-This decision is limited to the YAML contract and probes layer. It does not mean
-`behavior_verified` or `complete`:
-
-- `behavior_verified` still requires product-layer existence checks from the
-  roadmap and demo matrix.
-- `complete` still requires the applicable product/demo verification layer.
-- Full layout algorithm set, full event state machine, and reserved extension
-  semantics remain outside M2 scope.
+This decision is limited to M2's declared Draw2D API semantics. Full layout
+algorithm set, full event state machine, and reserved extension semantics remain
+outside M2 scope.
 
 ## M2 Contract
 
@@ -28,6 +23,7 @@ Scope:
 - Parent and children topology.
 - Bounds, insets, clientArea, visible, enabled, and z-order.
 - Tree add, remove, and reparent invariants.
+- addNotify/removeNotify equivalent lifecycle hooks.
 
 Contracts:
 
@@ -61,6 +57,7 @@ Probes:
 | AD-028 M2 child order and z-order contract audit | Sibling order query and safe z-order reordering APIs exist; topmost hit-test follows draw2d reverse child search semantics | Verified |
 | AD-029 M2 bounds/insets/clientArea consistency audit | child search for hit-test and mouse target descends only through parent clientArea | Verified |
 | AD-030 M2 remove and reparent lifecycle contract audit | remove/reparent invalid paths avoid partial writes and preserve topology/update/interaction state | Verified |
+| AD-038 M1-M3 completion API semantics | `Figure::on_attached/on_detached` exposes addNotify/removeNotify equivalents and `FigureGraph` calls them on add/remove/reparent | Verified |
 
 ## Verification
 
@@ -75,15 +72,13 @@ bash agent/workflow-verify.sh --fast
 
 Results:
 
-- `cargo test -p novadraw-scene`: 161/161 + 3 doctests passed.
+- `cargo test -p novadraw-scene`: 163/163 + 3 integration + 3 doctests passed.
 - `cargo clippy -p novadraw-scene -- -D warnings`: passed.
 - `ruby agent/workflow-doctor.rb`: passed.
 - `bash agent/workflow-verify.sh --fast`: passed.
 
 ## Residual Risks
 
-- M2 is not product-layer verified yet; product/demo checks remain required
-  before `behavior_verified`.
 - Direct public remove/reparent APIs are intentionally not introduced in M2;
   structural runtime mutation is currently exercised through pending mutations.
 - Full layout algorithm set and full event state machine are explicitly outside
@@ -93,13 +88,11 @@ Results:
 
 ## Status Update
 
-M2 is contract-aligned because all YAML probes have automated evidence and the
-Figure tree now acts as the runtime backbone for topology, z-order,
-visibility/enabled state, coordinates, validation entry points, and hit testing
-at the M2 contract layer.
+M2 is complete within its scoped API semantics because all YAML probes have
+automated evidence and the Figure tree now acts as the runtime backbone for
+topology, z-order, visibility/enabled state, lifecycle hooks, coordinates,
+validation entry points, and hit testing.
 
 Next step:
 
-- Create M2 product-layer existence checks before considering
-  `behavior_verified`, or begin M3 if the workflow allows `contract_aligned`
-  dependencies.
+- Continue M3 completion with real clipping strategy API semantics.

@@ -46,10 +46,12 @@
 - 项目文档总入口：`doc/00-index.md`
 - 完整项目规则：`CLAUDE.md`
 - **Milestone 编号 SSOT（M1-M10）**：`agent/draw2d-core-milestones.yaml`
+- **Draw2D API 语义覆盖账本**：`doc/01-architecture/draw2d_api_coverage.md`
 - **当前进度快照 + 阻塞项**：`agent/goal-roadmap.md`
 - **产品交付清单 / Demo 矩阵**：`doc/06-roadmap/`
 
 > Milestone 编号唯一来源是 `agent/draw2d-core-milestones.yaml`。任何 delta、PR、commit、文档引用 `M{n}` 一律指 YAML M{n}，禁止在其他文档发明独立编号。
+> 推进 M1-M10 的 architecture/parity delta 时，必须检查对应 `api_semantics` 的 Draw2D API 语义是否完整；语义账本见 `doc/01-architecture/draw2d_api_coverage.md`。
 
 ### 架构分析边界
 

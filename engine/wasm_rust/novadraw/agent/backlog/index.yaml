@@ -1,8 +1,8 @@
 ---
 version: 1
-last_updated: '2026-06-17'
-current_delta: AD-037
-next_recommended_delta: M4 coordinate-domain and transform contract audit
+last_updated: '2026-06-20'
+current_delta: AD-040
+next_recommended_delta: M4 coordinate root movement audit
 read_order:
 - agent/backlog/index.yaml
 - agent/backlog/active.yaml

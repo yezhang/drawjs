@@ -8,12 +8,14 @@ purpose: >
 
 source_of_truth:
   - doc/01-architecture/draw2d_design_axioms.md
+  - doc/01-architecture/draw2d_api_coverage.md
   - doc/01-architecture/draw2d_notification_design.md
   - doc/01-architecture/ideal-architecture-static.md
   - doc/01-architecture/ideal-architecture-dynamic.md
   - /Users/bytedance/Documents/code/GitHub/gef-classic/org.eclipse.draw2d
 
 companion_views:
+  api_semantic_view: doc/01-architecture/draw2d_api_coverage.md
   product_view: doc/06-roadmap/product-deliverables.md
   demo_view: doc/06-roadmap/demo-matrix.md
   status_snapshot: agent/goal-roadmap.md
@@ -34,9 +36,14 @@ status_definitions:
 
 completion_rules:
   - A milestone can only move to behavior_verified after its contract probes pass.
+  - A milestone can only move to behavior_verified after its primary api_semantics are checked against doc/01-architecture/draw2d_api_coverage.md.
   - A milestone can only move to complete after documentation and debt entries are reconciled.
+  - Any delta that moves a milestone forward must state which api_semantics are affected and whether the semantic contract remains complete.
   - A delta must reference milestone_id unless it is pure workflow maintenance or baseline debt cleanup.
   - GEF-specific work must not be attached to these milestones.
+  - M1-M5 core mechanism gates are evaluated against the active core Figure surface only: RootFigure, RectangleFigure, and test mock Figures.
+  - Existing deferred Figure implementations remain exported but are not counted as M1-M5 completion gates; ViewportFigure belongs to M8, reusable builtin figures belong to M10.
+  - Any generic Figure mechanism or API semantic must cover every Figure in the active surface; deferred Figures must reach the same protocol coverage before being counted as their own milestone progress.
 
 bootstrap:
   id: M0
@@ -60,7 +67,7 @@ milestones:
   - id: M1
     title: 几何与 Graphics 基础
     layer: Foundation
-    status: behavior_verified
+    status: complete
     goal: >
       Establish the geometry and drawing substrate required by all higher-level
       Draw2D protocols.
@@ -80,6 +87,13 @@ milestones:
       - Geometry operation unit tests
       - Graphics state stack nesting tests
       - Clip and transform command snapshots
+    api_semantics:
+      primary:
+        - geometry.primitives
+        - graphics.context
+      secondary:
+        - paint.protocol
+        - clipping.strategy
     dependencies: []
     enables:
       - M2
@@ -88,19 +102,22 @@ milestones:
   - id: M2
     title: Figure 树与盒模型
     layer: Figure Runtime
-    status: behavior_verified
+    status: complete
     goal: >
       Implement the lightweight Figure tree as the single runtime backbone for
       ownership, z-order, visibility, coordinates, validation, and hit testing.
     scope:
       - Figure, FigureBlock, and FigureGraph roles
+      - Active core Figure surface: RootFigure, RectangleFigure, and test mock Figures
       - Parent and children topology
       - Bounds, insets, clientArea, visible, enabled, and z-order
       - Tree add, remove, and reparent invariants
+      - addNotify/removeNotify equivalent lifecycle hooks
     non_scope:
       - Full layout algorithm set
       - Full event state machine
       - Reserved extension semantics
+      - Deferred reusable/builtin Figure parity beyond the active core surface
     contracts:
       - Draw2D A1 lightweight Figure tree axiom
       - Draw2D A2 tree as runtime backbone axiom
@@ -111,6 +128,17 @@ milestones:
       - Child order and z-order tests
       - Bounds, insets, and clientArea consistency tests
       - Visible and enabled propagation tests
+    api_semantics:
+      primary:
+        - figure.tree
+        - figure.lifecycle
+        - figure.geometry.bounds
+        - figure.box.client_area
+        - figure.visibility.enabled
+      secondary:
+        - hit_test.search
+        - coordinate.conversion
+        - notification.ancestor
     dependencies:
       - M1
     enables:
@@ -121,18 +149,21 @@ milestones:
   - id: M3
     title: 绘制遍历与裁剪闭环
     layer: Figure Runtime
-    status: behavior_verified
+    status: complete
     goal: >
       Align rendering traversal with Draw2D Figure paint template semantics and
       make clipping consistent with the Figure tree.
     scope:
       - paint -> paintFigure -> paintClientArea/children -> paintBorder order
       - Parent clientArea clip and child bounds clip
+      - Draw2D-equivalent child clipping strategy override
+      - Active core Figure surface clipping and border protocol coverage
       - Hit-test visible area consistency with paint clipping
     non_scope:
       - Iterative render implementation and render-mode switching
       - Backend-specific performance tuning
       - Full widget library
+      - Deferred reusable/builtin Figure visual parity
       - GEF feedback or handles
     contracts:
       - Children must be clipped by parent clientArea and child bounds.
@@ -142,6 +173,17 @@ milestones:
       - Nested clipping rendering tests
       - Border and insets rendering tests
       - Paint versus hit-test consistency tests
+    api_semantics:
+      primary:
+        - paint.protocol
+        - graphics.context
+        - clipping.strategy
+        - border.protocol
+        - hit_test.search
+      secondary:
+        - figure.box.client_area
+        - coordinate.conversion
+        - damage.repaint
     dependencies:
       - M1
       - M2
@@ -153,7 +195,7 @@ milestones:
   - id: M4
     title: 坐标域与变换闭环
     layer: Figure Runtime
-    status: not_started
+    status: in_progress
     goal: >
       Complete the Draw2D coordinate-domain model, including coordinate roots,
       parent conversion, absolute conversion, and event point reduction.
@@ -176,6 +218,15 @@ milestones:
       - Coordinate root movement tests
       - Event point reduction tests
       - Dirty rect parent-chain coordinate propagation tests
+    api_semantics:
+      primary:
+        - coordinate.conversion
+        - figure.box.client_area
+        - event.point_reduction
+      secondary:
+        - hit_test.search
+        - damage.repaint
+        - viewport.scroll_zoom
     dependencies:
       - M2
       - M3
@@ -213,6 +264,16 @@ milestones:
       - Dirty region union and clipping tests
       - Validation-then-repair ordering tests
       - Reentrant invalidation convergence tests
+    api_semantics:
+      primary:
+        - layout.manager
+        - validation.protocol
+        - update_manager.two_phase
+        - damage.repaint
+      secondary:
+        - figure.geometry.bounds
+        - figure.box.client_area
+        - notification.layout_update
     dependencies:
       - M3
       - M4
@@ -249,6 +310,16 @@ milestones:
       - Enter and exit transition tests
       - Focus keyboard routing tests
       - Z-order hit-test tests
+    api_semantics:
+      primary:
+        - event.dispatcher
+        - event.input_listeners
+        - event.focus
+        - hit_test.search
+        - event.point_reduction
+      secondary:
+        - coordinate.conversion
+        - figure.visibility.enabled
     dependencies:
       - M2
       - M4
@@ -283,6 +354,17 @@ milestones:
       - Coordinate root movement triggers coordinate system changed
       - Parent-chain changes trigger ancestor notifications
       - UpdateManager emits validating and painting phase notifications
+    api_semantics:
+      primary:
+        - notification.figure
+        - notification.coordinate
+        - notification.property
+        - notification.ancestor
+        - notification.layout_update
+      secondary:
+        - figure.lifecycle
+        - validation.protocol
+        - update_manager.two_phase
     dependencies:
       - M5
       - M6
@@ -319,6 +401,16 @@ milestones:
       - Scrolled origin coordinate tests
       - Zoomed hit-test tests
       - Nested viewport dirty-region mapping tests
+    api_semantics:
+      primary:
+        - viewport.scroll_zoom
+        - clipping.strategy
+        - coordinate.conversion
+        - hit_test.search
+      secondary:
+        - damage.repaint
+        - update_manager.two_phase
+        - layer.freeform
     dependencies:
       - M3
       - M4
@@ -357,6 +449,17 @@ milestones:
       - Connection damage tests
       - Decoration rendering tests
       - Connection hit-test tests
+    api_semantics:
+      primary:
+        - connection.figure
+        - connection.anchor
+        - connection.router
+        - connection.locator
+      secondary:
+        - coordinate.conversion
+        - damage.repaint
+        - notification.ancestor
+        - hit_test.search
     dependencies:
       - M2
       - M4
@@ -373,7 +476,8 @@ milestones:
       Provide enough reusable Draw2D figures for real demos while ensuring they
       remain consumers of the core protocols rather than special cases.
     scope:
-      - Rectangle, ellipse, rounded rectangle, polygon, polyline, triangle
+      - Promote deferred builtin Figures to full reusable status: ellipse, rounded rectangle, polygon, polyline, triangle
+      - Confirm Rectangle remains the baseline core Shape and does not require special-case protocol forks
       - Label and image figure
       - Border implementations
       - Button-like and toggle-like figures
@@ -393,6 +497,16 @@ milestones:
       - Border clientArea tests
       - Button-like event behavior tests
       - Basic text layout visual or snapshot tests
+    api_semantics:
+      primary:
+        - builtin.figures
+        - border.protocol
+        - text.flow
+        - widgets.basic
+      secondary:
+        - layout.manager
+        - event.input_listeners
+        - figure.properties
     dependencies:
       - M3
       - M6
@@ -433,7 +547,23 @@ workflow_integration:
         deltas were authored without milestone awareness and back-classifying
         them would risk inaccurate associations. The grandfather rule preserves
         accuracy while still enforcing milestone_id on all future work.
+    api_semantics:
+      applies_to: "Deltas created on or after 2026-06-18 that move M1-M10 forward"
+      rule: >
+        Every architecture or parity delta that moves a Draw2D core milestone
+        forward must list affected api_semantics from the milestone's
+        api_semantics.primary or api_semantics.secondary sets and state whether
+        the semantic contract remains complete.
+      grandfathered: >
+        Existing deltas created before 2026-06-18 are not required to backfill
+        api_semantics unless they are actively reopened to move milestone
+        behavior, probes, or completion status forward.
+      rationale: >
+        API semantic coverage was introduced as a milestone audit layer on
+        2026-06-18. Applying it only to forward-moving work keeps historical
+        records stable while making future milestone progress auditable.
   completion_audit_layers:
     - Architecture contract coverage
     - Draw2D core milestone coverage
+    - Draw2D API semantic coverage
     - Baseline and paused debt review

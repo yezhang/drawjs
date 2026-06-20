@@ -4,10 +4,10 @@
 
 - Milestone: M1 几何与 Graphics 基础
 - Previous status: `contract_aligned`
-- Recommended status: `behavior_verified`
+- Recommended status: `complete`
 - Decision time: 2026-06-11
 
-M1 can move from `contract_aligned` to `behavior_verified`.
+M1 can move from `behavior_verified` to `complete`.
 
 This decision covers the product-layer existence checks defined by
 `doc/06-roadmap/product-deliverables.md`. M1 still has no independent demo in
@@ -60,15 +60,17 @@ Results:
   rendering can be expanded later without changing the public product-layer entry.
 - Real text shaping/rasterization and image resource management remain outside M1;
   M1 only requires command-layer and product-entry existence.
-- M1 should not be marked `complete` until roadmap/demo matrix synchronization and
-  documentation expectations are reconciled.
+- M1 is complete within its scoped command-layer semantics. Real text shaping,
+  backend rasterization, and image resource management remain explicitly outside
+  M1.
 
 ## Status Update
 
-M1 is behavior-verified because both YAML contract probes and product-layer
-existence checks now have repeatable automated evidence.
+M1 is complete because both YAML contract probes and product-layer existence
+checks now have repeatable automated evidence, and the remaining richer
+rendering concerns are outside the M1 API-semantic scope.
 
 Next step:
 
-- Start M2 Figure 树与盒模型, or first clean `BASELINE-002` so the full
-  repository verification gate can become fully green.
+- Continue M1-M3 complete 收口 without expanding M1 into backend text/image
+  implementation work.

@@ -7,6 +7,12 @@ milestone_id_policy: 'Deltas created on or after 2026-06-11 must carry a milesto
   it.
 
 '
+api_semantics_policy: 'Deltas created on or after 2026-06-18 that move M1-M10
+  forward must carry api_semantics referencing the affected API semantic families
+  from agent/draw2d-core-milestones.yaml and doc/01-architecture/draw2d_api_coverage.md.
+  Existing deltas are grandfathered unless actively reopened for milestone progress.
+
+'
 selection_rules:
 - 先处理职责边界错误，再处理实现细节
 - 先处理高优先级 delta，再处理中低优先级 delta
@@ -15,6 +21,7 @@ selection_rules:
 - 新问题默认先作为 candidate，评估后再进入正式 backlog
 - 默认只主动推进 evolution_kind 为 architecture 或 parity 的条目
 - 新增 delta（2026-06-11 起）必须挂 milestone_id；旧 delta 免补
+- 推进 M1-M10 的新增 delta（2026-06-18 起）必须挂 api_semantics，并检查 API 语义完整性
 evolution_kind_definitions:
   architecture: 理想架构收敛项，处理职责边界、状态归属、协议时序和依赖方向
   parity: 为实现 g2 等价语义必须补齐的能力缺口

@@ -3,16 +3,16 @@
 ## Metadata
 
 - schema_version: 1
-- updated_at: 2026-06-17
+- updated_at: 2026-06-20
 - checkpoint_kind: architecture-loop
 
 ## Current Delta
 
-- AD-037 M3 iterative render POC archive
+- AD-040 M4 coordinate conversion roundtrip
 
 ## Current Status
 
-- verified（迭代渲染 POC 已从主线移除并归档到 git tag `archive/render-iterative-poc-20260617`；M3 当前门禁回到递归渲染、裁剪与 paint/hit-test 一致性，不恢复递归/迭代等价要求）
+- verified（M4 已启动并推进到 `in_progress`；本轮修复 translate_to_relative 的 Draw2D 父链逆变换语义，补齐 target coordinate root roundtrip 与事件点降域证据）
 
 ## Context Boundary
 
@@ -20,6 +20,44 @@
 - 已剥离主题不得作为每轮 next step、阻塞项或残余风险反复带出。
 
 ## What Was Done
+
+### AD-040 M4 coordinate conversion roundtrip（本轮，verified）
+- **根因分析**：Draw2D `Figure#translateToRelative` 的递归回程调用 parent 的 `translateFromParent`；当前实现误调用当前节点的 `translate_from_parent`，导致 target 自身也是 coordinate root 时多减一次自身 bounds/insets。
+- **最小修复**：
+  - `FigureGraph::translate_to_relative` 改为在父链回程调用 `translate_from_parent(parent_id, ...)`。
+  - 新增 target coordinate root roundtrip 测试，验证 `translate_to_absolute_mut` 与 `translate_to_relative` 互为父链逆变换。
+  - 更新事件分发测试，使 target 自身是 coordinate root 时事件点落在 target parent coordinate domain，匹配 Draw2D MouseEvent `source.translateToRelative(...)` 语义。
+- **API 语义**：primary `coordinate.conversion`、`event.point_reduction`；secondary `figure.box.client_area`、`hit_test.search`。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-scene ✅，cargo clippy -p novadraw-scene -- -D warnings ✅
+- **状态推进**：M4 从 `not_started` 推进到 `in_progress`；未推进到 `contract_aligned`，因为 coordinate root movement 与 dirty rect parent-chain probes 仍未系统审计。
+- **下一步**：M4 coordinate root movement audit。
+
+### AD-039 Active Figure surface governance（本轮，verified）
+- **根因分析**：M1-M3 完成后，继续在治理口径上把所有已有 concrete Figure 都纳入 M1-M5 通用机制门禁，会让框架核心验证被 M8 Viewport 与 M10 reusable builtin Figure 拖住；但直接删除这些文件又会丢失已有实现和后续恢复路径。
+- **最小修复**：
+  - 不新增运行时代码 API，不引入 `FigureSurface` 或等价分类字段。
+  - 在 milestone 与 API 语义账本中说明：active surface 只是当前 M1-M5 的治理描述，非代码抽象。
+  - `RootFigure`、`RectangleFigure` 和测试 mock Figure 作为当前核心机制验证代表；`ViewportFigure` 归属 M8；Ellipse、RoundedRectangle、Polyline、Polygon、Triangle 归属 M10。
+  - 现有 Figure 文件、导出和已有跨 Figure API 测试全部保留。
+  - milestone 与 API 语义账本同步 active/deferred surface 规则。
+- **API 语义**：primary `figure.tree`、`paint.protocol`、`clipping.strategy`、`border.protocol`；secondary `builtin.figures`、`viewport.scroll_zoom`。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-scene ✅，cargo clippy -p novadraw-scene -- -D warnings ✅，ruby agent/workflow-doctor.rb ✅，bash agent/workflow-verify.sh --fast ✅，git diff --check ✅
+- **状态推进**：不改变 M1-M10 状态；本轮只收口文档与治理完成口径。
+- **下一步**：M4 coordinate conversion roundtrip audit。
+
+### AD-038 M1-M3 completion API semantics（本轮，verified）
+- **根因分析**：M1-M3 已有 `behavior_verified` 证据，但 M2 `figure.lifecycle` 与 M3 `clipping.strategy` 仍偏测试/固定行为，没有明确的 Draw2D 等价 API 语义。按用户要求，里程碑推进不得只改文档或测试，必须真实增加代码能力。
+- **最小修复**：
+  - 新增 `Figure::on_attached/on_detached` hook，对应 Draw2D `addNotify/removeNotify`。
+  - `FigureGraph` 在 add/remove/reparent 路径触发生命周期 hook。
+  - 新增 `ChildClippingStrategy`，并将 `with_child_clipping_strategy(...)` 配套到 Rectangle、Ellipse、RoundedRectangle、Polyline、Polygon、Triangle、Root、ViewportFigure；递归渲染按父 Figure 策略决定是否裁剪到 child bounds。
+  - 审计发现 `border.protocol` 也只落在 Rectangle；已将 `with_border(...)`、`get_border()`、`insets()` 配套到现有 concrete Figure surface。
+  - 新增 lifecycle 与 clipping strategy 契约测试。
+  - 新增产品层 API 测试，确保现有 concrete Figure 都暴露 child clipping strategy 与 border 入口。
+- **API 语义**：primary `figure.lifecycle`、`clipping.strategy`；secondary `paint.protocol`、`figure.tree`。
+- **验证**：cargo fmt --check ✅，cargo test -p novadraw-scene ✅，cargo clippy -p novadraw-scene -- -D warnings ✅
+- **状态推进**：M1、M2、M3 从 `behavior_verified` 推进到 `complete`；M4 保持 `not_started`。
+- **下一步**：M4 coordinate conversion roundtrip audit。
 
 ### AD-037 M3 iterative render POC archive（本轮，verified）
 - **根因分析**：迭代渲染是早期极端性能方向 POC；递归渲染语义尚未完备前，保留第二条主循环会干扰 Draw2D 核心契约收敛、测试门禁和后续 delta 判断。

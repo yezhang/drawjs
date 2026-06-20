@@ -1,7 +1,130 @@
 ---
 version: 1
-last_updated: '2026-06-17'
+last_updated: '2026-06-20'
 candidate_items:
+- id: AD-040
+  title: M4 coordinate conversion roundtrip
+  contract: >
+    translate_to_absolute_mut and translate_to_relative must be inverse
+    parent-chain conversions matching Draw2D Figure#translateToAbsolute and
+    Figure#translateToRelative, including when the target itself is a coordinate
+    root.
+  evolution_kind: parity
+  milestone_id: M4
+  api_semantics:
+    primary:
+    - coordinate.conversion
+    - event.point_reduction
+    secondary:
+    - figure.box.client_area
+    - hit_test.search
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - novadraw-scene/src/graph/mod.rs
+  - novadraw-scene/src/runtime/context.rs
+  - agent/draw2d-core-milestones.yaml
+  - agent/goal-roadmap.md
+  - agent/inner-loop-checkpoint.md
+  progress_notes:
+  - Root Cause：translate_to_relative 递归回程调用了当前节点的 translate_from_parent，而 Draw2D Figure#translateToRelative 调用的是 parent 的 translateFromParent。
+  - 修复后，目标节点本身是 coordinate root 时不会被额外应用自身 bounds/insets 逆变换。
+  - 新增 roundtrip 测试覆盖 target coordinate root；事件分发测试更新为 target parent coordinate domain。
+  - M4 从 not_started 推进到 in_progress；尚未推进到 contract_aligned。
+  done_when:
+  - translate_to_relative applies parent-chain inverse conversion
+  - target coordinate root roundtrip test passes
+  - event point reduction test matches Draw2D parent-domain semantics
+  - cargo fmt --check passes
+  - cargo test -p novadraw-scene passes
+  - cargo clippy -p novadraw-scene -- -D warnings passes
+- id: AD-039
+  title: Active Figure surface governance
+  contract: M1-M5 core mechanism gates use active/deferred Figure surface only
+    as documentation and governance language; no runtime code or public API should
+    encode this classification.
+  evolution_kind: architecture
+  milestone_id: M3
+  api_semantics:
+    primary:
+    - figure.tree
+    - paint.protocol
+    - clipping.strategy
+    - border.protocol
+    secondary:
+    - builtin.figures
+    - viewport.scroll_zoom
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - agent/draw2d-core-milestones.yaml
+  - doc/01-architecture/draw2d_api_coverage.md
+  - agent/m3-completion-summary.md
+  - agent/inner-loop-checkpoint.md
+  progress_notes:
+  - Root Cause：治理口径若继续把所有已有 concrete Figure 都纳入 M1-M5 通用机制门禁，会让核心机制验证被 M8 Viewport 与 M10 reusable builtin Figure 拖住；但代码分类会污染运行时抽象。
+  - 按用户要求撤回代码层 `FigureSurface` 方案，active/deferred surface 只保留在文档和治理描述中。
+  - M1-M5 当前核心机制验证代表是 RootFigure、RectangleFigure 与测试 mock Figure；ViewportFigure 归属 M8，Ellipse/RoundedRectangle/Polyline/Polygon/Triangle 归属 M10。
+  - 保留现有 Figure 文件、导出和已有跨 Figure API 测试，不删除、不降级已实现能力。
+  done_when:
+  - No FigureSurface or equivalent runtime classification API exists in novadraw-scene
+  - Milestone governance states active/deferred surface as documentation-only completion language
+  - API semantic ledger maps ViewportFigure to M8 and reusable builtin figures to M10
+  - Existing Figure implementations and tests still compile
+  - cargo fmt --check passes
+  - cargo test -p novadraw-scene passes
+  - cargo clippy -p novadraw-scene -- -D warnings passes
+- id: AD-038
+  title: M1-M3 completion API semantics
+  contract: M1-M3 can only move to complete after their declared Draw2D API
+    semantics are backed by real runtime code, not only documentation or tests.
+  evolution_kind: parity
+  milestone_id: M3
+  api_semantics:
+    primary:
+    - figure.lifecycle
+    - clipping.strategy
+    secondary:
+    - paint.protocol
+    - figure.tree
+  priority: high
+  status: verified
+  parent_id:
+  evidence:
+  - novadraw-scene/src/figure/mod.rs
+  - novadraw-scene/src/figure/rectangle.rs
+  - novadraw-scene/src/figure/ellipse.rs
+  - novadraw-scene/src/figure/rounded_rectangle.rs
+  - novadraw-scene/src/figure/polyline.rs
+  - novadraw-scene/src/figure/polygon.rs
+  - novadraw-scene/src/figure/triangle.rs
+  - novadraw-scene/src/figure/root.rs
+  - novadraw-scene/src/container/viewport.rs
+  - novadraw-scene/src/graph/mod.rs
+  - novadraw-scene/src/graph/render_recursive.rs
+  - novadraw-scene/tests/m2_product_existence.rs
+  - agent/draw2d-core-milestones.yaml
+  - agent/goal-roadmap.md
+  - agent/m1-product-existence-checks.md
+  - agent/m2-contract-alignment-summary.md
+  - agent/m3-completion-summary.md
+  progress_notes:
+  - Root Cause：M1-M3 已有 behavior_verified 证据，但 M2 `figure.lifecycle` 与 M3 `clipping.strategy` 仍偏测试/固定行为，没有明确的 Draw2D 等价 API 语义。
+  - 新增 `Figure::on_attached/on_detached` 生命周期 hook，并在 add/remove/reparent 路径触发，闭合 addNotify/removeNotify 等价语义。
+  - 新增 `ChildClippingStrategy`，并将 `with_child_clipping_strategy(...)` 配套到 Rectangle、Ellipse、RoundedRectangle、Polyline、Polygon、Triangle、Root、ViewportFigure；递归渲染按父 Figure 策略决定是否裁剪到 child bounds。
+  - 审计发现 `border.protocol` 也只落在 Rectangle；已将 `with_border(...)`、`get_border()`、`insets()` 配套到现有 concrete Figure surface。
+  - M4 保持 `not_started`；M1-M3 按最新 API 语义推进到 `complete`。
+  done_when:
+  - M2 lifecycle hooks exist and fire on add/remove/reparent
+  - M3 child clipping strategy exists on all existing concrete Figure types and default behavior still clips to child bounds
+  - M3 border API exists on all existing concrete Figure types and insets feed clientArea
+  - M3 strategy can skip child bounds clip while preserving parent clientArea clip
+  - M1-M3 milestone statuses are complete and M4 remains not_started
+  - cargo fmt --check passes
+  - cargo test -p novadraw-scene passes
+  - cargo clippy -p novadraw-scene -- -D warnings passes
 - id: AD-037
   title: M3 iterative render POC archive
   contract: Iterative render is a deferred performance POC and must not remain

@@ -28,24 +28,24 @@
 
 **编号规则**：本文及任何 delta、PR、commit 信息引用 milestone 编号一律写 `M{n}`，指 YAML M{n}。不允许出现"本文 M{n}"或"MD M{n}"的歧义说法。
 
-## 状态快照（2026-06-12）
+## 状态快照（2026-06-20）
 
 ### 总览
 
 | 维度 | 当前 | 目标 |
 |------|------|------|
-| 完成 milestone 数 | 0 / 10 | 10 / 10 |
-| 总测试数 | 167 | ~1,250 |
+| 完成 milestone 数 | 3 / 10 | 10 / 10 |
+| 总测试数 | 170 | ~1,250 |
 | 已 verify demo 数 | 1 / 11 | 11 / 11 |
 
 ### Milestone 状态
 
 | YAML | 标题 | 当前状态 | 备注 |
 |------|------|----------|------|
-| M1 | 几何与 Graphics 基础 | `behavior_verified` | M1 probes summary 已确认契约层自动化证据；M1 product existence checks 已覆盖几何类型清单与 Graphics API 清单；尚未进入 `complete` |
-| M2 | Figure 树与盒模型 | `behavior_verified` | AD-026 至 AD-031 已覆盖 M2 YAML probes 与契约对齐；AD-032 product existence checks 已覆盖 5 基础图元、FigureGraph 产品 API 与三段式 paint 顺序；尚未进入 `complete` |
-| M3 | 绘制遍历与裁剪闭环 | `behavior_verified` | AD-035 已闭合 paint versus hit-test consistency；AD-036 已通过 clip-app nested clip 截图验证；迭代渲染 POC 已归档到 `archive/render-iterative-poc-20260617`，不再作为当前 M3 门禁；尚未进入 `complete` |
-| M4 | 坐标域与变换闭环 | `not_started` | — |
+| M1 | 几何与 Graphics 基础 | `complete` | 几何类型、Graphics 状态栈、clip/transform/text/image 命令层入口与产品存在性证据已闭合；真实文本 shaping/图片资源系统仍不属于 M1 |
+| M2 | Figure 树与盒模型 | `complete` | 已覆盖树拓扑、bounds/clientArea/visible/enabled/z-order，并新增 addNotify/removeNotify 等价 lifecycle hook 作为真实 API 语义 |
+| M3 | 绘制遍历与裁剪闭环 | `complete` | 已覆盖递归 paint template、clientArea/child bounds clip、border/hit-test 一致性，并新增 Draw2D 等价 child clipping strategy；迭代渲染 POC 已归档 |
+| M4 | 坐标域与变换闭环 | `in_progress` | 已启动坐标转换父链 roundtrip 修正；尚需 deep nested、coordinate root movement、dirty rect propagation 等 M4 probes |
 | M5 | Layout + Validation + UpdateManager | `not_started` | — |
 | M6 | 事件分发与交互状态机 | `not_started` | — |
 | M7 | 通知语义分层 | `not_started` | — |
